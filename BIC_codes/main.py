@@ -13,7 +13,7 @@ os.environ["OMP_NUM_THREADS"] = '64'
 DATA_type = 'real' # 'real' or 'simulated'
 
 n_overlap = 1
-output_root = './Results/'
+output_root = '../../../../Results/methods_implementation/'
 if DATA_type=='simulated':
     data_root = '../../../../DATA/TVB data/'
 else:
@@ -104,7 +104,7 @@ hmm_disc = HMM_DISC(W=int(44*BOLD.Fs), n_overlap=n_overlap)
 
 interval = list(range(200))
 
-BOLD.visualize(interval=interval, save_image=True, fig_name=output_root + 'BOLD_signal')
+BOLD.visualize(interval=interval, save_image=True, fig_name=output_root+'BOLD_signal')
 
 BOLD.truncate(start_point=None, end_point=None)    #10000
 
@@ -137,4 +137,4 @@ TRs = TRs[200:300:10]
 
 for measure in MEASURES:
     measure.visualize_dFC(TRs=TRs, W=1, n_overlap=1, normalize=True, threshold=0.0, save_image=True, \
-        fig_name= output_root + 'dFC/' + measure.measure_name + '_dFC')
+        fig_name= output_root+'dFC/'+measure.measure_name+'_dFC')
