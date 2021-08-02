@@ -63,10 +63,10 @@ class dFC:
             TRs = list(range(self.dFCM.n_time))
 
         if normalize:
-            C = self.dFC_mat_normalize(C_t=self.dFCM.slice_TR(TRs=TRs), \
+            C = self.dFC_mat_normalize(C_t=self.dFCM.get_dFC_mat(TRs=TRs), \
                 global_normalization=True, threshold=threshold)
         else:
-            C = self.dFCM.slice_TR(TRs=TRs)
+            C = self.dFCM.get_dFC_mat(TRs=TRs)
 
         L = C.shape[0]
         step = int((1-n_overlap)*W)
@@ -304,10 +304,8 @@ _ the problem with corr
 
 class SLIDING_WINDOW(dFC):
 
-    def __init__(self, method=None, W=88, n_overlap=0.5, tapered_window=True):
+    def __init__(self, method='pear_corr', W=88, n_overlap=0.5, tapered_window=True):
 
-        if method is None:
-            method='pear_corr'
         assert method=='pear_corr' or method=='MI', \
             "method not recognized. It must be either pear_corr \
                 or MI."
@@ -565,17 +563,22 @@ from sklearn.cluster import KMeans
 
 class SLIDING_WINDOW_CLUSTR(dFC):
 
-    def __init__(self, sliding_window=None, n_states=12, W=88, n_overlap=0.5, tapered_window=True):
+    def __init__(self, sw_method='pear_corr', sliding_window=None, n_states=12, W=88, n_overlap=0.5, tapered_window=True):
         self.measure_name = 'Sliding Window + Clustering'
         self.dFCM = DFCM()
         self.TPM = []
         self.FCS_ = []
+        self.sw_method_=sw_method
         self.sliding_window = sliding_window
         self.n_states = n_states
         self.W = W
         self.n_overlap = n_overlap
         self.tapered_window = tapered_window
     
+    @property
+    def sw_method(self):
+        return self.sw_method_
+
     def set_sliding_window(self, sliding_window=None):
         self.sliding_window = sliding_window
 
@@ -608,12 +611,12 @@ class SLIDING_WINDOW_CLUSTR(dFC):
         self.n_time = time_series.n_time
 
         if self.sliding_window is None:
-            self.sliding_window = SLIDING_WINDOW(W=self.W, n_overlap=self.n_overlap, tapered_window=self.tapered_window)
+            self.sliding_window = SLIDING_WINDOW(method=self.sw_method, W=self.W, n_overlap=self.n_overlap, tapered_window=self.tapered_window)
             self.sliding_window.calc(time_series=time_series)
         
         self.dFCM_raw = self.sliding_window.dFCM
 
-        self.F = self.dFC_mat2vec(self.dFCM_raw.dFC_mat)
+        self.F = self.dFC_mat2vec(self.dFCM_raw.get_dFC_mat(TRs=self.dFCM_raw.TR_array))
 
         self.kmeans_ = KMeans(n_clusters=self.n_states).fit(self.F)
 
@@ -641,17 +644,22 @@ from hmmlearn import hmm
 
 class HMM_DISC(dFC):
 
-    def __init__(self, swc=None, n_states=12, n_hid_states=6, W=88, n_overlap=0.5, tapered_window=True):
+    def __init__(self, sw_method='pear_corr', swc=None, n_states=12, n_hid_states=6, W=88, n_overlap=0.5, tapered_window=True):
         self.measure_name = 'Discrete HMM'
         self.dFCM = DFCM()
         self.TPM = []
         self.FCS_ = []
+        self.sw_method_ = sw_method
         self.swc = swc
         self.n_states = n_states
         self.n_hid_states = n_hid_states
         self.W = W
         self.n_overlap = n_overlap
         self.tapered_window = tapered_window
+
+    @property
+    def sw_method(self):
+        return self.sw_method_
 
     def set_swc(self, swc=None):
         self.swc = swc
@@ -665,7 +673,7 @@ class HMM_DISC(dFC):
         self.n_time = time_series.n_time
 
         if self.swc is None:
-            self.swc = SLIDING_WINDOW_CLUSTR(n_states=self.n_states, W=self.W, n_overlap=self.n_overlap, tapered_window=self.tapered_window)
+            self.swc = SLIDING_WINDOW_CLUSTR(sw_method=self.sw_method, n_states=self.n_states, W=self.W, n_overlap=self.n_overlap, tapered_window=self.tapered_window)
             self.swc.calc(time_series=time_series)
         
         self.FCC_ = self.swc.dFCM
@@ -679,7 +687,7 @@ class HMM_DISC(dFC):
 
         self.FCS_ = np.zeros((self.n_hid_states, self.n_regions, self.n_regions))
         for i in range(self.n_hid_states):
-            self.FCS_[i,:,:] = np.mean(self.FCC_.dFC_mat[np.squeeze(np.argwhere(self.Z==i)),:,:], axis=0)  # III
+            self.FCS_[i,:,:] = np.mean(self.FCC_.get_dFC_mat(TRs=np.squeeze(np.argwhere(self.Z==i))), axis=0)  # III
 
         self.dFCM.add_FCP(FCPs=self.FCS_, FCP_idx=self.Z, TR_array=self.FCC_.TR_array)
 
@@ -865,9 +873,9 @@ class DFCM():
     def from_numpy(cls, array=None):
         pass
 
-    @property
-    def dFC_mat(self):
-        return self.FCPs[self.FCP_idx,:,:]
+    # @property
+    # def dFC_mat(self):
+    #     return self.FCPs[self.FCP_idx,:,:]
 
     @property
     def TR_array(self):
@@ -889,12 +897,14 @@ class DFCM():
     def FCP_idx(self):
         return self.FCP_idx_
 
-    def slice_TR(self, TRs=None):
+    def get_dFC_mat(self, TRs=None):
+        # get dFC matrices corresponding to 
+        # the specified TRs
         idxs = list()
         for tr in TRs:
             idxs.append(np.argwhere(self.TR_array==tr)[0,0])
 
-        return self.dFC_mat[idxs, :, :]
+        return self.FCPs[self.FCP_idx[idxs],:,:] 
 
     def concat(self, dFCM):
 
@@ -915,7 +925,7 @@ class DFCM():
             FCP_idx = dFCM.FCP_idx + self.FCPs.shape[0]
             self.FCPs_ = np.concatenate((self.FCPs_, dFCM.FCPs), axis=0)
             self.FCP_idx_ = np.concatenate((self.FCP_idx_, FCP_idx), axis=0)
-            self.n_time_ = self.dFC_mat.shape[0]
+            self.n_time_ = self.FCP_idx.shape[0]
             self.TR_array_ = np.concatenate((self.TR_array, dFCM.TR_array))
 
     def add_FCP(self, FCPs, FCP_idx=None, TR_array=None):
@@ -941,8 +951,8 @@ class DFCM():
         if self.FCPs_ is None:
             self.FCPs_ = FCPs
             self.FCP_idx_ = FCP_idx
-            self.n_regions_ = self.dFC_mat.shape[1]
-            self.n_time_ = self.dFC_mat.shape[0]
+            self.n_regions_ = self.FCPs.shape[1]
+            self.n_time_ = self.FCP_idx.shape[0]
             self.TR_array_ = TR_array
         else:
             # test this part
@@ -951,13 +961,7 @@ class DFCM():
             FCP_idx = FCP_idx + self.FCPs.shape[0]
             self.FCPs_ = np.concatenate((self.FCPs_, FCPs), axis=0)
             self.FCP_idx_ = np.concatenate((self.FCP_idx_, FCP_idx), axis=0)
-            self.n_time_ = self.dFC_mat.shape[0]
+            self.n_time_ = self.FCP_idx.shape[0]
             self.TR_array_ = np.concatenate((self.TR_array, TR_array))
 
-    
-    def expand():
-        pass
-
-    def zip():
-        pass
 

@@ -98,8 +98,8 @@ sw = SLIDING_WINDOW(method='MI', W=int(44*BOLD.Fs), n_overlap=n_overlap)
 time_freq_cwt = TIME_FREQ(method='CWT_mag')
 time_freq_cwt_r = TIME_FREQ(method='CWT_phase_r')
 time_freq_wtc = TIME_FREQ(method='WTC')
-swc = SLIDING_WINDOW_CLUSTR(W=int(44*BOLD.Fs), n_overlap=n_overlap)
-hmm_disc = HMM_DISC(W=int(44*BOLD.Fs), n_overlap=n_overlap)
+swc = SLIDING_WINDOW_CLUSTR(sw_method='MI', W=int(44*BOLD.Fs), n_overlap=n_overlap)
+hmm_disc = HMM_DISC(sw_method='MI', W=int(44*BOLD.Fs), n_overlap=n_overlap)
 
 
 interval = list(range(200))
