@@ -244,7 +244,7 @@ class HMM_CONT(dFC):
         self.TPM = self.hmm_model.transmat_
         self.pi = self.hmm_model.startprob_
 
-        self.dFCM.add_FCM(self.FCS_[self.Z,:,:])
+        self.dFCM.add_FCP(FCPs=self.FCS_, FCP_idx=self.Z)
         return
 
 ################################## Windowless ##################################
@@ -289,7 +289,7 @@ class WINDOWLESS(dFC):
         self.Z = list()
         for i in range(self.n_time):
             self.Z.append(np.argwhere(self.gamma[i, :] != 0)[0,0])
-        self.dFCM.add_FCM(self.FCS_[self.Z,:,:])
+        self.dFCM.add_FCP(FCPs=self.FCS_, FCP_idx=self.Z)
         return 
 
 
@@ -388,7 +388,7 @@ class SLIDING_WINDOW(dFC):
 
             window = np.repeat(np.expand_dims(window, axis=0), time_series.shape[0], axis=0)
 
-            C.add_FCM(self.FC(np.multiply(time_series, window)), TR_array=np.array( [ int(l + (l+W)) / 2 ] ) )
+            C.add_FCP(FCPs=self.FC(np.multiply(time_series, window)), TR_array=np.array( [ int(l + (l+W)) / 2 ] ) )
             # print('dFC step = %d' %(l))
 
         return C
@@ -548,7 +548,7 @@ class TIME_FREQ(dFC):
 
                 
 
-        self.dFCM.add_FCM(FCM=WT)
+        self.dFCM.add_FCP(FCPs=WT)
         return 
 
 ########################### Sliding_Window + Clustering ###########################
@@ -621,7 +621,7 @@ class SLIDING_WINDOW_CLUSTR(dFC):
         self.F_cent = self.kmeans_.cluster_centers_
 
         self.FCS_ = self.dFC_vec2mat(self.F_cent, N=self.n_regions)
-        self.dFCM.add_FCM(self.FCS_[self.Z,:,:], TR_array=self.dFCM_raw.TR_array)
+        self.dFCM.add_FCP(FCPs=self.FCS_, FCP_idx=self.Z, TR_array=self.dFCM_raw.TR_array)
 
         return 
 
@@ -681,7 +681,7 @@ class HMM_DISC(dFC):
         for i in range(self.n_hid_states):
             self.FCS_[i,:,:] = np.mean(self.FCC_.dFC_mat[np.squeeze(np.argwhere(self.Z==i)),:,:], axis=0)  # III
 
-        self.dFCM.add_FCM(self.FCS_[self.Z,:,:], TR_array=self.FCC_.TR_array)
+        self.dFCM.add_FCP(FCPs=self.FCS_, FCP_idx=self.Z, TR_array=self.FCC_.TR_array)
 
         return 
     
@@ -833,30 +833,33 @@ class TIME_SERIES():
 ################################# dFCM class ######################################
 
 """
+Parameters
+    ----------
+    TR_array : an array labeling 
+        timepoints by their TRs
+
+Variables
+    ----------
+    FCPs : Functional Connecitivity 
+        Patterns
+    FCP_idx : the  index of the 
+        FCP that corresponds to each 
+        timepoint
+    
 
 todo:
 - 
 """
 
 class DFCM():
-    def __init__(self, dFC_mat=None, TR_array=None):
+    def __init__(self):
 
-        if dFC_mat is None:
-            self.dFC_mat_ = None
-            self.TR_array_ = None
-            self.n_regions_ = None
-            self.n_time_ = 0
-        else:
-            assert dFC_mat.shape[1] == dFC_mat.shape[2], \
-                "FC matrices must be square."
-
-            self.dFC_mat_ = dFC_mat
-            self.n_regions_ = self.dFC_mat_.shape[1]
-            self.n_time_ = self.dFC_mat_.shape[0]
-            if TR_array is None:
-                self.TR_array_ = np.arange(start=1, stop=self.n_time+1, step=1)
-            else:
-                self.TR_array_ = TR_array
+        #self.dFC_mat_ = None
+        self.FCPs_ = None 
+        self.FCP_idx_ = None
+        self.TR_array_ = None
+        self.n_regions_ = None
+        self.n_time_ = 0
     
     @classmethod
     def from_numpy(cls, array=None):
@@ -864,7 +867,7 @@ class DFCM():
 
     @property
     def dFC_mat(self):
-        return self.dFC_mat_
+        return self.FCPs[self.FCP_idx,:,:]
 
     @property
     def TR_array(self):
@@ -878,6 +881,14 @@ class DFCM():
     def n_time(self):
         return self.n_time_
 
+    @property
+    def FCPs(self):
+        return self.FCPs_
+
+    @property
+    def FCP_idx(self):
+        return self.FCP_idx_
+
     def slice_TR(self, TRs=None):
         idxs = list()
         for tr in TRs:
@@ -887,40 +898,60 @@ class DFCM():
 
     def concat(self, dFCM):
 
-        assert dFCM is DFCM, \
+        # test this method
+
+        assert type(dFCM) is DFCM, \
                 "The input must be of DFCM class"
 
-        if self.dFC_mat_ is None:
-            self.dFC_mat_=dFCM.dFC_mat
+        if self.FCPs_ is None:
+            self.FCPs_ = dFCM.FCPs
+            self.FCP_idx_ = dFCM.FCP_idx
             self.n_regions_ = dFCM.n_regions
             self.n_time_ = dFCM.n_time
+            self.TR_array_ = dFCM.TR_array
         else:
-            assert self.dFC_mat_.shape[1] == dFCM.dFC_mat.shape[1], \
+            assert self.n_regions== dFCM.n_regions, \
                 "dFCM region numbers missmatch."
-            self.dFC_mat_ = np.concatenate((self.dFC_mat_, dFCM.dFC_mat), axis=0)
-            self.n_time_ += dFCM.n_time
+            FCP_idx = dFCM.FCP_idx + self.FCPs.shape[0]
+            self.FCPs_ = np.concatenate((self.FCPs_, dFCM.FCPs), axis=0)
+            self.FCP_idx_ = np.concatenate((self.FCP_idx_, FCP_idx), axis=0)
+            self.n_time_ = self.dFC_mat.shape[0]
+            self.TR_array_ = np.concatenate((self.TR_array, dFCM.TR_array))
 
-    def add_FCM(self, FCM, TR_array=None):
+    def add_FCP(self, FCPs, FCP_idx=None, TR_array=None):
         
-        if len(FCM.shape)==2:
-            FCM = np.expand_dims(FCM, axis=0)
+        if len(FCPs.shape)==2:
+            FCPs = np.expand_dims(FCPs, axis=0)
+
+        if FCP_idx is None:
+            FCP_idx = np.arange(start=0, stop=FCPs.shape[0], step=1)
+
+        if type(FCP_idx) is list:
+            FCP_idx = np.array(FCP_idx)
+
+        if len(FCP_idx.shape)>1:
+            FCP_idx = np.squeeze(FCP_idx)
         
-        assert FCM.shape[1] == FCM.shape[2], \
+        assert FCPs.shape[1] == FCPs.shape[2], \
                 "FC matrices must be square."
 
         if TR_array is None:
-            TR_array = np.arange(start=self.n_time+1, stop=self.n_time+FCM.shape[0]+1, step=1)
+            TR_array = np.arange(start=self.n_time+1, stop=self.n_time+len(FCP_idx)+1, step=1)
 
-        if self.dFC_mat_ is None:
-            self.dFC_mat_ = FCM
-            self.n_regions_ = self.dFC_mat_.shape[1]
-            self.n_time_ = self.dFC_mat_.shape[0]
+        if self.FCPs_ is None:
+            self.FCPs_ = FCPs
+            self.FCP_idx_ = FCP_idx
+            self.n_regions_ = self.dFC_mat.shape[1]
+            self.n_time_ = self.dFC_mat.shape[0]
             self.TR_array_ = TR_array
         else:
-            assert self.dFC_mat_.shape[1] == FCM.shape[1], \
-                "FCM region numbers missmatch."
-            self.dFC_mat_ = np.concatenate((self.dFC_mat_, FCM), axis=0)
-            self.n_time_ += FCM.shape[0]
+            # test this part
+            assert self.n_regions == FCPs.shape[1], \
+                "FCP region numbers missmatch."
+            FCP_idx = FCP_idx + self.FCPs.shape[0]
+            self.FCPs_ = np.concatenate((self.FCPs_, FCPs), axis=0)
+            self.FCP_idx_ = np.concatenate((self.FCP_idx_, FCP_idx), axis=0)
+            self.n_time_ = self.dFC_mat.shape[0]
             self.TR_array_ = np.concatenate((self.TR_array, TR_array))
 
     
