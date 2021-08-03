@@ -34,6 +34,7 @@ def TR_intersection(measures_lst): # input is a list of dFC Measure objs
 """
 
 todo:
+- separate the matrix visualizing function
 - brain or brain graph class
 - add an updating behavior -> we can segment subjects and time_series and update the model gradually ?
 - type annotation
@@ -48,6 +49,10 @@ class dFC:
         self.dFCM = DFCM()
         self._stat = []
         self.TPM = []
+
+    @property
+    def FCS(self):
+        return self.FCS_
 
     def calc(self):
         pass
@@ -73,6 +78,15 @@ class dFC:
         if step == 0:
             step = 1
 
+        C = np.abs(C) # ?????? should we do this?
+
+        if np.any(C<0):
+            V_MIN = -1
+            V_MAX = 1
+        else:
+            V_MIN = 0
+            V_MAX = 1
+
         fig, axs = plt.subplots(1,int((L-W)/step)+1, figsize=(25, 10), \
             facecolor='w', edgecolor='k')
         fig.suptitle(self.measure_name+' dFC', fontsize=20, size=20)
@@ -83,7 +97,7 @@ class dFC:
             idx = int((l + (l+W))/2)
             axs[i].set_axis_off()
             im = axs[i].imshow(C[idx, :, :], interpolation='nearest', aspect='equal', cmap='jet',    # 'viridis'
-                        vmin=0, vmax=1)
+                        vmin=V_MIN, vmax=V_MAX)
             axs[i].set_title('TR '+str(TRs[i]))
             i = i + 1
 
@@ -106,13 +120,13 @@ class dFC:
 
     def visualize_FCS(self, normalize=True, threshold=0.0, save_image=False, fig_name=None):
         
-        if self.FCS_ == []:
+        if self.FCS == []:
             return
 
         if normalize:
-            C = self.dFC_mat_normalize(C_t=self.FCS_, threshold=threshold)
+            C = self.dFC_mat_normalize(C_t=self.FCS, threshold=threshold)
         else:
-            C = self.FCS_
+            C = self.FCS
 
         fig, axs = plt.subplots(1,C.shape[0], figsize=(25, 10), facecolor='w', edgecolor='k')
         fig.suptitle(self.measure_name+' FCS', fontsize=20, size=20)
@@ -163,7 +177,11 @@ class dFC:
 
         if global_normalization:
 
-            # transform the whole dFC mat to [0, 1]
+            # transform the whole abs(dFC mat) to [0, 1] 
+
+            signs = np.sign(C_t_z)
+            C_t_z = np.abs(C_t_z)
+
             miN = list()
             for i in range(C_t_z.shape[0]):
                 slice = C_t_z[i,:,:]
@@ -180,18 +198,27 @@ class dFC:
 
             C_t_z = np.divide(C_t_z, np.max(maX))
 
+            C_t_z = np.multiply(C_t_z, (C_t_z>=threshold))
+            C_t_z = np.multiply(C_t_z, signs)
+
         else:
 
-            # transform each time slice to [0, 1]
+            # transform abs of each time slice to [0, 1]
+
+            signs = np.sign(C_t_z)
+            C_t_z = np.abs(C_t_z)
+            
             for i in range(C_t_z.shape[0]):
                 slice = C_t_z[i,:,:]
                 slice_non_diag = slice[np.where(~np.eye(slice.shape[0],dtype=bool))]
                 slice = slice - np.min(slice_non_diag)
                 slice_non_diag = slice[np.where(~np.eye(slice.shape[0],dtype=bool))]
                 slice = np.divide(slice, np.max(slice_non_diag))
-                slice = slice * (slice>=threshold)
+                slice = np.multiply(slice, (slice>=threshold))
 
                 C_t_z[i,:,:] = slice
+
+            C_t_z = np.multiply(C_t_z, signs)
 
         # removing self connections
         for i in range(C_t_z.shape[1]):
@@ -304,14 +331,14 @@ _ the problem with corr
 
 class SLIDING_WINDOW(dFC):
 
-    def __init__(self, method='pear_corr', W=88, n_overlap=0.5, tapered_window=True):
+    def __init__(self, sw_method='pear_corr', W=88, n_overlap=0.5, tapered_window=True):
 
-        assert method=='pear_corr' or method=='MI', \
-            "method not recognized. It must be either pear_corr \
+        assert sw_method=='pear_corr' or sw_method=='MI', \
+            "sw_method not recognized. It must be either pear_corr \
                 or MI."
 
         self.measure_name_ = 'Sliding Window'
-        self.method_ = method
+        self.sw_method_ = sw_method
         self.dFCM = DFCM()
         self.TPM = []
         self.FCS_ = []
@@ -321,11 +348,11 @@ class SLIDING_WINDOW(dFC):
     
     @property
     def measure_name(self):
-        return self.measure_name_ + '_' + self.method_
+        return self.measure_name_ + '_' + self.sw_method_
         
     @property
-    def method(self):
-        return self.method_
+    def sw_method(self):
+        return self.sw_method_
 
     def shan_entropy(self, c):
         c_normalized = c / float(np.sum(c))
@@ -357,7 +384,7 @@ class SLIDING_WINDOW(dFC):
                 X = time_series[i, :]
                 Y = time_series[j, :]
 
-                if self.method=='MI':
+                if self.sw_method=='MI':
                     C[j, i] = self.calc_MI(X, Y)
                 else:
                     C[j, i] = np.corrcoef(X, Y)[0, 1]

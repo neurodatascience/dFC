@@ -13,7 +13,9 @@ os.environ["OMP_NUM_THREADS"] = '64'
 DATA_type = 'real' # 'real' or 'simulated'
 
 n_overlap = 1
-output_root = '../../../../Results/methods_implementation/'
+W_sw = 44 # in seconds
+
+output_root = '../../../../RESULTs/methods_implementation/'
 if DATA_type=='simulated':
     data_root = '../../../../DATA/TVB data/'
 else:
@@ -94,12 +96,13 @@ if DATA_type=='simulated':
 
 hmm_cont = HMM_CONT()
 windowless = WINDOWLESS(n_states=5)
-sw = SLIDING_WINDOW(method='MI', W=int(44*BOLD.Fs), n_overlap=n_overlap)
+sw_pc = SLIDING_WINDOW(sw_method='pear_corr', W=int(W_sw*BOLD.Fs), n_overlap=n_overlap)
+sw_mi = SLIDING_WINDOW(sw_method='MI', W=int(W_sw*BOLD.Fs), n_overlap=n_overlap)
 time_freq_cwt = TIME_FREQ(method='CWT_mag')
 time_freq_cwt_r = TIME_FREQ(method='CWT_phase_r')
 time_freq_wtc = TIME_FREQ(method='WTC')
-swc = SLIDING_WINDOW_CLUSTR(sw_method='MI', W=int(44*BOLD.Fs), n_overlap=n_overlap)
-hmm_disc = HMM_DISC(sw_method='MI', W=int(44*BOLD.Fs), n_overlap=n_overlap)
+swc = SLIDING_WINDOW_CLUSTR(sw_method='MI', W=int(W_sw*BOLD.Fs), n_overlap=n_overlap)
+hmm_disc = HMM_DISC(sw_method='MI', W=int(W_sw*BOLD.Fs), n_overlap=n_overlap)
 
 
 interval = list(range(200))
@@ -108,7 +111,7 @@ BOLD.visualize(interval=interval, save_image=True, fig_name=output_root+'BOLD_si
 
 BOLD.truncate(start_point=None, end_point=None)    #10000
 
-MEASURES = [hmm_cont] #[hmm_cont, windowless, sw, time_freq_cwt, time_freq_cwt_r, \
+MEASURES = [hmm_cont] #[hmm_cont, windowless, sw_pc, sw_mi, time_freq_cwt, time_freq_cwt_r, \
                                                 #   time_freq_wtc, swc, hmm_disc]
 
 tic = time.time()
