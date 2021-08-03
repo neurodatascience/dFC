@@ -732,7 +732,7 @@ class HMM_DISC(dFC):
 
         self.FCS_ = np.zeros((self.n_hid_states, self.n_regions, self.n_regions))
         for i in range(self.n_hid_states):
-            self.FCS_[i,:,:] = np.mean(self.FCC_.get_dFC_mat(TRs=np.squeeze(np.argwhere(self.Z==i))), axis=0)  # III
+            self.FCS_[i,:,:] = np.mean(self.FCC_.get_dFC_mat(TRs=self.FCC_.TR_array[np.squeeze(np.argwhere(self.Z==i))]), axis=0)  # III
 
         self.dFCM.add_FCP(FCPs=self.FCS_, FCP_idx=self.Z, TR_array=self.FCC_.TR_array)
 
@@ -945,6 +945,10 @@ class DFCM():
     def get_dFC_mat(self, TRs=None):
         # get dFC matrices corresponding to 
         # the specified TRs
+
+        if type(TRs) is np.int32 or type(TRs) is np.int64:
+            TRs = [TRs]
+
         idxs = list()
         for tr in TRs:
             idxs.append(np.argwhere(self.TR_array==tr)[0,0])
