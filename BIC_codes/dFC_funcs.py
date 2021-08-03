@@ -623,7 +623,8 @@ class SLIDING_WINDOW_CLUSTR(dFC):
         return self.sw_method_
 
     def set_sliding_window(self, sliding_window=None):
-        self.sliding_window = sliding_window
+        if sliding_window.sw_method==self.sw_method:
+            self.sliding_window = sliding_window
 
     def dFC_mat2vec(self, C_t):
         F = list()
@@ -654,7 +655,7 @@ class SLIDING_WINDOW_CLUSTR(dFC):
         self.n_time = time_series.n_time
 
         if self.sliding_window is None:
-            self.sliding_window = SLIDING_WINDOW(method=self.sw_method, W=self.W, n_overlap=self.n_overlap, tapered_window=self.tapered_window)
+            self.sliding_window = SLIDING_WINDOW(sw_method=self.sw_method, W=self.W, n_overlap=self.n_overlap, tapered_window=self.tapered_window)
             self.sliding_window.calc(time_series=time_series)
         
         self.dFCM_raw = self.sliding_window.dFCM
@@ -705,7 +706,8 @@ class HMM_DISC(dFC):
         return self.sw_method_
 
     def set_swc(self, swc=None):
-        self.swc = swc
+        if swc.sw_method==self.sw_method:
+            self.swc = swc
 
     def calc(self, time_series=None):
         
