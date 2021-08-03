@@ -60,7 +60,8 @@ class dFC:
     def visualize_states(self):
         pass
 
-    def visualize_dFC(self, TRs=None, W=1, n_overlap=1, normalize=True, threshold=0.0, save_image=False, fig_name=None):
+    def visualize_dFC(self, TRs=None, W=1, n_overlap=1, normalize=True, \
+        threshold=0.0, save_image=False, fig_name=None, fix_lim=True):
 
         # W = 1 and n_overlap = 1 -> normal dFC visualization
 
@@ -86,6 +87,10 @@ class dFC:
         else:
             V_MIN = 0
             V_MAX = 1
+
+        if not fix_lim:
+            V_MAX = np.max(C)
+            V_MIN = np.min(C)
 
         fig, axs = plt.subplots(1,int((L-W)/step)+1, figsize=(25, 10), \
             facecolor='w', edgecolor='k')
@@ -134,7 +139,8 @@ class dFC:
         axs = axs.ravel()
 
         for i, c in enumerate(C):
-            axs[i].imshow(c, interpolation='nearest', aspect='equal', cmap='jet')
+            axs[i].imshow(c, interpolation='nearest', aspect='equal', cmap='jet',\
+                vmin=0, vmax=1)
             # axs[i].colorbar(shrink=0.8)
             axs[i].set_title('FCS '+str(i+1))
 
@@ -171,6 +177,7 @@ class dFC:
 
     def dFC_mat_normalize(self, C_t, global_normalization=True, threshold=0.0):
 
+        # threshold is ratio of connections wanted to be zero
         C_t_z = deepcopy(C_t)
         if len(C_t_z.shape)<3:
             C_t_z = np.expand_dims(C_t_z, axis=0)
@@ -198,7 +205,11 @@ class dFC:
 
             C_t_z = np.divide(C_t_z, np.max(maX))
 
-            C_t_z = np.multiply(C_t_z, (C_t_z>=threshold))
+            # thresholding
+            d = deepcopy(np.ravel(C_t_z))
+            d.sort()
+            new_threshold = d[int(threshold*len(d))]
+            C_t_z = np.multiply(C_t_z, (C_t_z>=new_threshold))
             C_t_z = np.multiply(C_t_z, signs)
 
         else:
@@ -214,7 +225,12 @@ class dFC:
                 slice = slice - np.min(slice_non_diag)
                 slice_non_diag = slice[np.where(~np.eye(slice.shape[0],dtype=bool))]
                 slice = np.divide(slice, np.max(slice_non_diag))
-                slice = np.multiply(slice, (slice>=threshold))
+
+                # thresholding
+                d = deepcopy(np.ravel(slice))
+                d.sort()
+                new_threshold = d[int(threshold*len(d))]
+                slice = np.multiply(slice, (slice>=new_threshold))
 
                 C_t_z[i,:,:] = slice
 
