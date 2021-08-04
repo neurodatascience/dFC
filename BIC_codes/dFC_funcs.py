@@ -288,7 +288,7 @@ class HMM_CONT(dFC):
         self.pi = self.hmm_model.startprob_
 
         self.dFCM.add_FCP(FCPs=self.FCS_, FCP_idx=self.Z)
-        return
+        return self
 
 ################################## Windowless ##################################
 
@@ -333,7 +333,7 @@ class WINDOWLESS(dFC):
         for i in range(self.n_time):
             self.Z.append(np.argwhere(self.gamma[i, :] != 0)[0,0])
         self.dFCM.add_FCP(FCPs=self.FCS_, FCP_idx=self.Z)
-        return 
+        return self
 
 
 ################################# Sliding-Window #################################
@@ -446,7 +446,7 @@ class SLIDING_WINDOW(dFC):
 
         # self.dFC_mat = self.dFC_mat_normalize(self.dFC_mat)
 
-        return 
+        return self
 
     
 ################################# Time-Frequency #################################
@@ -590,7 +590,7 @@ class TIME_FREQ(dFC):
                 
 
         self.dFCM.add_FCP(FCPs=WT)
-        return 
+        return self
 
 ########################### Sliding_Window + Clustering ###########################
 
@@ -670,7 +670,7 @@ class SLIDING_WINDOW_CLUSTR(dFC):
         self.FCS_ = self.dFC_vec2mat(self.F_cent, N=self.n_regions)
         self.dFCM.add_FCP(FCPs=self.FCS_, FCP_idx=self.Z, TR_array=self.dFCM_raw.TR_array)
 
-        return 
+        return self
 
 ################################# HMM Discrete #################################
 
@@ -736,7 +736,7 @@ class HMM_DISC(dFC):
 
         self.dFCM.add_FCP(FCPs=self.FCS_, FCP_idx=self.Z, TR_array=self.FCC_.TR_array)
 
-        return 
+        return self
     
 ###################################################################################
 
