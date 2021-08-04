@@ -10,6 +10,9 @@ import numpy as np
 from scipy import signal
 from copy import deepcopy
 import matplotlib.pyplot as plt
+from pyclustering import kmeans, distance_metric, type_metric
+from pyclustering.cluster.kmeans import kmeans
+from pyclustering.cluster.center_initializer import kmeans_plusplus_initializer
 
 ################################# Parameters ####################################
 
@@ -364,7 +367,7 @@ class SLIDING_WINDOW(dFC):
     
     @property
     def measure_name(self):
-        return self.measure_name_ + '_' + self.sw_method_
+        return self.measure_name_ + '_' + self.sw_method
         
     @property
     def sw_method(self):
@@ -521,9 +524,14 @@ class TIME_FREQ(dFC):
     @property
     def coi_correction(self):
         return self.coi_correction_
+
+    @property
+    def method(self):
+        return self.method_
+
     @property
     def measure_name(self):
-        return self.measure_name_ + '_' + self.method_
+        return self.measure_name_ + '_' + self.method
 
     def coi_correct(self, X, coi, freqs):
         # correct the edge effect in matrix X = [freqs, time] using coi
@@ -607,7 +615,7 @@ from sklearn.cluster import KMeans
 class SLIDING_WINDOW_CLUSTR(dFC):
 
     def __init__(self, sw_method='pear_corr', sliding_window=None, n_states=12, W=88, n_overlap=0.5, tapered_window=True):
-        self.measure_name = 'Sliding Window + Clustering'
+        self.measure_name_ = 'SlidingWindow+Clustering'
         self.dFCM = DFCM()
         self.TPM = []
         self.FCS_ = []
@@ -621,6 +629,10 @@ class SLIDING_WINDOW_CLUSTR(dFC):
     @property
     def sw_method(self):
         return self.sw_method_
+
+    @property
+    def measure_name(self):
+        return self.measure_name_ + '_' + self.sw_method
 
     def set_sliding_window(self, sliding_window=None):
         if sliding_window.sw_method==self.sw_method:
@@ -655,17 +667,31 @@ class SLIDING_WINDOW_CLUSTR(dFC):
         self.n_time = time_series.n_time
 
         if self.sliding_window is None:
-            self.sliding_window = SLIDING_WINDOW(sw_method=self.sw_method, W=self.W, n_overlap=self.n_overlap, tapered_window=self.tapered_window)
+            self.sliding_window = SLIDING_WINDOW(sw_method=self.sw_method, \
+                W=self.W, n_overlap=self.n_overlap, tapered_window=self.tapered_window)
             self.sliding_window.calc(time_series=time_series)
         
         self.dFCM_raw = self.sliding_window.dFCM
 
         self.F = self.dFC_mat2vec(self.dFCM_raw.get_dFC_mat(TRs=self.dFCM_raw.TR_array))
 
-        self.kmeans_ = KMeans(n_clusters=self.n_states).fit(self.F)
+        ########### Clustering ##############
+        # Prepare initial centers using K-Means++ method.
+        initial_centers = kmeans_plusplus_initializer(self.F, self.n_states).initialize()
+        # create metric that will be used for clustering
+        manhattan_metric = distance_metric(type_metric.MANHATTAN)
+        # Create instance of K-Means algorithm with prepared centers.
+        self.kmeans_ = kmeans(self.F, initial_centers, metric=manhattan_metric)
+        # Run cluster analysis and obtain results.
+        self.kmeans_.process()
+        self.Z = self.kmeans_.get_clusters()
+        self.F_cent = self.kmeans_.get_centers()
 
-        self.Z = self.kmeans_.predict(self.F)
-        self.F_cent = self.kmeans_.cluster_centers_
+        # using scikit_learn
+        # self.kmeans_ = KMeans(n_clusters=self.n_states).fit(self.F)
+
+        # self.Z = self.kmeans_.predict(self.F)
+        # self.F_cent = self.kmeans_.cluster_centers_
 
         self.FCS_ = self.dFC_vec2mat(self.F_cent, N=self.n_regions)
         self.dFCM.add_FCP(FCPs=self.FCS_, FCP_idx=self.Z, TR_array=self.dFCM_raw.TR_array)
@@ -689,7 +715,7 @@ from hmmlearn import hmm
 class HMM_DISC(dFC):
 
     def __init__(self, sw_method='pear_corr', swc=None, n_states=12, n_hid_states=6, W=88, n_overlap=0.5, tapered_window=True):
-        self.measure_name = 'Discrete HMM'
+        self.measure_name_ = 'DiscreteHMM'
         self.dFCM = DFCM()
         self.TPM = []
         self.FCS_ = []
@@ -704,6 +730,10 @@ class HMM_DISC(dFC):
     @property
     def sw_method(self):
         return self.sw_method_
+
+    @property
+    def measure_name(self):
+        return self.measure_name_ + '_' + self.sw_method
 
     def set_swc(self, swc=None):
         if swc.sw_method==self.sw_method:
