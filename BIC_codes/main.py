@@ -99,6 +99,7 @@ hmm_cont = HMM_CONT()
 windowless = WINDOWLESS(n_states=5)
 sw_pc = SLIDING_WINDOW(sw_method='pear_corr', W=int(W_sw*BOLD.Fs), n_overlap=n_overlap)
 sw_mi = SLIDING_WINDOW(sw_method='MI', W=int(W_sw*BOLD.Fs), n_overlap=n_overlap)
+sw_gLasso = SLIDING_WINDOW(sw_method='GraphLasso', W=int(W_sw*BOLD.Fs), n_overlap=n_overlap)
 time_freq_cwt = TIME_FREQ(method='CWT_mag')
 time_freq_cwt_r = TIME_FREQ(method='CWT_phase_r')
 time_freq_wtc = TIME_FREQ(method='WTC')
@@ -114,7 +115,7 @@ BOLD.visualize(interval=interval, save_image=True, fig_name=output_root+'BOLD_si
 
 BOLD.truncate(start_point=None, end_point=1000)    #10000
 
-MEASURES = [hmm_cont, windowless, sw_pc, sw_mi, time_freq_cwt, time_freq_cwt_r, \
+MEASURES = [hmm_cont, windowless, sw_pc, sw_mi, sw_gLasso, time_freq_cwt, time_freq_cwt_r, \
                             time_freq_wtc, swc_pc, swc_mi, hmm_disc_pc, hmm_disc_mi]
 
 tic = time.time()

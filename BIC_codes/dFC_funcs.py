@@ -13,6 +13,9 @@ import matplotlib.pyplot as plt
 from pyclustering.cluster.kmeans import kmeans
 from pyclustering.cluster.center_initializer import kmeans_plusplus_initializer
 from pyclustering.utils.metric import distance_metric, type_metric
+# import warnings
+
+# warnings.simplefilter('ignore')
 
 ################################# Parameters ####################################
 
@@ -348,13 +351,15 @@ todo:
 _ the problem with corr
 """
 
+from sklearn.covariance import GraphicalLassoCV
+
 class SLIDING_WINDOW(dFC):
 
     def __init__(self, sw_method='pear_corr', W=88, n_overlap=0.5, tapered_window=True):
 
-        assert sw_method=='pear_corr' or sw_method=='MI', \
-            "sw_method not recognized. It must be either pear_corr \
-                or MI."
+        assert sw_method=='pear_corr' or sw_method=='MI' or sw_method=='GraphLasso', \
+            "sw_method not recognized. It must be either pear_corr, \
+                MI, or GraphLasso."
 
         self.measure_name_ = 'Sliding Window'
         self.sw_method_ = sw_method
@@ -396,21 +401,26 @@ class SLIDING_WINDOW(dFC):
 
     def FC(self, time_series):
     
-        C = np.zeros((time_series.shape[0], time_series.shape[0]))
-        for i in range(time_series.shape[0]):
-            for j in range(i, time_series.shape[0]):
-                
-                X = time_series[i, :]
-                Y = time_series[j, :]
+        if self.sw_method=='GraphLasso':
+            model = GraphicalLassoCV()
+            model.fit(time_series.T)
+            C = model.covariance_
+        else:
+            C = np.zeros((time_series.shape[0], time_series.shape[0]))
+            for i in range(time_series.shape[0]):
+                for j in range(i, time_series.shape[0]):
+                    
+                    X = time_series[i, :]
+                    Y = time_series[j, :]
 
-                if self.sw_method=='MI':
-                    ########### Mutual Information ##############
-                    C[j, i] = self.calc_MI(X, Y)
-                else:
-                    ########### Pearson Correlation ##############
-                    C[j, i] = np.corrcoef(X, Y)[0, 1]
+                    if self.sw_method=='MI':
+                        ########### Mutual Information ##############
+                        C[j, i] = self.calc_MI(X, Y)
+                    else:
+                        ########### Pearson Correlation ##############
+                        C[j, i] = np.corrcoef(X, Y)[0, 1]
 
-                C[i, j] = C[j, i]   
+                    C[i, j] = C[j, i]   
                 
         return C
 
@@ -764,7 +774,9 @@ class HMM_DISC(dFC):
         self.n_time = time_series.n_time
 
         if self.swc is None:
-            self.swc = SLIDING_WINDOW_CLUSTR(sw_method=self.sw_method, n_states=self.n_states, W=self.W, n_overlap=self.n_overlap, tapered_window=self.tapered_window)
+            self.swc = SLIDING_WINDOW_CLUSTR(sw_method=self.sw_method, \
+                n_states=self.n_states, W=self.W, n_overlap=self.n_overlap, \
+                    tapered_window=self.tapered_window)
             self.swc.calc(time_series=time_series)
         
         self.FCC_ = self.swc.dFCM
@@ -778,7 +790,9 @@ class HMM_DISC(dFC):
 
         self.FCS_ = np.zeros((self.n_hid_states, self.n_regions, self.n_regions))
         for i in range(self.n_hid_states):
-            self.FCS_[i,:,:] = np.mean(self.FCC_.get_dFC_mat(TRs=self.FCC_.TR_array[np.squeeze(np.argwhere(self.Z==i))]), axis=0)  # III
+            self.FCS_[i,:,:] = np.mean(self.FCC_.get_dFC_mat(\
+                TRs=self.FCC_.TR_array[np.squeeze(np.argwhere(self.Z==i))]\
+                    ), axis=0)  # III
 
         self.dFCM.add_FCP(FCPs=self.FCS_, FCP_idx=self.Z, TR_array=self.FCC_.TR_array)
 
