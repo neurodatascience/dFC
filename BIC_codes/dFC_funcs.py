@@ -10,9 +10,9 @@ import numpy as np
 from scipy import signal
 from copy import deepcopy
 import matplotlib.pyplot as plt
-from pyclustering import kmeans, distance_metric, type_metric
 from pyclustering.cluster.kmeans import kmeans
 from pyclustering.cluster.center_initializer import kmeans_plusplus_initializer
+from pyclustering.utils.metric import distance_metric, type_metric
 
 ################################# Parameters ####################################
 
@@ -404,8 +404,10 @@ class SLIDING_WINDOW(dFC):
                 Y = time_series[j, :]
 
                 if self.sw_method=='MI':
+                    ########### Mutual Information ##############
                     C[j, i] = self.calc_MI(X, Y)
                 else:
+                    ########### Pearson Correlation ##############
                     C[j, i] = np.corrcoef(X, Y)[0, 1]
 
                 C[i, j] = C[j, i]   
@@ -422,11 +424,11 @@ class SLIDING_WINDOW(dFC):
         C = DFCM()
         for l in range(0, L-W+1, step):
 
-            # creating a rectangel window
+            ######### creating a rectangel window ############
             window = np.zeros((time_series.shape[1]))
             window[l:l+W] = 1
             
-            # tapering the window
+            ########### tapering the window ##############
             if tapered_window:
                 window = signal.convolve(window, window_taper, mode='same') / sum(window_taper)
 
@@ -604,8 +606,9 @@ class TIME_FREQ(dFC):
 
 """
 - We used a tapered window as in Allen et al., created by convolving a rectangle (width = 22 TRs = 44s) 
-  with a Gaussian (σ = 3 TRs) and slid in steps of 1 TR, resulting in W= 126 windows.
+  with a Gaussian (σ = 3 TRs) and slid in steps of 1 TR, resulting in W= 126 windows (Allen et al., 2014).
 - can use the results from SW
+- Kmeans Clustering is repeated 500 times to escape local minima (Allen et al., 2014)
 
 todo:
 
@@ -614,8 +617,15 @@ from sklearn.cluster import KMeans
 
 class SLIDING_WINDOW_CLUSTR(dFC):
 
-    def __init__(self, sw_method='pear_corr', sliding_window=None, n_states=12, W=88, n_overlap=0.5, tapered_window=True):
+    def __init__(self, sw_method='pear_corr', sliding_window=None, n_states=12, W=88, \
+        n_overlap=0.5, tapered_window=True, clstr_distance='euclidean'):
+
+        assert clstr_distance=='euclidean' or clstr_distance=='manhattan', \
+            "Clustering distance not recognized. It must be either \
+                euclidean or manhattan."
+    
         self.measure_name_ = 'SlidingWindow+Clustering'
+        self.clstr_distance = clstr_distance
         self.dFCM = DFCM()
         self.TPM = []
         self.FCS_ = []
@@ -657,6 +667,12 @@ class SLIDING_WINDOW_CLUSTR(dFC):
             C.append(K)
         C = np.array(C)
         return C
+
+    def clusters_lst2idx(self, clusters):
+        Z = np.zeros((self.F.shape[0],))
+        for i, cluster in enumerate(clusters):
+            for sample in cluster:
+                Z[sample] = i
     
     def calc(self, time_series=None):
         
@@ -675,23 +691,23 @@ class SLIDING_WINDOW_CLUSTR(dFC):
 
         self.F = self.dFC_mat2vec(self.dFCM_raw.get_dFC_mat(TRs=self.dFCM_raw.TR_array))
 
-        ########### Clustering ##############
-        # Prepare initial centers using K-Means++ method.
-        initial_centers = kmeans_plusplus_initializer(self.F, self.n_states).initialize()
-        # create metric that will be used for clustering
-        manhattan_metric = distance_metric(type_metric.MANHATTAN)
-        # Create instance of K-Means algorithm with prepared centers.
-        self.kmeans_ = kmeans(self.F, initial_centers, metric=manhattan_metric)
-        # Run cluster analysis and obtain results.
-        self.kmeans_.process()
-        self.Z = self.kmeans_.get_clusters()
-        self.F_cent = self.kmeans_.get_centers()
-
-        # using scikit_learn
-        # self.kmeans_ = KMeans(n_clusters=self.n_states).fit(self.F)
-
-        # self.Z = self.kmeans_.predict(self.F)
-        # self.F_cent = self.kmeans_.cluster_centers_
+        if self.clstr_distance=='manhattan':
+            ########### Manhattan Clustering ##############
+            # Prepare initial centers using K-Means++ method.
+            initial_centers = kmeans_plusplus_initializer(self.F, self.n_states).initialize()
+            # create metric that will be used for clustering
+            manhattan_metric = distance_metric(type_metric.MANHATTAN)
+            # Create instance of K-Means algorithm with prepared centers.
+            self.kmeans_ = kmeans(self.F, initial_centers, metric=manhattan_metric)
+            # Run cluster analysis and obtain results.
+            self.kmeans_.process()
+            self.Z = self.clusters_lst2idx(self.kmeans_.get_clusters())
+            self.F_cent = np.array(self.kmeans_.get_centers())
+        else:
+            ########### Euclidean Clustering ##############
+            self.kmeans_ = KMeans(n_clusters=self.n_states, n_init=500).fit(self.F)
+            self.Z = self.kmeans_.predict(self.F)
+            self.F_cent = self.kmeans_.cluster_centers_
 
         self.FCS_ = self.dFC_vec2mat(self.F_cent, N=self.n_regions)
         self.dFCM.add_FCP(FCPs=self.FCS_, FCP_idx=self.Z, TR_array=self.dFCM_raw.TR_array)
