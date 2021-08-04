@@ -3,6 +3,7 @@ import numpy as np
 import time
 import hdf5storage
 import scipy.io as sio
+from joblib import Parallel, delayed
 import os
 os.environ["MKL_NUM_THREADS"] = '64'
 os.environ["NUMEXPR_NUM_THREADS"] = '64'
@@ -12,7 +13,7 @@ os.environ["OMP_NUM_THREADS"] = '64'
 
 DATA_type = 'real' # 'real' or 'simulated'
 
-n_overlap = 1
+n_overlap = 0.5
 W_sw = 44 # in seconds
 
 output_root = '../../../../RESULTs/methods_implementation/'
@@ -101,43 +102,40 @@ sw_mi = SLIDING_WINDOW(sw_method='MI', W=int(W_sw*BOLD.Fs), n_overlap=n_overlap)
 time_freq_cwt = TIME_FREQ(method='CWT_mag')
 time_freq_cwt_r = TIME_FREQ(method='CWT_phase_r')
 time_freq_wtc = TIME_FREQ(method='WTC')
-swc = SLIDING_WINDOW_CLUSTR(sw_method='MI', W=int(W_sw*BOLD.Fs), n_overlap=n_overlap)
-hmm_disc = HMM_DISC(sw_method='MI', W=int(W_sw*BOLD.Fs), n_overlap=n_overlap)
+swc_pc = SLIDING_WINDOW_CLUSTR(sw_method='pear_corr', W=int(W_sw*BOLD.Fs), n_overlap=n_overlap)
+swc_mi = SLIDING_WINDOW_CLUSTR(sw_method='MI', W=int(W_sw*BOLD.Fs), n_overlap=n_overlap)
+hmm_disc_pc = HMM_DISC(sw_method='pear_corr', W=int(W_sw*BOLD.Fs), n_overlap=n_overlap)
+hmm_disc_mi = HMM_DISC(sw_method='MI', W=int(W_sw*BOLD.Fs), n_overlap=n_overlap)
 
 
 interval = list(range(200))
 
 BOLD.visualize(interval=interval, save_image=True, fig_name=output_root+'BOLD_signal')
 
-BOLD.truncate(start_point=None, end_point=None)    #10000
+BOLD.truncate(start_point=None, end_point=1000)    #10000
 
-MEASURES = [hmm_cont] #[hmm_cont, windowless, sw_pc, sw_mi, time_freq_cwt, time_freq_cwt_r, \
-                                                #   time_freq_wtc, swc, hmm_disc]
+MEASURES = [hmm_cont, windowless, sw_pc, sw_mi, time_freq_cwt, time_freq_cwt_r, \
+                            time_freq_wtc, swc_pc, swc_mi, hmm_disc_pc, hmm_disc_mi]
 
 tic = time.time()
 print('Measurement Started ...')
 
-for measure in MEASURES:  
-    
-    measure.calc(time_series=BOLD)
-
-    if type(measure) is SLIDING_WINDOW:
-        swc.set_sliding_window(sliding_window=measure)
-
-    if type(measure) is SLIDING_WINDOW_CLUSTR:
-        hmm_disc.set_swc(swc=measure)
-
-    measure.visualize_FCS(normalize=True, threshold=0.0, save_image=True, \
-        fig_name= output_root + 'FCS/' + measure.measure_name + '_FCS')
-    # measure.visualize_TPM(normalize=True)
+MEASURES_NEW = Parallel(n_jobs=-1, verbose=1, backend='loky')(delayed(measure.calc)(time_series=BOLD) for measure in MEASURES)
 
 print('Measurement required %0.3f seconds.' % (time.time() - tic, ))
 
 ################################# Visualize dFC mats #################################
 
-TRs = TR_intersection(MEASURES)
-TRs = TRs[200:300:10]
+for measure in MEASURES_NEW:  
 
-for measure in MEASURES:
+    measure.visualize_FCS(normalize=True, threshold=0.0, save_image=True, \
+        fig_name= output_root + 'FCS/' + measure.measure_name + '_FCS')
+    # measure.visualize_TPM(normalize=True)
+
+TRs = TR_intersection(MEASURES_NEW)
+# TRs = TRs[200:300:10]
+TRs = TRs[:10]
+
+for measure in MEASURES_NEW:
     measure.visualize_dFC(TRs=TRs, W=1, n_overlap=1, normalize=True, threshold=0.0, save_image=True, \
         fig_name= output_root+'dFC/'+measure.measure_name+'_dFC')
