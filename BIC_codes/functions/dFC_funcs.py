@@ -89,6 +89,22 @@ class DFC_ANALYZER:
         plt.suptitle('Correlation of measured dFC')
         plt.show()
 
+    def visualize_dFC_mats(self, TR_idx=None):
+
+        TRs = TR_intersection(self.MEASURES_lst)
+        if not TR_idx is None:
+            assert not np.any(np.array(TR_idx)>=len(TRs)), \
+                'TR_idx out of range.'
+            TRs = [TRs[i] for i in TR_idx]
+
+        for measure in self.MEASURES_lst:
+            measure.visualize_dFC(TRs=TRs, normalize=True, threshold=0.0, fix_lim=True)
+
+    def visualize_FCS(self, normalize=True, threshold=0.0):
+        for measure in self.MEASURES_lst:  
+            measure.visualize_FCS(normalize=normalize, threshold=threshold) # normalize?
+            # measure.visualize_TPM(normalize=normalize)
+
 
 ################################# dFC class ####################################
 
@@ -121,10 +137,8 @@ class dFC:
     def visualize_states(self):
         pass
 
-    def visualize_dFC(self, TRs=None, W=1, n_overlap=1, normalize=True, \
+    def visualize_dFC(self, TRs=None, normalize=True, \
         threshold=0.0, save_image=False, fig_name=None, fix_lim=True):
-
-        # W = 1 and n_overlap = 1 -> normal dFC visualization
 
         if TRs is None:
             TRs = list(range(self.dFCM.n_time))
@@ -134,11 +148,6 @@ class dFC:
                 global_normalization=True, threshold=threshold)
         else:
             C = self.dFCM.get_dFC_mat(TRs=TRs)
-
-        L = C.shape[0]
-        step = int((1-n_overlap)*W)
-        if step == 0:
-            step = 1
 
         C = np.abs(C) # ?????? should we do this?
 
@@ -153,19 +162,16 @@ class dFC:
             V_MAX = np.max(C)
             V_MIN = np.min(C)
 
-        fig, axs = plt.subplots(1,int((L-W)/step)+1, figsize=(25, 10), \
+        fig, axs = plt.subplots(1, C.shape[0], figsize=(25, 10), \
             facecolor='w', edgecolor='k')
         fig.suptitle(self.measure_name+' dFC', fontsize=20, size=20)
         axs = axs.ravel()
 
-        i=0
-        for l in range(0, L-W+1, step):
-            idx = int((l + (l+W))/2)
-            axs[i].set_axis_off()
-            im = axs[i].imshow(C[idx, :, :], interpolation='nearest', aspect='equal', cmap='jet',    # 'viridis'
+        for l in range(0, C.shape[0]):
+            axs[l].set_axis_off()
+            im = axs[l].imshow(C[l, :, :], interpolation='nearest', aspect='equal', cmap='jet',    # 'viridis'
                         vmin=V_MIN, vmax=V_MAX)
-            axs[i].set_title('TR '+str(TRs[i]))
-            i = i + 1
+            axs[l].set_title('TR '+str(TRs[l]))
 
         fig.subplots_adjust(bottom=0.1, top=1.5, left=0.1, right=0.9,
                             wspace=0.02, hspace=0.02)
