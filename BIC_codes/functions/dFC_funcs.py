@@ -683,6 +683,7 @@ class SLIDING_WINDOW_CLUSTR(dFC):
         for i, cluster in enumerate(clusters):
             for sample in cluster:
                 Z[sample] = i
+        return Z.astype(int)
     
     def calc(self, time_series=None):
         
