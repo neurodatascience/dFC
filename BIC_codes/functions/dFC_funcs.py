@@ -33,6 +33,8 @@ def TR_intersection(measures_lst): # input is a list of dFC Measure objs
         TRs_lst_new = intersection(TRs_lst_old, measure.dFCM.TR_array)
         TRs_lst_old = TRs_lst_new
     TRs_lst_old.sort()
+    if len(TRs_lst_old)==0:
+        print('No TR intersection.')
     return TRs_lst_old
 
 ################################# dFC class ####################################
@@ -1009,7 +1011,7 @@ class DFCM():
         # get dFC matrices corresponding to 
         # the specified TRs
 
-        if type(TRs) is np.int32 or type(TRs) is np.int64:
+        if type(TRs) is np.int32 or type(TRs) is np.int64 or type(TRs) is int:
             TRs = [TRs]
 
         idxs = list()
@@ -1057,15 +1059,14 @@ class DFCM():
         assert FCPs.shape[1] == FCPs.shape[2], \
                 "FC matrices must be square."
 
+        if TR_array is None:
+            TR_array = np.arange(start=self.n_time+1, stop=self.n_time+len(FCP_idx)+1, step=1)
+
         if self.FCPs_ is None:
             self.FCPs_ = FCPs
             self.FCP_idx_ = FCP_idx
             self.n_regions_ = self.FCPs.shape[1]
             self.n_time_ = self.FCP_idx.shape[0]
-
-            if TR_array is None:
-                TR_array = np.arange(start=self.n_time+1, stop=self.n_time+len(FCP_idx)+1, step=1)
-
             self.TR_array_ = TR_array
         else:
             # test this part
@@ -1075,10 +1076,6 @@ class DFCM():
             self.FCPs_ = np.concatenate((self.FCPs_, FCPs), axis=0)
             self.FCP_idx_ = np.concatenate((self.FCP_idx_, FCP_idx), axis=0)
             self.n_time_ = self.FCP_idx.shape[0]
-
-            if TR_array is None:
-                TR_array = np.arange(start=self.n_time+1, stop=self.n_time+len(FCP_idx)+1, step=1)
-
             self.TR_array_ = np.concatenate((self.TR_array, TR_array))
 
 
