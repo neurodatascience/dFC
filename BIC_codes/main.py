@@ -1,4 +1,4 @@
-from dFC_funcs import *
+from functions.dFC_funcs import *
 import numpy as np
 import time
 import hdf5storage
@@ -103,11 +103,12 @@ sw_gLasso = SLIDING_WINDOW(sw_method='GraphLasso', W=int(W_sw*BOLD.Fs), n_overla
 time_freq_cwt = TIME_FREQ(method='CWT_mag')
 time_freq_cwt_r = TIME_FREQ(method='CWT_phase_r')
 time_freq_wtc = TIME_FREQ(method='WTC')
-swc_gLasso = SLIDING_WINDOW_CLUSTR(sw_method='GraphLasso', W=int(W_sw*BOLD.Fs), n_overlap=n_overlap)
+swc_pc = SLIDING_WINDOW_CLUSTR(sw_method='pear_corr', W=int(W_sw*BOLD.Fs), n_overlap=n_overlap)
 swc_mi = SLIDING_WINDOW_CLUSTR(sw_method='MI', W=int(W_sw*BOLD.Fs), n_overlap=n_overlap)
-hmm_disc_gLasso = HMM_DISC(sw_method='GraphLasso', W=int(W_sw*BOLD.Fs), n_overlap=n_overlap)
+swc_gLasso = SLIDING_WINDOW_CLUSTR(sw_method='GraphLasso', W=int(W_sw*BOLD.Fs), n_overlap=n_overlap)
+hmm_disc_pc = HMM_DISC(sw_method='pear_corr', W=int(W_sw*BOLD.Fs), n_overlap=n_overlap)
 hmm_disc_mi = HMM_DISC(sw_method='MI', W=int(W_sw*BOLD.Fs), n_overlap=n_overlap)
-
+hmm_disc_gLasso = HMM_DISC(sw_method='GraphLasso', W=int(W_sw*BOLD.Fs), n_overlap=n_overlap)
 
 interval = list(range(200))
 
@@ -115,11 +116,23 @@ BOLD.visualize(interval=interval, save_image=True, fig_name=output_root+'BOLD_si
 
 BOLD.truncate(start_point=None, end_point=None)    #10000
 
-# MEASURES = [hmm_cont, windowless, sw_pc, sw_mi, sw_gLasso, time_freq_cwt, time_freq_cwt_r, \
-#                             time_freq_wtc, swc_pc, swc_mi, hmm_disc_pc, hmm_disc_mi]
-
-MEASURES = [hmm_cont, windowless, sw_pc, sw_mi, sw_gLasso, \
-                            swc_gLasso, swc_mi, hmm_disc_gLasso, hmm_disc_mi]
+MEASURES = [
+    hmm_cont, \
+    windowless, \
+    sw_pc, \
+    sw_mi, \
+    sw_gLasso, \
+    time_freq_cwt, \
+    time_freq_cwt_r, \
+    time_freq_wtc, \
+    swc_pc, \
+    swc_mi, \
+    swc_gLasso, \
+    swc_mi, \
+    hmm_disc_pc,\
+    hmm_disc_gLasso, \
+    hmm_disc_mi \
+            ]
 
 tic = time.time()
 print('Measurement Started ...')

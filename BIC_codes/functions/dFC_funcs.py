@@ -974,7 +974,7 @@ class DFCM():
         self.FCP_idx_ = None
         self.TR_array_ = None
         self.n_regions_ = None
-        self.n_time_ = 0
+        self.n_time_ = -1
     
     @classmethod
     def from_numpy(cls, array=None):
@@ -1056,23 +1056,28 @@ class DFCM():
         assert FCPs.shape[1] == FCPs.shape[2], \
                 "FC matrices must be square."
 
-        if TR_array is None:
-            TR_array = np.arange(start=self.n_time+1, stop=self.n_time+len(FCP_idx)+1, step=1)
-
         if self.FCPs_ is None:
             self.FCPs_ = FCPs
             self.FCP_idx_ = FCP_idx
             self.n_regions_ = self.FCPs.shape[1]
             self.n_time_ = self.FCP_idx.shape[0]
+
+            if TR_array is None:
+                TR_array = np.arange(start=self.n_time+1, stop=self.n_time+len(FCP_idx)+1, step=1)
+
             self.TR_array_ = TR_array
         else:
             # test this part
             assert self.n_regions == FCPs.shape[1], \
-                "FCP region numbers missmatch."
+                "FCP region numbers mismatch."
             FCP_idx = FCP_idx + self.FCPs.shape[0]
             self.FCPs_ = np.concatenate((self.FCPs_, FCPs), axis=0)
             self.FCP_idx_ = np.concatenate((self.FCP_idx_, FCP_idx), axis=0)
             self.n_time_ = self.FCP_idx.shape[0]
+
+            if TR_array is None:
+                TR_array = np.arange(start=self.n_time+1, stop=self.n_time+len(FCP_idx)+1, step=1)
+
             self.TR_array_ = np.concatenate((self.TR_array, TR_array))
 
 
