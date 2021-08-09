@@ -37,6 +37,55 @@ def TR_intersection(measures_lst): # input is a list of dFC Measure objs
         print('No TR intersection.')
     return TRs_lst_old
 
+############################# dFC Analyzer class ################################
+
+class DFC_ANALYZER:
+
+    def __init__(self, MEASURES_lst):
+        self.analysis_name = ''
+        self.MEASURES_lst_ = MEASURES_lst
+
+    @property
+    def MEASURES_lst(self):
+        return self.MEASURES_lst_
+
+    def dFC_corr(self):
+        methods_corr = np.zeros((len(self.MEASURES_lst), len(self.MEASURES_lst)))
+        for i in range(len(self.MEASURES_lst)):
+            for j in range(i+1, len(self.MEASURES_lst)):
+
+                TRs = TR_intersection([self.MEASURES_lst[i], self.MEASURES_lst[j]])
+
+                dFCs = list()
+                dFCs.append(self.MEASURES_lst[i].dFCM.get_dFC_mat(TRs=TRs))
+                dFCs.append(self.MEASURES_lst[j].dFCM.get_dFC_mat(TRs=TRs))
+
+                dFCs = np.array(dFCs)
+                
+                corr = list()
+                for t in range(int(dFCs.shape[1]*0.1), int(dFCs.shape[1]*(1-0.1))):
+                    corr.append(np.corrcoef(dFCs[0,t,:,:].flatten(), dFCs[1,t,:,:].flatten())[0,1])
+                corr= np.array(corr)
+                methods_corr[i,j] = np.mean(corr)
+                methods_corr[j,i] = methods_corr[i,j] 
+        return methods_corr
+
+    def visualize_dFC_corr(self):
+
+        measure_list = list()
+        for measure in self.MEASURES_lst:
+            measure_list.append(measure.measure_name)
+        fig, ax = plt.subplots(figsize=(7, 7))
+        im = ax.imshow(self.dFC_corr(), interpolation='nearest', aspect='equal', cmap='jet')
+        ax.set_xticks(np.arange(len(measure_list)))
+        ax.set_yticks(np.arange(len(measure_list)))
+        ax.set_xticklabels(measure_list, rotation=90)
+        ax.set_yticklabels(measure_list)
+        cb=fig.colorbar(im, shrink=0.8)
+        plt.suptitle('Correlation of measured dFC')
+        plt.show()
+
+
 ################################# dFC class ####################################
 
 """
