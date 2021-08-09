@@ -628,7 +628,7 @@ from sklearn.cluster import KMeans
 class SLIDING_WINDOW_CLUSTR(dFC):
 
     def __init__(self, sw_method='pear_corr', sliding_window=None, n_states=12, W=88, \
-        n_overlap=0.5, tapered_window=True, clstr_distance='euclidean'):
+        n_overlap=0.5, tapered_window=True, clstr_distance='manhattan'):
 
         assert clstr_distance=='euclidean' or clstr_distance=='manhattan', \
             "Clustering distance not recognized. It must be either \
@@ -806,10 +806,15 @@ class HMM_DISC(dFC):
 
 todo:
 - select nodes for visualizer
+- default node list is chosen by arange !
 """
 
 class TIME_SERIES():
     def __init__(self, data=None, Fs=None, time_array=None, locs=None, nodes_info=None, TS_name=''):
+        
+        assert (not data is None) and (not Fs is None), \
+            "data and Fs args must be provided."
+
         self.data_ = data
         self.Fs_ = Fs
         self.TS_name_ = TS_name
@@ -882,8 +887,8 @@ class TIME_SERIES():
 
     def append_ts(self, new_time_series=None):
         # append new time series to existing ones
-        # truncate and node selection are not considered; the whole old time series will be concat to new one
-        # append_ts resets the truncate and node selection
+        # truncate is not considered, while node selection is; the whole old time series will be concat to new one
+        # append_ts resets the truncate but not the node selection
 
         assert self.n_regions_ == new_time_series.shape[0], \
             "Number of nodes mismatch."
@@ -924,10 +929,7 @@ class TIME_SERIES():
         if nodes_idx is None:
             self.nodes_selection_ = list(range(self.n_regions_))
         else:
-            self.nodes_selection_ = nodes_idx
-            
-
-        
+            self.nodes_selection_ = nodes_idx    
 
     def visualize(self, interval=None, save_image=False, fig_name=None):
 

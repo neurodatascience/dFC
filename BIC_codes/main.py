@@ -14,7 +14,7 @@ os.environ["OMP_NUM_THREADS"] = '64'
 DATA_type = 'real' # 'real' or 'simulated'
 
 n_overlap = 0.5
-W_sw = 44 # in seconds
+W_sw = 100 # in seconds, 44, choose even Ws!?
 
 output_root = '../../../../RESULTs/methods_implementation/'
 if DATA_type=='simulated':
@@ -103,9 +103,9 @@ sw_gLasso = SLIDING_WINDOW(sw_method='GraphLasso', W=int(W_sw*BOLD.Fs), n_overla
 time_freq_cwt = TIME_FREQ(method='CWT_mag')
 time_freq_cwt_r = TIME_FREQ(method='CWT_phase_r')
 time_freq_wtc = TIME_FREQ(method='WTC')
-swc_pc = SLIDING_WINDOW_CLUSTR(sw_method='pear_corr', W=int(W_sw*BOLD.Fs), n_overlap=n_overlap)
+swc_gLasso = SLIDING_WINDOW_CLUSTR(sw_method='GraphLasso', W=int(W_sw*BOLD.Fs), n_overlap=n_overlap)
 swc_mi = SLIDING_WINDOW_CLUSTR(sw_method='MI', W=int(W_sw*BOLD.Fs), n_overlap=n_overlap)
-hmm_disc_pc = HMM_DISC(sw_method='pear_corr', W=int(W_sw*BOLD.Fs), n_overlap=n_overlap)
+hmm_disc_gLasso = HMM_DISC(sw_method='GraphLasso', W=int(W_sw*BOLD.Fs), n_overlap=n_overlap)
 hmm_disc_mi = HMM_DISC(sw_method='MI', W=int(W_sw*BOLD.Fs), n_overlap=n_overlap)
 
 
@@ -113,10 +113,13 @@ interval = list(range(200))
 
 BOLD.visualize(interval=interval, save_image=True, fig_name=output_root+'BOLD_signal')
 
-BOLD.truncate(start_point=None, end_point=1000)    #10000
+BOLD.truncate(start_point=None, end_point=None)    #10000
 
-MEASURES = [hmm_cont, windowless, sw_pc, sw_mi, sw_gLasso, time_freq_cwt, time_freq_cwt_r, \
-                            time_freq_wtc, swc_pc, swc_mi, hmm_disc_pc, hmm_disc_mi]
+# MEASURES = [hmm_cont, windowless, sw_pc, sw_mi, sw_gLasso, time_freq_cwt, time_freq_cwt_r, \
+#                             time_freq_wtc, swc_pc, swc_mi, hmm_disc_pc, hmm_disc_mi]
+
+MEASURES = [hmm_cont, windowless, sw_pc, sw_mi, sw_gLasso, \
+                            swc_gLasso, swc_mi, hmm_disc_gLasso, hmm_disc_mi]
 
 tic = time.time()
 print('Measurement Started ...')
@@ -134,9 +137,13 @@ for measure in MEASURES_NEW:
     # measure.visualize_TPM(normalize=True)
 
 TRs = TR_intersection(MEASURES_NEW)
-# TRs = TRs[200:300:10]
-TRs = TRs[:10]
+TRs = TRs[200:300:10]
+# TRs = TRs[:10]
 
 for measure in MEASURES_NEW:
     measure.visualize_dFC(TRs=TRs, W=1, n_overlap=1, normalize=True, threshold=0.0, save_image=True, \
         fig_name= output_root+'dFC/'+measure.measure_name+'_dFC')
+
+
+################################# Methods dFC Corr MAT #################################
+
