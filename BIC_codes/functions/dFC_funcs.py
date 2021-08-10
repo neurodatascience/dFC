@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 from pyclustering.cluster.kmeans import kmeans
 from pyclustering.cluster.center_initializer import kmeans_plusplus_initializer
 from pyclustering.utils.metric import distance_metric, type_metric
+from joblib import Parallel, delayed
 # import warnings
 
 # warnings.simplefilter('ignore')
@@ -635,6 +636,39 @@ class TIME_FREQ(dFC):
         X_corrected = np.multiply(X, (coi>=periods))
         return X_corrected
 
+    def WT_dFC(self, Y1, Y2, Fs, J, s0, dj):
+        if self.method_=='CWT_mag' or self.method_=='CWT_phase_r' or self.method_=='CWT_phase_a':
+            # Cross Wavelet Transform
+            WT_xy, coi, freqs, _ = wavelet.xwt(Y1, Y2, dt=1/Fs, dj=dj, s0=s0, J=J, 
+                significance_level=0.95, wavelet='morlet', normalize=True)
+
+            if self.method_=='CWT_mag':
+                WT_xy_corrected = self.coi_correct(WT_xy, coi, freqs)
+                wt = np.abs(np.mean(WT_xy_corrected, axis=0))
+
+            if self.method_=='CWT_phase_r' or self.method_=='CWT_phase_a':
+                cosA = np.cos(np.angle(WT_xy))
+                sinA = np.sin(np.angle(WT_xy))
+
+                cosA_corrected = self.coi_correct(cosA, coi, freqs)
+                sinA_corrected = self.coi_correct(sinA, coi, freqs)
+
+                A = (cosA_corrected + sinA_corrected * 1j)
+
+                if self.method_=='CWT_phase_r':
+                    wt = np.abs(np.mean(A, axis=0))
+                else:
+                    wt = np.angle(np.mean(A, axis=0))
+        
+        if self.method_=='WTC':
+            # Wavelet Transform Coherence
+            WT_xy, _, coi, freqs, _ = wavelet.wct(Y1, Y2, dt=1/Fs, dj=dj, s0=s0, J=J, 
+                sig=False, significance_level=0.95, wavelet='morlet', normalize=True)
+            WT_xy_corrected = self.coi_correct(WT_xy, coi, freqs)
+            wt = np.abs(np.mean(WT_xy_corrected, axis=0))
+
+        return wt
+
     def calc(self, time_series=None):
         
         # params
@@ -650,42 +684,16 @@ class TIME_FREQ(dFC):
 
         WT = np.zeros((self.n_time, self.n_regions, self.n_regions))
         for i in range(self.n_regions):
-            for j in range(self.n_regions):
 
-                Y1 = time_series.data[i, :]
-                Y2 = time_series.data[j, :]
-
-                if self.method_=='CWT_mag' or self.method_=='CWT_phase_r' or self.method_=='CWT_phase_a':
-                    # Cross Wavelet Transform
-                    WT_xy, coi, freqs, _ = wavelet.xwt(Y1, Y2, dt=1/time_series.Fs, dj=dj, s0=s0, J=J, 
-                        significance_level=0.95, wavelet='morlet', normalize=True)
-
-                    if self.method_=='CWT_mag':
-                        WT_xy_corrected = self.coi_correct(WT_xy, coi, freqs)
-                        WT[:, i, j] = np.abs(np.mean(WT_xy_corrected, axis=0))
-
-                    if self.method_=='CWT_phase_r' or self.method_=='CWT_phase_a':
-                        cosA = np.cos(np.angle(WT_xy))
-                        sinA = np.sin(np.angle(WT_xy))
-
-                        cosA_corrected = self.coi_correct(cosA, coi, freqs)
-                        sinA_corrected = self.coi_correct(sinA, coi, freqs)
-
-                        A = (cosA_corrected + sinA_corrected * 1j)
-
-                        if self.method_=='CWT_phase_r':
-                            WT[:, i, j] = np.abs(np.mean(A, axis=0))
-                        else:
-                            WT[:, i, j] = np.angle(np.mean(A, axis=0))
-
-                if self.method_=='WTC':
-                    # Wavelet Transform Coherence
-                    WT_xy, _, coi, freqs, _ = wavelet.wct(Y1, Y2, dt=1/time_series.Fs, dj=dj, s0=s0, J=J, 
-                        sig=False, significance_level=0.95, wavelet='morlet', normalize=True)
-                    WT_xy_corrected = self.coi_correct(WT_xy, coi, freqs)
-                    WT[:, i, j] = np.abs(np.mean(WT_xy_corrected, axis=0))
-
-                
+            Q = Parallel(n_jobs=-1, verbose=0, backend='loky')( \
+                delayed(self.WT_dFC)( \
+                                    Y1=time_series.data[i, :], \
+                                    Y2=time_series.data[j, :], \
+                                    Fs=time_series.Fs, \
+                                    J=J, s0=s0, dj=dj) \
+                                    for j in range(self.n_regions) \
+                                                                )
+            WT[:, i, :] = np.array(Q).T
 
         self.dFCM.add_FCP(FCPs=WT)
         return self
