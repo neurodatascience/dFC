@@ -74,7 +74,7 @@ class DFC_ANALYZER:
                 methods_corr[j,i] = methods_corr[i,j] 
         return methods_corr
 
-    def visualize_dFC_corr(self):
+    def visualize_dFC_corr(self, save_image=False, fig_name=None):
 
         measure_list = list()
         for measure in self.MEASURES_lst:
@@ -87,9 +87,14 @@ class DFC_ANALYZER:
         ax.set_yticklabels(measure_list)
         cb=fig.colorbar(im, shrink=0.8)
         plt.suptitle('Correlation of measured dFC')
-        plt.show()
+        if save_image:
+            plt.savefig(fig_name + '.png', dpi=fig_dpi)  
+            plt.close()
+        else:
+            plt.show()
 
-    def visualize_dFC_mats(self, TR_idx=None):
+    def visualize_dFC_mats(self, TR_idx=None, normalize=True, threshold=0.0, \
+                            fix_lim=True, save_image=False, output_root=None):
 
         TRs = TR_intersection(self.MEASURES_lst)
         if not TR_idx is None:
@@ -98,12 +103,24 @@ class DFC_ANALYZER:
             TRs = [TRs[i] for i in TR_idx]
 
         for measure in self.MEASURES_lst:
-            measure.visualize_dFC(TRs=TRs, normalize=True, threshold=0.0, fix_lim=True)
+            if save_image:
+                measure.visualize_dFC(TRs=TRs, normalize=normalize, threshold=threshold, \
+                    fix_lim=fix_lim, \
+                    save_image=save_image, \
+                    fig_name= output_root+measure.measure_name+'_dFC')
+            else:
+                measure.visualize_dFC(TRs=TRs, normalize=normalize, threshold=threshold, fix_lim=fix_lim)
 
-    def visualize_FCS(self, normalize=True, threshold=0.0):
+    def visualize_FCS(self, normalize=True, threshold=0.0, save_image=False, output_root=None):
         for measure in self.MEASURES_lst:  
-            measure.visualize_FCS(normalize=normalize, threshold=threshold) # normalize?
-            # measure.visualize_TPM(normalize=normalize)
+            if save_image:
+                measure.visualize_FCS(normalize=normalize, threshold=threshold, save_image=True, \
+                    fig_name= output_root + measure.measure_name + '_FCS')
+                # measure.visualize_TPM(normalize=normalize)
+            else:
+                measure.visualize_FCS(normalize=normalize, threshold=threshold) # normalize?
+                # measure.visualize_TPM(normalize=normalize)
+                
 
 
 ################################# dFC class ####################################

@@ -109,16 +109,16 @@ class Test_methods:
             self.windowless, \
             self.sw_pc, \
             self.sw_mi, \
-            self.sw_gLasso, \
+            # self.sw_gLasso, \
             self.time_freq_cwt, \
             self.time_freq_cwt_r, \
             self.time_freq_wtc, \
             self.swc_pc, \
             self.swc_mi, \
-            self.swc_gLasso, \
+            # self.swc_gLasso, \
             self.swc_mi, \
             self.hmm_disc_pc,\
-            self.hmm_disc_gLasso, \
+            # self.hmm_disc_gLasso, \
             self.hmm_disc_mi \
                     ]
 
