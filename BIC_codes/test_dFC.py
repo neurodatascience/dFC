@@ -6,7 +6,7 @@ Notes:
     would be very detrimental to test isolation and would promote poor test practices.
 
 todo:
-- 
+- carefully test TS truncate
 """
 
 from functions.dFC_funcs import *

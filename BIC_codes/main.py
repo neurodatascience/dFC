@@ -65,9 +65,9 @@ if DATA_type=='real':
         time_series = time_series - np.repeat(np.mean(time_series, axis=1)[:,None], time_series.shape[1], axis=1) # ???????????????????????
 
         if BOLD is None:
-            BOLD = TIME_SERIES(data=time_series, Fs=1/0.72, locs=locs, nodes_info=atlas_data, TS_name='BOLD Real')
+            BOLD = TIME_SERIES(data=time_series, subj_id=subject, Fs=1/0.72, locs=locs, nodes_info=atlas_data, TS_name='BOLD Real')
         else:
-            BOLD.append_ts(new_time_series=time_series)
+            BOLD.append_ts(new_time_series=time_series, subj_id=subject)
 
         # # select nodes
         # nodes_idx = np.random.choice(range(BOLD.n_regions), size = 50, replace=False)
@@ -83,7 +83,7 @@ if DATA_type=='simulated':
     time_BOLD = np.load(data_root+'bold_time.npy')    
     time_series_BOLD = np.load(data_root+'bold_data.npy')
 
-    BOLD = TIME_SERIES(data=time_series_BOLD.T, Fs=1/0.5, time_array=time_BOLD, TS_name='BOLD Simulation')
+    BOLD = TIME_SERIES(data=time_series_BOLD.T, subj_id=1, Fs=1/0.5, time_array=time_BOLD, TS_name='BOLD Simulation')
 
 ################################# Load Simulated Tavg data #################################
 
@@ -91,7 +91,7 @@ if DATA_type=='simulated':
     time_Tavg = np.load(data_root+'tavg_time.npy')    
     time_series_Tavg = np.load(data_root+'tavg_data.npy')
 
-    TAVG = TIME_SERIES(data=time_series_Tavg.T, Fs=200, time_array=time_Tavg, TS_name='Tavg Simulation')
+    TAVG = TIME_SERIES(data=time_series_Tavg.T, subj_id=1, Fs=200, time_array=time_Tavg, TS_name='Tavg Simulation')
 
 ################################# Measure dFC #################################
 

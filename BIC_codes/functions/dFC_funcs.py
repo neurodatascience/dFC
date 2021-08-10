@@ -38,17 +38,25 @@ def TR_intersection(measures_lst): # input is a list of dFC Measure objs
         print('No TR intersection.')
     return TRs_lst_old
 
+def visualize_corr_mat():
+    pass
+
 ############################# dFC Analyzer class ################################
 
 class DFC_ANALYZER:
 
-    def __init__(self, MEASURES_lst):
+    def __init__(self, SB_MEASURES_lst, NSB_MEASURES_lst):
         self.analysis_name = ''
-        self.MEASURES_lst_ = MEASURES_lst
+        self.SB_MEASURES_lst_ = SB_MEASURES_lst
+        self.NSB_MEASURES_lst_ = NSB_MEASURES_lst
 
     @property
-    def MEASURES_lst(self):
-        return self.MEASURES_lst_
+    def SB_MEASURES_lst(self):
+        return self.SB_MEASURES_lst_
+
+    @property
+    def NSB_MEASURES_lst(self):
+        return self.NSB_MEASURES_lst_
 
     def dFC_corr(self, measure_i, measure_j):
 
@@ -372,7 +380,7 @@ class HMM_CONT(dFC):
         self.TPM = self.hmm_model.transmat_
         self.pi = self.hmm_model.startprob_
 
-        self.dFCM.add_FCP(FCPs=self.FCS_, FCP_idx=self.Z)
+        self.dFCM.add_FCP(FCPs=self.FCS_, FCP_idx=self.Z, subj_id_array=time_series.subj_id_array)
         return self
 
 ################################## Windowless ##################################
@@ -417,7 +425,7 @@ class WINDOWLESS(dFC):
         self.Z = list()
         for i in range(self.n_time):
             self.Z.append(np.argwhere(self.gamma[i, :] != 0)[0,0])
-        self.dFCM.add_FCP(FCPs=self.FCS_, FCP_idx=self.Z)
+        self.dFCM.add_FCP(FCPs=self.FCS_, FCP_idx=self.Z, subj_id_array=time_series.subj_id_array)
         return self
 
 
@@ -503,7 +511,7 @@ class SLIDING_WINDOW(dFC):
                 
         return C
 
-    def dFC(self, time_series, W=None, n_overlap=None, tapered_window=False):
+    def dFC(self, time_series, subj_id, W=None, n_overlap=None, tapered_window=False):
         L = time_series.shape[1]
         step = int((1-n_overlap)*W)
         if step == 0:
@@ -523,12 +531,19 @@ class SLIDING_WINDOW(dFC):
 
             window = np.repeat(np.expand_dims(window, axis=0), time_series.shape[0], axis=0)
 
-            C.add_FCP(FCPs=self.FC(np.multiply(time_series, window)), TR_array=np.array( [ int(l + (l+W)) / 2 ] ) )
+            C.add_FCP(FCPs=self.FC(np.multiply(time_series, window)), \
+                        subj_id_array = subj_id, \
+                        TR_array=np.array( [ int(l + (l+W)) / 2 ] ) \
+                        )
             # print('dFC step = %d' %(l))
 
         return C
     
     def calc(self, time_series=None):
+
+        '''
+        we assume calc is applied on subjects separately
+        '''
         
         assert type(time_series) is TIME_SERIES, \
             "time_series must be of TIME_SERIES class."
@@ -536,7 +551,8 @@ class SLIDING_WINDOW(dFC):
         self.n_regions = time_series.n_regions
         self.n_time = time_series.n_time
 
-        self.dFCM = self.dFC(time_series=time_series.data, W=self.W, n_overlap=self.n_overlap, tapered_window=self.tapered_window)
+        self.dFCM = self.dFC(time_series=time_series.data, subj_id=time_series.subj_id_array[:1], \
+            W=self.W, n_overlap=self.n_overlap, tapered_window=self.tapered_window)
 
         # self.dFC_mat = self.dFC_mat_normalize(self.dFC_mat)
 
@@ -695,7 +711,7 @@ class TIME_FREQ(dFC):
                                                                 )
             WT[:, i, :] = np.array(Q).T
 
-        self.dFCM.add_FCP(FCPs=WT)
+        self.dFCM.add_FCP(FCPs=WT, subj_id_array=time_series.subj_id_array)
         return self
 
 ########################### Sliding_Window + Clustering ###########################
@@ -807,7 +823,11 @@ class SLIDING_WINDOW_CLUSTR(dFC):
             self.F_cent = self.kmeans_.cluster_centers_
 
         self.FCS_ = self.dFC_vec2mat(self.F_cent, N=self.n_regions)
-        self.dFCM.add_FCP(FCPs=self.FCS_, FCP_idx=self.Z, TR_array=self.dFCM_raw.TR_array)
+        self.dFCM.add_FCP(FCPs=self.FCS_, \
+            FCP_idx=self.Z, \
+            subj_id_array=self.dFCM_raw.subj_id_array, \
+            TR_array=self.dFCM_raw.TR_array \
+            )
 
         return self
 
@@ -881,7 +901,11 @@ class HMM_DISC(dFC):
                 TRs=self.FCC_.TR_array[np.squeeze(np.argwhere(self.Z==i))]\
                     ), axis=0)  # III
 
-        self.dFCM.add_FCP(FCPs=self.FCS_, FCP_idx=self.Z, TR_array=self.FCC_.TR_array)
+        self.dFCM.add_FCP(FCPs=self.FCS_, \
+            FCP_idx=self.Z, \
+            subj_id_array=self.FCC_.subj_id_array, \
+            TR_array=self.FCC_.TR_array \
+                )
 
         return self
     
@@ -897,12 +921,18 @@ todo:
 """
 
 class TIME_SERIES():
-    def __init__(self, data=None, Fs=None, time_array=None, locs=None, nodes_info=None, TS_name=''):
+    def __init__(self, data=None, subj_id=None, Fs=None, time_array=None, \
+                locs=None, nodes_info=None, TS_name=''):
         
-        assert (not data is None) and (not Fs is None), \
-            "data and Fs args must be provided."
+        '''
+        subj_id is an id to identify the subjects
+        '''
+
+        assert (not data is None) and (not Fs is None) and (not subj_id is None), \
+            "data, subj_id, and Fs args must be provided."
 
         self.data_ = data
+        self.subj_id_array_ = [subj_id] * data.shape[1] 
         self.Fs_ = Fs
         self.TS_name_ = TS_name
         self.n_regions_ = self.data_.shape[0]
@@ -929,6 +959,10 @@ class TIME_SERIES():
     @property
     def data(self):
         return self.data_[self.nodes_lst, self.interval]
+
+    @property
+    def subj_id_array(self):
+        return [self.subj_id_array_[i] for i in self.interval_]
 
     @property
     def nodes_lst(self):
@@ -972,15 +1006,31 @@ class TIME_SERIES():
         # change self.Fs_
         pass
 
-    def append_ts(self, new_time_series=None):
+    def get_subj_ts(self, subj_id=None):
+        """
+        you can select time samples by their subj_id
+        ! be careful about the original properties of TS hidden in new TS
+        """
+        new_TS = deepcopy(self)
+        idx = [i for i,j in enumerate(self.subj_id_array) if j==subj_id]
+        new_TS.truncate(start_point=idx[0], end_point=idx[-1])
+        return new_TS
+
+
+    def append_ts(self, new_time_series=None, subj_id=None):
         # append new time series to existing ones
-        # truncate is not considered, while node selection is; the whole old time series will be concat to new one
+        # truncate will not be considered anymore, while node selection is; 
+        # the whole old time series will be concat to new one
         # append_ts resets the truncate but not the node selection
 
         assert self.n_regions_ == new_time_series.shape[0], \
             "Number of nodes mismatch."
 
+        assert not subj_id is None, \
+            "subj_id must be provided."
+
         self.data_ = np.concatenate((self.data_, new_time_series), axis=1)
+        self.subj_id_array_ = self.subj_id_array_ + [subj_id] * new_time_series.shape[1]
         self.n_time_ = self.data_.shape[1]
         self.interval_ = list(range(self.n_time_))
 
@@ -1059,6 +1109,7 @@ class DFCM():
         #self.dFC_mat_ = None
         self.FCPs_ = None 
         self.FCP_idx_ = None
+        self.subj_id_array_ = None
         self.TR_array_ = None
         self.n_regions_ = None
         self.n_time_ = -1
@@ -1090,6 +1141,10 @@ class DFCM():
     @property
     def FCP_idx(self):
         return self.FCP_idx_
+
+    @property
+    def subj_id_array(self):
+        return self.subj_id_array_
 
     def get_dFC_mat(self, TRs=None):
         # get dFC matrices corresponding to 
@@ -1126,7 +1181,7 @@ class DFCM():
             self.n_time_ = self.FCP_idx.shape[0]
             self.TR_array_ = np.concatenate((self.TR_array, dFCM.TR_array))
 
-    def add_FCP(self, FCPs, FCP_idx=None, TR_array=None):
+    def add_FCP(self, FCPs, FCP_idx=None, subj_id_array=None, TR_array=None):
         
         if len(FCPs.shape)==2:
             FCPs = np.expand_dims(FCPs, axis=0)
@@ -1139,9 +1194,15 @@ class DFCM():
 
         if len(FCP_idx.shape)>1:
             FCP_idx = np.squeeze(FCP_idx)
+
+        if not type(subj_id_array) is list:
+            subj_id_array = list(subj_id_array)
         
         assert FCPs.shape[1] == FCPs.shape[2], \
                 "FC matrices must be square."
+
+        assert len(subj_id_array)==FCP_idx.shape[0], \
+            "FCP_idx and subj_id_array length mismatch."
 
         if TR_array is None:
             TR_array = np.arange(start=self.n_time+1, stop=self.n_time+len(FCP_idx)+1, step=1)
@@ -1149,6 +1210,7 @@ class DFCM():
         if self.FCPs_ is None:
             self.FCPs_ = FCPs
             self.FCP_idx_ = FCP_idx
+            self.subj_id_array_ = subj_id_array
             self.n_regions_ = self.FCPs.shape[1]
             self.n_time_ = self.FCP_idx.shape[0]
             self.TR_array_ = TR_array
@@ -1159,6 +1221,7 @@ class DFCM():
             FCP_idx = FCP_idx + self.FCPs.shape[0]
             self.FCPs_ = np.concatenate((self.FCPs_, FCPs), axis=0)
             self.FCP_idx_ = np.concatenate((self.FCP_idx_, FCP_idx), axis=0)
+            self.subj_id_array_ = self.subj_id_array_ + subj_id_array
             self.n_time_ = self.FCP_idx.shape[0]
             self.TR_array_ = np.concatenate((self.TR_array, TR_array))
 
