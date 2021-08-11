@@ -141,6 +141,8 @@ class DFC_ANALYZER:
             dFCM_lst = self.estimate_dFCM(time_series=time_series.get_subj_ts(subj_id=subject))
             self.visualize_dFCMs(dFCM_lst=dFCM_lst, TR_idx=list(range(10, 20)))
 
+        return dFCM_lst
+
 
     def estimate_FCS(self, time_series=None):
         SB_MEASURES_lst = self.SB_MEASURES_lst
@@ -729,7 +731,9 @@ class TIME_FREQ(dFC):
 - We used a tapered window as in Allen et al., created by convolving a rectangle (width = 22 TRs = 44s) 
   with a Gaussian (σ = 3 TRs) and slid in steps of 1 TR, resulting in W= 126 windows (Allen et al., 2014).
 - Kmeans Clustering is repeated 500 times to escape local minima (Allen et al., 2014)
-
+- for clustering, we have a 2-level kmeans clustering. First, we cluster FCPs of each subject. Then, we
+    cluster all clustering centers from all subjects. the final estimate_dFCM is using the second kmeans
+    model (Allen et al., 2014; Ou et al., 2015). 
 todo:
 - pyclustering(manhattan) has a problem when suing predict
 """
@@ -798,6 +802,33 @@ class SLIDING_WINDOW_CLUSTR(dFC):
                 Z[sample] = i
         return Z.astype(int)
 
+    def cluster_FC(self, FCS_raw, n_regions):
+
+        F = self.dFC_mat2vec(FCS_raw)
+
+        if self.clstr_distance=='manhattan':
+            pass
+            # ########### Manhattan Clustering ##############
+            # # Prepare initial centers using K-Means++ method.
+            # initial_centers = kmeans_plusplus_initializer(F, self.n_states).initialize()
+            # # create metric that will be used for clustering
+            # manhattan_metric = distance_metric(type_metric.MANHATTAN)
+            # # Create instance of K-Means algorithm with prepared centers.
+            # kmeans_ = kmeans(F, initial_centers, metric=manhattan_metric)
+            # # Run cluster analysis and obtain results.
+            # kmeans_.process()
+            # Z = self.clusters_lst2idx(kmeans_.get_clusters())
+            # F_cent = np.array(kmeans_.get_centers())
+        else:
+            ########### Euclidean Clustering ##############
+            kmeans_ = KMeans(n_clusters=self.n_states, n_init=500).fit(F)
+            Z = kmeans_.predict(F)
+            F_cent = kmeans_.cluster_centers_
+
+        FCS_ = self.dFC_vec2mat(F_cent, N=n_regions)
+        return FCS_, kmeans_
+
+        
     def estimate_FCS(self, time_series=None):
 
         assert type(time_series) is TIME_SERIES, \
@@ -806,33 +837,39 @@ class SLIDING_WINDOW_CLUSTR(dFC):
         # self.n_regions = time_series.n_regions
         # self.n_time = time_series.n_time
 
-        self.sliding_window = SLIDING_WINDOW(sw_method=self.sw_method, \
-            W=self.W, n_overlap=self.n_overlap, tapered_window=self.tapered_window)
-        self.dFCM_raw = self.sliding_window.estimate_dFCM(time_series=time_series)
+        sliding_window = SLIDING_WINDOW(sw_method=self.sw_method, \
+                W=self.W, n_overlap=self.n_overlap, tapered_window=self.tapered_window)
 
-        self.F = self.dFC_mat2vec(self.dFCM_raw.get_dFC_mat(TRs=self.dFCM_raw.TR_array))
-        print(self.F.shape)
+        # 1-level clustering
+        # dFCM_raw = sliding_window.estimate_dFCM( \
+        #         time_series=time_series \
+        #         )
+        # self.FCS_, self.kmeans_ = self.cluster_FC( \
+        # dFCM_raw.get_dFC_mat(TRs=self.dFCM_raw.TR_array), \
+        # n_regions = dFCM_raw.n_regions \
+        # )
 
-        if self.clstr_distance=='manhattan':
-            pass
-            # ########### Manhattan Clustering ##############
-            # # Prepare initial centers using K-Means++ method.
-            # initial_centers = kmeans_plusplus_initializer(self.F, self.n_states).initialize()
-            # # create metric that will be used for clustering
-            # manhattan_metric = distance_metric(type_metric.MANHATTAN)
-            # # Create instance of K-Means algorithm with prepared centers.
-            # self.kmeans_ = kmeans(self.F, initial_centers, metric=manhattan_metric)
-            # # Run cluster analysis and obtain results.
-            # self.kmeans_.process()
-            # self.Z = self.clusters_lst2idx(self.kmeans_.get_clusters())
-            # self.F_cent = np.array(self.kmeans_.get_centers())
-        else:
-            ########### Euclidean Clustering ##############
-            self.kmeans_ = KMeans(n_clusters=self.n_states, n_init=500).fit(self.F)
-            self.Z = self.kmeans_.predict(self.F)
-            self.F_cent = self.kmeans_.cluster_centers_
-
-        self.FCS_ = self.dFC_vec2mat(self.F_cent, N=time_series.n_regions)
+        # 2-level clustering
+        SUBJECTs = list(set(time_series.subj_id_array))
+        FCS_1st_level = None
+        for subject in SUBJECTs:
+            
+            dFCM_raw = sliding_window.estimate_dFCM( \
+                time_series=time_series.get_subj_ts(subj_id=subject) \
+                )
+            FCS, _ = self.cluster_FC( \
+                FCS_raw = dFCM_raw.get_dFC_mat(TRs=dFCM_raw.TR_array), \
+                n_regions = dFCM_raw.n_regions
+                )
+            if FCS_1st_level is None:
+                FCS_1st_level = FCS
+            else:
+                FCS_1st_level = np.concatenate((FCS_1st_level, FCS), axis=0)
+        
+        self.FCS_, self.kmeans_ = self.cluster_FC( \
+            FCS_raw=FCS_1st_level, \
+            n_regions = dFCM_raw.n_regions \
+            )
 
         return self
 
