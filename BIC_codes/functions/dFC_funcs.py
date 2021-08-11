@@ -66,19 +66,20 @@ class DFC_ANALYZER:
                 NSB_MEASURES.append(measure)
         return NSB_MEASURES
 
-    def estimate_states(self, time_series=None):
-        SB_MEASURES = self.SB_MEASURES
-        SB_MEASURES_NEW = Parallel(n_jobs=-1, verbose=1, backend='loky')( \
-            delayed(measure.calc)(time_series=time_series) \
-                for measure in SB_MEASURES)
-        self.MEASURES_lst_ = self.NSB_MEASURES_lst + SB_MEASURES_NEW
+    def estimate_FCS(self, time_series=None):
+        SB_MEASURES_lst = self.SB_MEASURES_lst
+        SB_MEASURES_lst_NEW = Parallel(n_jobs=-1, verbose=1, backend='loky')( \
+            delayed(measure.estimate_FCS)(time_series=time_series) \
+                for measure in SB_MEASURES_lst)
+        self.MEASURES_lst_ = self.NSB_MEASURES_lst + SB_MEASURES_lst_NEW
 
-    def estimate_dFC(self, time_series=None):
-        SB_MEASURES = self.SB_MEASURES
-        NSB_MEASURES = self.NSB_MEASURES
+    def estimate_dFCM(self, time_series=None):
         SUBJECTs = list(set(time_series.subj_id_array))
         for subject in SUBJECTs:
-            pass
+            MEASURES_NEW = Parallel(n_jobs=-1, verbose=1, backend='loky')( \
+            delayed(measure.estimate_dFCM)(time_series=time_series) \
+                for measure in self.MEASURES_lst)
+            
 
     def dFC_corr(self, measure_i, measure_j):
 
@@ -983,7 +984,7 @@ class SLIDING_WINDOW_CLUSTR(dFC):
             self.Z = self.kmeans_.predict(self.F)
             self.F_cent = self.kmeans_.cluster_centers_
 
-        self.FCS_ = self.dFC_vec2mat(self.F_cent, N=self.n_regions)
+        self.FCS_ = self.dFC_vec2mat(self.F_cent, N=time_series.n_regions)
 
         return self
 
@@ -1132,7 +1133,8 @@ class HMM_DISC(dFC):
         self.TPM = self.hmm_model.transmat_
         self.EPM = self.hmm_model.emissionprob_ 
 
-        self.FCS_ = np.zeros((self.n_hid_states, self.n_regions, self.n_regions))
+        self.FCS_ = np.zeros((self.n_hid_states, \
+            time_series.n_regions, time_series.n_regions))
         for i in range(self.n_hid_states):
             self.FCS_[i,:,:] = np.mean(self.FCC_.get_dFC_mat(\
                 TRs=self.FCC_.TR_array[np.squeeze(np.argwhere(self.Z==i))]\
