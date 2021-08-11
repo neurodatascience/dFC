@@ -313,10 +313,6 @@ class dFC:
         else:
             plt.show()
 
-    
-
-
-
 ################################# HMM Continuous ###############################
 
 """
@@ -372,32 +368,6 @@ class HMM_CONT(dFC):
         dFCM.add_FCP(FCPs=self.FCS_, FCP_idx=Z, subj_id_array=time_series.subj_id_array)
 
         return dFCM
-    
-    # def calc(self, time_series=None):
-
-    #     assert type(time_series) is TIME_SERIES, \
-    #         "time_series must be of TIME_SERIES class."
-
-    #     # self.n_regions = time_series.n_regions
-    #     # self.n_time = time_series.n_time
-
-    #     Models, Scores = [], []
-    #     for i in range(10):
-    #         model = hmm.GaussianHMM(n_components=self.n_states, covariance_type="full")
-    #         model.fit(time_series.data.T) 
-    #         score = model.score(time_series.data.T)
-    #         Models.append(model)
-    #         Scores.append(score)
-            
-    #     self.hmm_model = Models[np.argmax(Scores)]
-    #     self.Z = self.hmm_model.predict(time_series.data.T)
-    #     self.means_ = self.hmm_model.means_
-    #     self.FCS_ = self.hmm_model.covars_ 
-    #     self.TPM = self.hmm_model.transmat_
-    #     self.pi = self.hmm_model.startprob_
-
-    #     self.dFCM.add_FCP(FCPs=self.FCS_, FCP_idx=self.Z, subj_id_array=time_series.subj_id_array)
-    #     return self
 
 ################################## Windowless ##################################
 
@@ -458,29 +428,6 @@ class WINDOWLESS(dFC):
         dFCM = DFCM(measure=self)
         dFCM.add_FCP(FCPs=self.FCS_, FCP_idx=Z, subj_id_array=time_series.subj_id_array)
         return dFCM
-
-    # def calc(self, time_series=None):
-        
-    #     assert type(time_series) is TIME_SERIES, \
-    #         "time_series must be of TIME_SERIES class."
-
-    #     # self.n_regions = time_series.n_regions
-    #     # self.n_time = time_series.n_time
-
-    #     # time_series ~ gamma.dot(dictionary)
-    #     aksvd = ApproximateKSVD(n_components=self.n_states, transform_n_nonzero_coefs=1)
-    #     self.dictionary = aksvd.fit(time_series.data.T).components_
-    #     self.gamma = aksvd.transform(time_series.data.T)
-
-    #     self.FCS_ = np.zeros([self.n_states, time_series.n_regions, time_series.n_regions])
-    #     for i in range(self.n_states):
-    #         self.FCS_[i, :, :] = np.multiply(np.expand_dims(self.dictionary[i,:], axis=0).T, np.expand_dims(self.dictionary[i,:], axis=0))
-
-    #     self.Z = list()
-    #     for i in range(time_series.n_time):
-    #         self.Z.append(np.argwhere(self.gamma[i, :] != 0)[0,0])
-    #     self.dFCM.add_FCP(FCPs=self.FCS_, FCP_idx=self.Z, subj_id_array=time_series.subj_id_array)
-    #     return self
 
 
 ################################# Sliding-Window #################################
@@ -613,25 +560,6 @@ class SLIDING_WINDOW(dFC):
             )
 
         return dFCM
-
-    # def calc(self, time_series=None):
-
-    #     '''
-    #     we assume calc is applied on subjects separately
-    #     '''
-        
-    #     assert type(time_series) is TIME_SERIES, \
-    #         "time_series must be of TIME_SERIES class."
-
-    #     self.n_regions = time_series.n_regions
-    #     self.n_time = time_series.n_time
-
-    #     self.dFCM = self.dFC(time_series=time_series.data, subj_id=time_series.subj_id_array[:1], \
-    #         W=self.W, n_overlap=self.n_overlap, tapered_window=self.tapered_window)
-
-    #     # self.dFC_mat = self.dFC_mat_normalize(self.dFC_mat)
-
-    #     return self
 
     
 ################################# Time-Frequency #################################
@@ -795,35 +723,6 @@ class TIME_FREQ(dFC):
         dFCM.add_FCP(FCPs=WT, subj_id_array=time_series.subj_id_array)
         return dFCM
 
-    # def calc(self, time_series=None):
-        
-    #     # params
-    #     J = 50 # -1
-    #     s0 = 1 # -1
-    #     dj = 1/8 # 1/12
-
-    #     assert type(time_series) is TIME_SERIES, \
-    #         "time_series must be of TIME_SERIES class."
-
-    #     self.n_regions = time_series.n_regions
-    #     self.n_time = time_series.n_time
-
-    #     WT = np.zeros((self.n_time, self.n_regions, self.n_regions))
-    #     for i in range(self.n_regions):
-
-    #         Q = Parallel(n_jobs=-1, verbose=0, backend='loky')( \
-    #             delayed(self.WT_dFC)( \
-    #                                 Y1=time_series.data[i, :], \
-    #                                 Y2=time_series.data[j, :], \
-    #                                 Fs=time_series.Fs, \
-    #                                 J=J, s0=s0, dj=dj) \
-    #                                 for j in range(self.n_regions) \
-    #                                                             )
-    #         WT[:, i, :] = np.array(Q).T
-
-    #     self.dFCM.add_FCP(FCPs=WT, subj_id_array=time_series.subj_id_array)
-    #     return self
-
 ########################### Sliding_Window + Clustering ###########################
 
 """
@@ -937,7 +836,10 @@ class SLIDING_WINDOW_CLUSTR(dFC):
 
         return self
 
-    def estimate_FCS_TC(self, time_series=None):
+    def estimate_dFCM(self, time_series=None):
+        
+        assert type(time_series) is TIME_SERIES, \
+            "time_series must be of TIME_SERIES class."
 
         sliding_window = SLIDING_WINDOW(sw_method=self.sw_method, \
             W=self.W, n_overlap=self.n_overlap, tapered_window=self.tapered_window)
@@ -954,67 +856,14 @@ class SLIDING_WINDOW_CLUSTR(dFC):
             ########### Euclidean Clustering ##############
             Z = self.kmeans_.predict(F)
 
-        return Z
-
-    def estimate_dFCM(self, time_series=None):
-        
-        assert type(time_series) is TIME_SERIES, \
-            "time_series must be of TIME_SERIES class."
-
-        Z = self.estimate_FCS_TC(time_series=time_series)
-
         dFCM = DFCM(measure=self)
         dFCM.add_FCP(FCPs=self.FCS_, \
             FCP_idx=Z, \
-            subj_id_array=self.dFCM_raw.subj_id_array, \
-            TR_array=self.dFCM_raw.TR_array \
+            subj_id_array=dFCM_raw.subj_id_array, \
+            TR_array=dFCM_raw.TR_array \
             )
 
         return dFCM
-
-    # def calc(self, time_series=None):
-        
-    #     assert type(time_series) is TIME_SERIES, \
-    #         "time_series must be of TIME_SERIES class."
-
-    #     self.n_regions = time_series.n_regions
-    #     self.n_time = time_series.n_time
-
-    #     if self.sliding_window is None:
-    #         self.sliding_window = SLIDING_WINDOW(sw_method=self.sw_method, \
-    #             W=self.W, n_overlap=self.n_overlap, tapered_window=self.tapered_window)
-    #         self.sliding_window.calc(time_series=time_series)
-        
-    #     self.dFCM_raw = self.sliding_window.dFCM
-
-    #     self.F = self.dFC_mat2vec(self.dFCM_raw.get_dFC_mat(TRs=self.dFCM_raw.TR_array))
-
-    #     if self.clstr_distance=='manhattan':
-    #         ########### Manhattan Clustering ##############
-    #         # Prepare initial centers using K-Means++ method.
-    #         initial_centers = kmeans_plusplus_initializer(self.F, self.n_states).initialize()
-    #         # create metric that will be used for clustering
-    #         manhattan_metric = distance_metric(type_metric.MANHATTAN)
-    #         # Create instance of K-Means algorithm with prepared centers.
-    #         self.kmeans_ = kmeans(self.F, initial_centers, metric=manhattan_metric)
-    #         # Run cluster analysis and obtain results.
-    #         self.kmeans_.process()
-    #         self.Z = self.clusters_lst2idx(self.kmeans_.get_clusters())
-    #         self.F_cent = np.array(self.kmeans_.get_centers())
-    #     else:
-    #         ########### Euclidean Clustering ##############
-    #         self.kmeans_ = KMeans(n_clusters=self.n_states, n_init=500).fit(self.F)
-    #         self.Z = self.kmeans_.predict(self.F)
-    #         self.F_cent = self.kmeans_.cluster_centers_
-
-    #     self.FCS_ = self.dFC_vec2mat(self.F_cent, N=self.n_regions)
-    #     self.dFCM.add_FCP(FCPs=self.FCS_, \
-    #         FCP_idx=self.Z, \
-    #         subj_id_array=self.dFCM_raw.subj_id_array, \
-    #         TR_array=self.dFCM_raw.TR_array \
-    #         )
-
-    #     return self
 
 ################################# HMM Discrete #################################
 
@@ -1092,55 +941,18 @@ class HMM_DISC(dFC):
         assert type(time_series) is TIME_SERIES, \
             "time_series must be of TIME_SERIES class."
 
-        FCS_TC_SWC = self.swc.estimate_FCS_TC(time_series=time_series)
+        FCC = self.swc.estimate_dFCM(time_series=time_series)
 
-        Z = self.hmm_model.predict(FCS_TC_SWC.reshape(-1, 1))
+        Z = self.hmm_model.predict(FCC.FCP_idx.reshape(-1, 1))
 
         dFCM = DFCM(measure=self)
         dFCM.add_FCP(FCPs=self.FCS_, \
             FCP_idx=Z, \
-            subj_id_array=self.FCC_.subj_id_array, \
-            TR_array=self.FCC_.TR_array \
+            subj_id_array=FCC.subj_id_array, \
+            TR_array=FCC.TR_array \
                 )
 
         return dFCM
-
-    # def calc(self, time_series=None):
-        
-    #     assert type(time_series) is TIME_SERIES, \
-    #         "time_series must be of TIME_SERIES class."
-
-    #     self.n_regions = time_series.n_regions
-    #     self.n_time = time_series.n_time
-
-    #     if self.swc is None:
-    #         self.swc = SLIDING_WINDOW_CLUSTR(sw_method=self.sw_method, \
-    #             n_states=self.n_states, W=self.W, n_overlap=self.n_overlap, \
-    #                 tapered_window=self.tapered_window)
-    #         self.swc.calc(time_series=time_series)
-        
-    #     self.FCC_ = self.swc.dFCM
-
-    #     model = hmm.MultinomialHMM(n_components=self.n_hid_states)
-    #     model.fit(self.swc.Z.reshape(-1, 1))
-
-    #     self.Z = model.predict(self.swc.Z.reshape(-1, 1))
-    #     self.TPM = model.transmat_
-    #     self.EPM = model.emissionprob_ 
-
-    #     self.FCS_ = np.zeros((self.n_hid_states, self.n_regions, self.n_regions))
-    #     for i in range(self.n_hid_states):
-    #         self.FCS_[i,:,:] = np.mean(self.FCC_.get_dFC_mat(\
-    #             TRs=self.FCC_.TR_array[np.squeeze(np.argwhere(self.Z==i))]\
-    #                 ), axis=0)  # III
-
-    #     self.dFCM.add_FCP(FCPs=self.FCS_, \
-    #         FCP_idx=self.Z, \
-    #         subj_id_array=self.FCC_.subj_id_array, \
-    #         TR_array=self.FCC_.TR_array \
-    #             )
-
-    #     return self
     
 ###################################################################################
 
