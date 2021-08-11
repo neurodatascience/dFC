@@ -25,10 +25,10 @@ def intersection(lst1, lst2): # input is a list
     lst3 = [value for value in lst1 if value in lst2]
     return lst3
 
-def TR_intersection(measures_lst): # input is a list of dFC Measure objs
-    TRs_lst_old = measures_lst[0].dFCM.TR_array
-    for measure in measures_lst:
-        TRs_lst_new = intersection(TRs_lst_old, measure.dFCM.TR_array)
+def TR_intersection(dFCM_lst): # input is a list of dFCM objs
+    TRs_lst_old = dFCM_lst[0].TR_array
+    for dFCM in dFCM_lst:
+        TRs_lst_new = intersection(TRs_lst_old, dFCM.TR_array)
         TRs_lst_old = TRs_lst_new
     TRs_lst_old.sort()
     if len(TRs_lst_old)==0:
@@ -37,6 +37,73 @@ def TR_intersection(measures_lst): # input is a list of dFC Measure objs
 
 def visualize_corr_mat():
     pass
+
+def dFC_mat_normalize(C_t, global_normalization=True, threshold=0.0):
+
+    # threshold is ratio of connections wanted to be zero
+    C_t_z = deepcopy(C_t)
+    if len(C_t_z.shape)<3:
+        C_t_z = np.expand_dims(C_t_z, axis=0)
+
+    if global_normalization:
+
+        # transform the whole abs(dFC mat) to [0, 1] 
+
+        signs = np.sign(C_t_z)
+        C_t_z = np.abs(C_t_z)
+
+        miN = list()
+        for i in range(C_t_z.shape[0]):
+            slice = C_t_z[i,:,:]
+            slice_non_diag = slice[np.where(~np.eye(slice.shape[0],dtype=bool))]
+            miN.append(np.min(slice_non_diag))
+
+        C_t_z = C_t_z - np.min(miN)
+
+        maX = list()
+        for i in range(C_t_z.shape[0]):
+            slice = C_t_z[i,:,:]
+            slice_non_diag = slice[np.where(~np.eye(slice.shape[0],dtype=bool))]
+            maX.append(np.max(slice_non_diag))
+
+        C_t_z = np.divide(C_t_z, np.max(maX))
+
+        # thresholding
+        d = deepcopy(np.ravel(C_t_z))
+        d.sort()
+        new_threshold = d[int(threshold*len(d))]
+        C_t_z = np.multiply(C_t_z, (C_t_z>=new_threshold))
+        C_t_z = np.multiply(C_t_z, signs)
+
+    else:
+
+        # transform abs of each time slice to [0, 1]
+
+        signs = np.sign(C_t_z)
+        C_t_z = np.abs(C_t_z)
+        
+        for i in range(C_t_z.shape[0]):
+            slice = C_t_z[i,:,:]
+            slice_non_diag = slice[np.where(~np.eye(slice.shape[0],dtype=bool))]
+            slice = slice - np.min(slice_non_diag)
+            slice_non_diag = slice[np.where(~np.eye(slice.shape[0],dtype=bool))]
+            slice = np.divide(slice, np.max(slice_non_diag))
+
+            # thresholding
+            d = deepcopy(np.ravel(slice))
+            d.sort()
+            new_threshold = d[int(threshold*len(d))]
+            slice = np.multiply(slice, (slice>=new_threshold))
+
+            C_t_z[i,:,:] = slice
+
+        C_t_z = np.multiply(C_t_z, signs)
+
+    # removing self connections
+    for i in range(C_t_z.shape[1]):
+        C_t_z[:, i, i] = np.mean(C_t_z) # ?????????????????
+
+    return C_t_z
 
 ############################# dFC Analyzer class ################################
 
@@ -66,6 +133,15 @@ class DFC_ANALYZER:
                 NSB_MEASURES.append(measure)
         return NSB_MEASURES
 
+    def analyze(self, time_series=None):
+
+        self.estimate_FCS(time_series=time_series)
+        SUBJECTs = list(set(time_series.subj_id_array))
+        for subject in SUBJECTs:
+            dFCM_lst = self.estimate_dFCM(time_series=time_series.get_subj_ts(subj_id=subject))
+            self.visualize_dFCMs(dFCM_lst=dFCM_lst, TR_idx=list(range(10, 20)))
+
+
     def estimate_FCS(self, time_series=None):
         SB_MEASURES_lst = self.SB_MEASURES_lst
         SB_MEASURES_lst_NEW = Parallel(n_jobs=-1, verbose=1, backend='loky')( \
@@ -74,18 +150,16 @@ class DFC_ANALYZER:
         self.MEASURES_lst_ = self.NSB_MEASURES_lst + SB_MEASURES_lst_NEW
 
     def estimate_dFCM(self, time_series=None):
-        SUBJECTs = list(set(time_series.subj_id_array))
-        for subject in SUBJECTs:
-            MEASURES_NEW = Parallel(n_jobs=-1, verbose=1, backend='loky')( \
+        dFCM_lst = Parallel(n_jobs=-1, verbose=1, backend='loky')( \
             delayed(measure.estimate_dFCM)(time_series=time_series) \
                 for measure in self.MEASURES_lst)
-            
+        return dFCM_lst
 
-    def dFC_corr(self, measure_i, measure_j):
+    def dFC_corr(self, dFCM_i, dFCM_j):
 
-        TRs = TR_intersection([measure_i, measure_j])
-        dFC_mat_i = measure_i.dFCM.get_dFC_mat(TRs=TRs)
-        dFC_mat_j = measure_j.dFCM.get_dFC_mat(TRs=TRs)
+        TRs = TR_intersection([dFCM_i, dFCM_j])
+        dFC_mat_i = dFCM_i.get_dFC_mat(TRs=TRs)
+        dFC_mat_j = dFCM_j.get_dFC_mat(TRs=TRs)
         corr = list()
         for t in range(len(TRs)):
             corr.append(np.corrcoef(dFC_mat_i[t,:,:].flatten(), dFC_mat_j[t,:,:].flatten())[0,1])
@@ -125,23 +199,23 @@ class DFC_ANALYZER:
         else:
             plt.show()
 
-    def visualize_dFC_mats(self, TR_idx=None, normalize=True, threshold=0.0, \
+    def visualize_dFCMs(self, dFCM_lst=None, TR_idx=None, normalize=True, threshold=0.0, \
                             fix_lim=True, save_image=False, output_root=None):
 
-        TRs = TR_intersection(self.MEASURES_lst)
+        TRs = TR_intersection(dFCM_lst)
         if not TR_idx is None:
             assert not np.any(np.array(TR_idx)>=len(TRs)), \
                 'TR_idx out of range.'
             TRs = [TRs[i] for i in TR_idx]
 
-        for measure in self.MEASURES_lst:
+        for dFCM in dFCM_lst:
             if save_image:
-                measure.visualize_dFC(TRs=TRs, normalize=normalize, threshold=threshold, \
+                dFCM.visualize_dFC(TRs=TRs, normalize=normalize, threshold=threshold, \
                     fix_lim=fix_lim, \
                     save_image=save_image, \
-                    fig_name= output_root+measure.measure_name+'_dFC')
+                    fig_name= output_root+dFCM.measure.measure_name+'_dFC')
             else:
-                measure.visualize_dFC(TRs=TRs, normalize=normalize, threshold=threshold, fix_lim=fix_lim)
+                dFCM.visualize_dFC(TRs=TRs, normalize=normalize, threshold=threshold, fix_lim=fix_lim)
 
     def visualize_FCS(self, normalize=True, threshold=0.0, save_image=False, output_root=None):
         for measure in self.MEASURES_lst:  
@@ -173,7 +247,6 @@ class dFC:
     def __init__(self):
         self.measure_name = ''
         self.is_state_based = bool()
-        self.dFCM = DFCM()
         self._stat = []
         self.TPM = []
 
@@ -189,59 +262,6 @@ class dFC:
 
     def visualize_states(self):
         pass
-
-    def visualize_dFC(self, TRs=None, normalize=True, \
-        threshold=0.0, save_image=False, fig_name=None, fix_lim=True):
-
-        if TRs is None:
-            TRs = list(range(self.dFCM.n_time))
-
-        if normalize:
-            C = self.dFC_mat_normalize(C_t=self.dFCM.get_dFC_mat(TRs=TRs), \
-                global_normalization=True, threshold=threshold)
-        else:
-            C = self.dFCM.get_dFC_mat(TRs=TRs)
-
-        C = np.abs(C) # ?????? should we do this?
-
-        if np.any(C<0):
-            V_MIN = -1
-            V_MAX = 1
-        else:
-            V_MIN = 0
-            V_MAX = 1
-
-        if not fix_lim:
-            V_MAX = np.max(C)
-            V_MIN = np.min(C)
-
-        fig, axs = plt.subplots(1, C.shape[0], figsize=(25, 10), \
-            facecolor='w', edgecolor='k')
-        fig.suptitle(self.measure_name+' dFC', fontsize=20, size=20)
-        axs = axs.ravel()
-
-        for l in range(0, C.shape[0]):
-            axs[l].set_axis_off()
-            im = axs[l].imshow(C[l, :, :], interpolation='nearest', aspect='equal', cmap='jet',    # 'viridis'
-                        vmin=V_MIN, vmax=V_MAX)
-            axs[l].set_title('TR '+str(TRs[l]))
-
-        fig.subplots_adjust(bottom=0.1, top=1.5, left=0.1, right=0.9,
-                            wspace=0.02, hspace=0.02)
-
-        # [x, y, w, h]
-        cb_ax = fig.add_axes([0.91, 0.75, 0.007, 0.1])
-        cbar = fig.colorbar(im, cax=cb_ax)
-
-        #set the colorbar ticks and tick labels
-        cbar.set_ticks(np.arange(0, 1.1, 0.5))
-        cbar.set_ticklabels(['0', '0.5', '1'])
-
-        if save_image:
-            plt.savefig(fig_name + '.png', dpi=fig_dpi)  
-            plt.close()
-        else:
-            plt.show()
 
     def visualize_FCS(self, normalize=True, threshold=0.0, save_image=False, fig_name=None):
         
@@ -295,73 +315,6 @@ class dFC:
 
     
 
-    def dFC_mat_normalize(self, C_t, global_normalization=True, threshold=0.0):
-
-        # threshold is ratio of connections wanted to be zero
-        C_t_z = deepcopy(C_t)
-        if len(C_t_z.shape)<3:
-            C_t_z = np.expand_dims(C_t_z, axis=0)
-
-        if global_normalization:
-
-            # transform the whole abs(dFC mat) to [0, 1] 
-
-            signs = np.sign(C_t_z)
-            C_t_z = np.abs(C_t_z)
-
-            miN = list()
-            for i in range(C_t_z.shape[0]):
-                slice = C_t_z[i,:,:]
-                slice_non_diag = slice[np.where(~np.eye(slice.shape[0],dtype=bool))]
-                miN.append(np.min(slice_non_diag))
-
-            C_t_z = C_t_z - np.min(miN)
-
-            maX = list()
-            for i in range(C_t_z.shape[0]):
-                slice = C_t_z[i,:,:]
-                slice_non_diag = slice[np.where(~np.eye(slice.shape[0],dtype=bool))]
-                maX.append(np.max(slice_non_diag))
-
-            C_t_z = np.divide(C_t_z, np.max(maX))
-
-            # thresholding
-            d = deepcopy(np.ravel(C_t_z))
-            d.sort()
-            new_threshold = d[int(threshold*len(d))]
-            C_t_z = np.multiply(C_t_z, (C_t_z>=new_threshold))
-            C_t_z = np.multiply(C_t_z, signs)
-
-        else:
-
-            # transform abs of each time slice to [0, 1]
-
-            signs = np.sign(C_t_z)
-            C_t_z = np.abs(C_t_z)
-            
-            for i in range(C_t_z.shape[0]):
-                slice = C_t_z[i,:,:]
-                slice_non_diag = slice[np.where(~np.eye(slice.shape[0],dtype=bool))]
-                slice = slice - np.min(slice_non_diag)
-                slice_non_diag = slice[np.where(~np.eye(slice.shape[0],dtype=bool))]
-                slice = np.divide(slice, np.max(slice_non_diag))
-
-                # thresholding
-                d = deepcopy(np.ravel(slice))
-                d.sort()
-                new_threshold = d[int(threshold*len(d))]
-                slice = np.multiply(slice, (slice>=new_threshold))
-
-                C_t_z[i,:,:] = slice
-
-            C_t_z = np.multiply(C_t_z, signs)
-
-        # removing self connections
-        for i in range(C_t_z.shape[1]):
-            C_t_z[:, i, i] = np.mean(C_t_z) # ?????????????????
-
-        return C_t_z
-
 
 
 ################################# HMM Continuous ###############################
@@ -380,7 +333,6 @@ class HMM_CONT(dFC):
     def __init__(self, n_states=12):
         self.measure_name = 'Continuous HMM'
         self.is_state_based = True
-        self.dFCM = DFCM()
         self.TPM = []
         self.FCS_ = []
         self.n_states = n_states
@@ -416,9 +368,10 @@ class HMM_CONT(dFC):
             "time_series must be of TIME_SERIES class."
 
         Z = self.hmm_model.predict(time_series.data.T)
-        self.dFCM.add_FCP(FCPs=self.FCS_, FCP_idx=Z, subj_id_array=time_series.subj_id_array)
+        dFCM = DFCM(measure=self)
+        dFCM.add_FCP(FCPs=self.FCS_, FCP_idx=Z, subj_id_array=time_series.subj_id_array)
 
-        return self
+        return dFCM
     
     # def calc(self, time_series=None):
 
@@ -464,7 +417,6 @@ class WINDOWLESS(dFC):
     def __init__(self, n_states=12):
         self.measure_name = 'Windowless'
         self.is_state_based = True
-        self.dFCM = DFCM()
         self.TPM = []
         self.FCS_ = []
         self.n_states = n_states
@@ -503,8 +455,9 @@ class WINDOWLESS(dFC):
         for i in range(time_series.n_time):
             Z.append(np.argwhere(gamma[i, :] != 0)[0,0])
             
-        self.dFCM.add_FCP(FCPs=self.FCS_, FCP_idx=Z, subj_id_array=time_series.subj_id_array)
-        return self
+        dFCM = DFCM(measure=self)
+        dFCM.add_FCP(FCPs=self.FCS_, FCP_idx=Z, subj_id_array=time_series.subj_id_array)
+        return dFCM
 
     # def calc(self, time_series=None):
         
@@ -552,7 +505,6 @@ class SLIDING_WINDOW(dFC):
         self.measure_name_ = 'Sliding Window'
         self.is_state_based = False
         self.sw_method_ = sw_method
-        self.dFCM = DFCM()
         self.TPM = []
         self.FCS_ = []
         self.W = W
@@ -620,7 +572,7 @@ class SLIDING_WINDOW(dFC):
             step = 1
 
         window_taper = signal.windows.gaussian(W, std=3*W/22)
-        C = DFCM()
+        C = DFCM(measure=self)
         for l in range(0, L-W+1, step):
 
             ######### creating a rectangel window ############
@@ -653,14 +605,14 @@ class SLIDING_WINDOW(dFC):
         # self.n_regions = time_series.n_regions
         # self.n_time = time_series.n_time
 
-        self.dFCM = self.dFC(time_series=time_series.data, \
+        dFCM = self.dFC(time_series=time_series.data, \
             subj_id=time_series.subj_id_array[:1], \
             W=self.W, \
             n_overlap=self.n_overlap, \
             tapered_window=self.tapered_window \
             )
 
-        return self
+        return dFCM
 
     # def calc(self, time_series=None):
 
@@ -746,7 +698,6 @@ class TIME_FREQ(dFC):
 
         self.measure_name_ = 'Time-Frequency '
         self.is_state_based = False
-        self.dFCM = DFCM()
         self.TPM = []
         self.FCS_ = []
         self.method_ = method
@@ -840,8 +791,9 @@ class TIME_FREQ(dFC):
                                                                 )
             WT[:, i, :] = np.array(Q).T
 
-        self.dFCM.add_FCP(FCPs=WT, subj_id_array=time_series.subj_id_array)
-        return self
+        dFCM = DFCM(measure=self)
+        dFCM.add_FCP(FCPs=WT, subj_id_array=time_series.subj_id_array)
+        return dFCM
 
     # def calc(self, time_series=None):
         
@@ -899,7 +851,6 @@ class SLIDING_WINDOW_CLUSTR(dFC):
         self.measure_name_ = 'SlidingWindow+Clustering'
         self.is_state_based = True
         self.clstr_distance = clstr_distance
-        self.dFCM = DFCM()
         self.TPM = []
         self.FCS_ = []
         self.sw_method_=sw_method
@@ -958,9 +909,7 @@ class SLIDING_WINDOW_CLUSTR(dFC):
 
         self.sliding_window = SLIDING_WINDOW(sw_method=self.sw_method, \
             W=self.W, n_overlap=self.n_overlap, tapered_window=self.tapered_window)
-        self.sliding_window.estimate_dFCM(time_series=time_series)
-        
-        self.dFCM_raw = self.sliding_window.dFCM
+        self.dFCM_raw = self.sliding_window.estimate_dFCM(time_series=time_series)
 
         self.F = self.dFC_mat2vec(self.dFCM_raw.get_dFC_mat(TRs=self.dFCM_raw.TR_array))
         print(self.F.shape)
@@ -992,9 +941,7 @@ class SLIDING_WINDOW_CLUSTR(dFC):
 
         sliding_window = SLIDING_WINDOW(sw_method=self.sw_method, \
             W=self.W, n_overlap=self.n_overlap, tapered_window=self.tapered_window)
-        sliding_window.estimate_dFCM(time_series=time_series)
-        
-        dFCM_raw = sliding_window.dFCM
+        dFCM_raw = sliding_window.estimate_dFCM(time_series=time_series)
 
         F = self.dFC_mat2vec(dFCM_raw.get_dFC_mat(TRs=dFCM_raw.TR_array))
 
@@ -1016,13 +963,14 @@ class SLIDING_WINDOW_CLUSTR(dFC):
 
         Z = self.estimate_FCS_TC(time_series=time_series)
 
-        self.dFCM.add_FCP(FCPs=self.FCS_, \
+        dFCM = DFCM(measure=self)
+        dFCM.add_FCP(FCPs=self.FCS_, \
             FCP_idx=Z, \
             subj_id_array=self.dFCM_raw.subj_id_array, \
             TR_array=self.dFCM_raw.TR_array \
             )
 
-        return self
+        return dFCM
 
     # def calc(self, time_series=None):
         
@@ -1087,7 +1035,6 @@ class HMM_DISC(dFC):
     def __init__(self, sw_method='pear_corr', n_states=12, n_hid_states=6, W=88, n_overlap=0.5, tapered_window=True):
         self.measure_name_ = 'DiscreteHMM'
         self.is_state_based = True
-        self.dFCM = DFCM()
         self.TPM = []
         self.FCS_ = []
         self.sw_method_ = sw_method
@@ -1122,9 +1069,7 @@ class HMM_DISC(dFC):
             n_states=self.n_states, W=self.W, n_overlap=self.n_overlap, \
                 tapered_window=self.tapered_window)
         self.swc.estimate_FCS(time_series=time_series)
-        self.swc.estimate_dFCM(time_series=time_series)
-        
-        self.FCC_ = self.swc.dFCM
+        self.FCC_ = self.swc.estimate_dFCM(time_series=time_series)
 
         self.hmm_model = hmm.MultinomialHMM(n_components=self.n_hid_states)
         self.hmm_model.fit(self.FCC_.FCP_idx.reshape(-1, 1))
@@ -1151,13 +1096,14 @@ class HMM_DISC(dFC):
 
         Z = self.hmm_model.predict(FCS_TC_SWC.reshape(-1, 1))
 
-        self.dFCM.add_FCP(FCPs=self.FCS_, \
+        dFCM = DFCM(measure=self)
+        dFCM.add_FCP(FCPs=self.FCS_, \
             FCP_idx=Z, \
             subj_id_array=self.FCC_.subj_id_array, \
             TR_array=self.FCC_.TR_array \
                 )
 
-        return self
+        return dFCM
 
     # def calc(self, time_series=None):
         
@@ -1391,9 +1337,11 @@ todo:
 """
 
 class DFCM():
-    def __init__(self):
+    def __init__(self, measure=None):
 
-        #self.dFC_mat_ = None
+        assert not measure is None, \
+            "measure arg must be provided."
+        self.measure_ = measure
         self.FCPs_ = None 
         self.FCP_idx_ = None
         self.subj_id_array_ = None
@@ -1408,6 +1356,10 @@ class DFCM():
     # @property
     # def dFC_mat(self):
     #     return self.FCPs[self.FCP_idx,:,:]
+
+    @property
+    def measure(self):
+        return self.measure_
 
     @property
     def TR_array(self):
@@ -1511,5 +1463,58 @@ class DFCM():
             self.subj_id_array_ = self.subj_id_array_ + subj_id_array
             self.n_time_ = self.FCP_idx.shape[0]
             self.TR_array_ = np.concatenate((self.TR_array, TR_array))
+
+    def visualize_dFC(self, TRs=None, normalize=True, \
+        threshold=0.0, save_image=False, fig_name=None, fix_lim=True):
+
+        if TRs is None:
+            TRs = list(range(self.n_time))
+
+        if normalize:
+            C = dFC_mat_normalize(C_t=self.get_dFC_mat(TRs=TRs), \
+                global_normalization=True, threshold=threshold)
+        else:
+            C = self.get_dFC_mat(TRs=TRs)
+
+        C = np.abs(C) # ?????? should we do this?
+
+        if np.any(C<0):
+            V_MIN = -1
+            V_MAX = 1
+        else:
+            V_MIN = 0
+            V_MAX = 1
+
+        if not fix_lim:
+            V_MAX = np.max(C)
+            V_MIN = np.min(C)
+
+        fig, axs = plt.subplots(1, C.shape[0], figsize=(25, 10), \
+            facecolor='w', edgecolor='k')
+        fig.suptitle(self.measure.measure_name+' dFC', fontsize=20, size=20)
+        axs = axs.ravel()
+
+        for l in range(0, C.shape[0]):
+            axs[l].set_axis_off()
+            im = axs[l].imshow(C[l, :, :], interpolation='nearest', aspect='equal', cmap='jet',    # 'viridis'
+                        vmin=V_MIN, vmax=V_MAX)
+            axs[l].set_title('TR '+str(TRs[l]))
+
+        fig.subplots_adjust(bottom=0.1, top=1.5, left=0.1, right=0.9,
+                            wspace=0.02, hspace=0.02)
+
+        # [x, y, w, h]
+        cb_ax = fig.add_axes([0.91, 0.75, 0.007, 0.1])
+        cbar = fig.colorbar(im, cax=cb_ax)
+
+        #set the colorbar ticks and tick labels
+        cbar.set_ticks(np.arange(0, 1.1, 0.5))
+        cbar.set_ticklabels(['0', '0.5', '1'])
+
+        if save_image:
+            plt.savefig(fig_name + '.png', dpi=fig_dpi)  
+            plt.close()
+        else:
+            plt.show()
 
 
