@@ -45,18 +45,13 @@ def visualize_corr_mat():
 
 class DFC_ANALYZER:
 
-    def __init__(self, SB_MEASURES_lst, NSB_MEASURES_lst):
+    def __init__(self, MEASURES_lst):
         self.analysis_name = ''
-        self.SB_MEASURES_lst_ = SB_MEASURES_lst
-        self.NSB_MEASURES_lst_ = NSB_MEASURES_lst
+        self.MEASURES_lst_ = MEASURES_lst
 
     @property
-    def SB_MEASURES_lst(self):
-        return self.SB_MEASURES_lst_
-
-    @property
-    def NSB_MEASURES_lst(self):
-        return self.NSB_MEASURES_lst_
+    def MEASURES_lst(self):
+        return self.MEASURES_lst_
 
     def dFC_corr(self, measure_i, measure_j):
 
@@ -149,6 +144,7 @@ class dFC:
 
     def __init__(self):
         self.measure_name = ''
+        self.is_state_based = bool()
         self.dFCM = DFCM()
         self._stat = []
         self.TPM = []
@@ -352,6 +348,7 @@ class HMM_CONT(dFC):
 
     def __init__(self, n_states=12):
         self.measure_name = 'Continuous HMM'
+        self.is_state_based = True
         self.dFCM = DFCM()
         self.TPM = []
         self.FCS_ = []
@@ -400,6 +397,7 @@ class WINDOWLESS(dFC):
 
     def __init__(self, n_states=12):
         self.measure_name = 'Windowless'
+        self.is_state_based = True
         self.dFCM = DFCM()
         self.TPM = []
         self.FCS_ = []
@@ -449,6 +447,7 @@ class SLIDING_WINDOW(dFC):
                 MI, or GraphLasso."
 
         self.measure_name_ = 'Sliding Window'
+        self.is_state_based = False
         self.sw_method_ = sw_method
         self.dFCM = DFCM()
         self.TPM = []
@@ -622,6 +621,7 @@ class TIME_FREQ(dFC):
                 CWT_phase_r, CWT_phase_a, or WTC."
 
         self.measure_name_ = 'Time-Frequency '
+        self.is_state_based = False
         self.dFCM = DFCM()
         self.TPM = []
         self.FCS_ = []
@@ -737,6 +737,7 @@ class SLIDING_WINDOW_CLUSTR(dFC):
                 euclidean or manhattan."
     
         self.measure_name_ = 'SlidingWindow+Clustering'
+        self.is_state_based = True
         self.clstr_distance = clstr_distance
         self.dFCM = DFCM()
         self.TPM = []
@@ -849,6 +850,7 @@ class HMM_DISC(dFC):
 
     def __init__(self, sw_method='pear_corr', swc=None, n_states=12, n_hid_states=6, W=88, n_overlap=0.5, tapered_window=True):
         self.measure_name_ = 'DiscreteHMM'
+        self.is_state_based = True
         self.dFCM = DFCM()
         self.TPM = []
         self.FCS_ = []
