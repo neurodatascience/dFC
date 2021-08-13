@@ -362,12 +362,12 @@ from hmmlearn import hmm
 
 class HMM_CONT(dFC):
 
-    def __init__(self, n_states=12):
+    def __init__(self, params):
         self.measure_name = 'Continuous HMM'
         self.is_state_based = True
         self.TPM = []
         self.FCS_ = []
-        self.n_states = n_states
+        self.n_states = params['n_states']
 
     def estimate_FCS(self, time_series=None):
 
@@ -420,12 +420,12 @@ from ksvd import ApproximateKSVD
 
 class WINDOWLESS(dFC):
 
-    def __init__(self, n_states=5):
+    def __init__(self, params):
         self.measure_name = 'Windowless'
         self.is_state_based = True
         self.TPM = []
         self.FCS_ = []
-        self.n_states = n_states
+        self.n_states = params['n_states']
     
     def estimate_FCS(self, time_series=None):
 
@@ -479,7 +479,7 @@ from sklearn.covariance import GraphicalLassoCV
 
 class SLIDING_WINDOW(dFC):
 
-    def __init__(self, sw_method='pear_corr', W=88, n_overlap=0.5, tapered_window=True):
+    def __init__(self, params, sw_method='pear_corr', tapered_window=True):
 
         assert sw_method=='pear_corr' or sw_method=='MI' or sw_method=='GraphLasso', \
             "sw_method not recognized. It must be either pear_corr, \
@@ -490,8 +490,8 @@ class SLIDING_WINDOW(dFC):
         self.sw_method_ = sw_method
         self.TPM = []
         self.FCS_ = []
-        self.W = W
-        self.n_overlap = n_overlap
+        self.W = params['W']
+        self.n_overlap = params['n_overlap']
         self.tapered_window = tapered_window
     
     @property
@@ -651,11 +651,8 @@ import pycwt as wavelet
 
 class TIME_FREQ(dFC):
 
-    def __init__(self, method=None, coi_correction=True, \
-        n_jobs=-1, verbose=1, backend='loky'):
+    def __init__(self, params, method='WTC', coi_correction=True):
         
-        if method is None:
-            method='WTC'
         assert method=='CWT_mag' or method=='CWT_phase_r' \
             or method=='CWT_phase_a' or method=='WTC', \
             "method not recognized. It must be either CWT_mag, \
@@ -667,9 +664,9 @@ class TIME_FREQ(dFC):
         self.FCS_ = []
         self.method_ = method
         self.coi_correction_ = coi_correction
-        self.n_jobs = n_jobs
-        self.verbose = verbose
-        self.backend = backend
+        self.n_jobs = params['n_jobs']
+        self.verbose = params['verbose']
+        self.backend = params['backend']
     
     @property
     def coi_correction(self):
@@ -783,8 +780,8 @@ from pyclustering.utils.metric import distance_metric, type_metric
 
 class SLIDING_WINDOW_CLUSTR(dFC):
 
-    def __init__(self, sw_method='pear_corr', n_states=12, W=88, \
-        n_overlap=0.5, tapered_window=True, clstr_distance='euclidean'):
+    def __init__(self, params, sw_method='pear_corr', clstr_distance='euclidean',
+    tapered_window=True):
 
         assert clstr_distance=='euclidean' or clstr_distance=='manhattan', \
             "Clustering distance not recognized. It must be either \
@@ -795,11 +792,10 @@ class SLIDING_WINDOW_CLUSTR(dFC):
         self.clstr_distance = clstr_distance
         self.TPM = []
         self.FCS_ = []
-        self.sw_method_=sw_method
-        self.sliding_window = None
-        self.n_states = n_states
-        self.W = W
-        self.n_overlap = n_overlap
+        self.sw_method_ = sw_method
+        self.n_states = params['n_states']
+        self.W = params['W']
+        self.n_overlap = params['n_overlap']
         self.tapered_window = tapered_window
     
     @property
@@ -809,10 +805,6 @@ class SLIDING_WINDOW_CLUSTR(dFC):
     @property
     def measure_name(self):
         return self.measure_name_ + '_' + self.sw_method
-
-    def set_sliding_window(self, sliding_window=None):
-        if sliding_window.sw_method==self.sw_method:
-            self.sliding_window = sliding_window
 
     def dFC_mat2vec(self, C_t):
         F = list()
@@ -957,17 +949,17 @@ from hmmlearn import hmm
 
 class HMM_DISC(dFC):
 
-    def __init__(self, sw_method='pear_corr', n_states=12, n_hid_states=6, W=88, n_overlap=0.5, tapered_window=True):
+    def __init__(self, params, sw_method='pear_corr', tapered_window=True):
         self.measure_name_ = 'DiscreteHMM'
         self.is_state_based = True
         self.TPM = []
         self.FCS_ = []
         self.sw_method_ = sw_method
         self.swc = None
-        self.n_states = n_states
-        self.n_hid_states = n_hid_states
-        self.W = W
-        self.n_overlap = n_overlap
+        self.n_states = params['n_states']
+        self.n_hid_states = params['n_hid_states']
+        self.W = params['W']
+        self.n_overlap = params['n_overlap']
         self.tapered_window = tapered_window
 
     @property
