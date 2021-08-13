@@ -109,9 +109,15 @@ def dFC_mat_normalize(C_t, global_normalization=True, threshold=0.0):
 
 class DFC_ANALYZER:
 
-    def __init__(self, MEASURES_lst):
+    def __init__(self, MEASURES_lst, save_image=False, output_root=None, \
+        n_jobs=-1, verbose=1, backend='loky'):
         self.analysis_name = ''
         self.MEASURES_lst_ = MEASURES_lst
+        self.save_image = save_image
+        self.output_root = output_root
+        self.n_jobs = n_jobs
+        self.verbose = verbose 
+        self.backend = backend
 
     @property
     def MEASURES_lst(self):
@@ -137,27 +143,45 @@ class DFC_ANALYZER:
 
         self.estimate_FCS(time_series=time_series)
         SUBJECTs = list(set(time_series.subj_id_array))
-        for subject in SUBJECTs:
-            dFCM_lst = self.estimate_dFCM(time_series=time_series.get_subj_ts(subj_id=subject))
-            self.visualize_dFCMs(dFCM_lst=dFCM_lst, TR_idx=list(range(10, 20)))
+
+        dFCM_lst = Parallel( \
+            n_jobs=self.n_jobs, verbose=self.verbose, backend=self.backend)( \
+            delayed(self.subj_lvl_analysis)( \
+                time_series=time_series.get_subj_ts(subj_id=subject) \
+                ) \
+                for subject in SUBJECTs)
 
         return dFCM_lst
 
+    def subj_lvl_analysis(self, time_series):
+
+        dFCM_lst = self.estimate_dFCM(time_series=time_series)
+
+        self.visualize_dFCMs(dFCM_lst=dFCM_lst, \
+            TR_idx=list(range(10, 20)), \
+            subj_id=time_series.subj_id_array[0], \
+            )
+
+        return dFCM_lst
 
     def estimate_FCS(self, time_series=None):
         SB_MEASURES_lst = self.SB_MEASURES_lst
-        SB_MEASURES_lst_NEW = Parallel(n_jobs=-1, verbose=1, backend='loky')( \
+        SB_MEASURES_lst_NEW = Parallel( \
+            n_jobs=self.n_jobs, verbose=self.verbose, backend=self.backend)( \
             delayed(measure.estimate_FCS)(time_series=time_series) \
                 for measure in SB_MEASURES_lst)
         self.MEASURES_lst_ = self.NSB_MEASURES_lst + SB_MEASURES_lst_NEW
 
     def estimate_dFCM(self, time_series=None):
-        dFCM_lst = Parallel(n_jobs=-1, verbose=1, backend='loky')( \
+        dFCM_lst = Parallel( \
+            n_jobs=self.n_jobs, verbose=self.verbose, backend=self.backend)( \
             delayed(measure.estimate_dFCM)(time_series=time_series) \
                 for measure in self.MEASURES_lst)
         return dFCM_lst
 
     def dFC_corr(self, dFCM_i, dFCM_j):
+
+        # returns correlation of dFC measures over time
 
         TRs = TR_intersection([dFCM_i, dFCM_j])
         dFC_mat_i = dFCM_i.get_dFC_mat(TRs=TRs)
@@ -169,6 +193,9 @@ class DFC_ANALYZER:
         return corr
 
     def dFC_corr_mat(self):
+
+        # returns averaged correlation of dFC measures 
+
         a = 0.1 # portion of the dFCs to ignore from the beginning and the end
         methods_corr = np.zeros((len(self.MEASURES_lst), len(self.MEASURES_lst)))
         for i in range(len(self.MEASURES_lst)):
@@ -184,6 +211,8 @@ class DFC_ANALYZER:
 
     def visualize_dFC_corr(self, save_image=False, fig_name=None):
 
+        # visualize avergaed dFC corr mat
+
         measure_list = list()
         for measure in self.MEASURES_lst:
             measure_list.append(measure.measure_name)
@@ -195,15 +224,17 @@ class DFC_ANALYZER:
         ax.set_yticklabels(measure_list)
         cb=fig.colorbar(im, shrink=0.8)
         plt.suptitle('Correlation of measured dFC')
-        if save_image:
+        if self.save_image:
+            output_root = self.output_root+'dFC/'
+            fig_name = output_root + 'avg_dFC_corr'
             plt.savefig(fig_name + '.png', dpi=fig_dpi)  
             plt.close()
         else:
             plt.show()
 
     def visualize_dFCMs(self, dFCM_lst=None, TR_idx=None, normalize=True, threshold=0.0, \
-                            fix_lim=True, save_image=False, output_root=None):
-
+                            fix_lim=True, subj_id=''):
+        
         TRs = TR_intersection(dFCM_lst)
         if not TR_idx is None:
             assert not np.any(np.array(TR_idx)>=len(TRs)), \
@@ -211,17 +242,20 @@ class DFC_ANALYZER:
             TRs = [TRs[i] for i in TR_idx]
 
         for dFCM in dFCM_lst:
-            if save_image:
+            if self.save_image:
+                output_root = self.output_root+'dFC/'
                 dFCM.visualize_dFC(TRs=TRs, normalize=normalize, threshold=threshold, \
                     fix_lim=fix_lim, \
-                    save_image=save_image, \
-                    fig_name= output_root+dFCM.measure.measure_name+'_dFC')
+                    save_image=self.save_image, \
+                    fig_name= output_root+'subject'+subj_id+'_'+dFCM.measure.measure_name+'_dFC')
             else:
                 dFCM.visualize_dFC(TRs=TRs, normalize=normalize, threshold=threshold, fix_lim=fix_lim)
 
-    def visualize_FCS(self, normalize=True, threshold=0.0, save_image=False, output_root=None):
+    def visualize_FCS(self, normalize=True, threshold=0.0):
+
         for measure in self.MEASURES_lst:  
-            if save_image:
+            if self.save_image:
+                output_root = self.output_root + 'FCS/'
                 measure.visualize_FCS(normalize=normalize, threshold=threshold, save_image=True, \
                     fig_name= output_root + measure.measure_name + '_FCS')
                 # measure.visualize_TPM(normalize=normalize)
@@ -386,7 +420,7 @@ from ksvd import ApproximateKSVD
 
 class WINDOWLESS(dFC):
 
-    def __init__(self, n_states=12):
+    def __init__(self, n_states=5):
         self.measure_name = 'Windowless'
         self.is_state_based = True
         self.TPM = []
@@ -617,7 +651,8 @@ import pycwt as wavelet
 
 class TIME_FREQ(dFC):
 
-    def __init__(self, method=None, coi_correction=True):
+    def __init__(self, method=None, coi_correction=True, \
+        n_jobs=-1, verbose=1, backend='loky'):
         
         if method is None:
             method='WTC'
@@ -632,6 +667,9 @@ class TIME_FREQ(dFC):
         self.FCS_ = []
         self.method_ = method
         self.coi_correction_ = coi_correction
+        self.n_jobs = n_jobs
+        self.verbose = verbose
+        self.backend = backend
     
     @property
     def coi_correction(self):
@@ -711,7 +749,8 @@ class TIME_FREQ(dFC):
             time_series.n_regions, time_series.n_regions))
 
         for i in range(time_series.n_regions):
-            Q = Parallel(n_jobs=-1, verbose=0, backend='loky')( \
+            Q = Parallel( \
+                n_jobs=self.n_jobs, verbose=self.verbose, backend=self.backend)( \
                 delayed(self.WT_dFC)( \
                                     Y1=time_series.data[i, :], \
                                     Y2=time_series.data[j, :], \
