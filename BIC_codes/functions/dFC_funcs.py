@@ -868,8 +868,9 @@ class SLIDING_WINDOW_CLUSTR(dFC):
         # self.n_regions = time_series.n_regions
         # self.n_time = time_series.n_time
 
-        sliding_window = SLIDING_WINDOW(sw_method=self.sw_method, \
-                W=self.W, n_overlap=self.n_overlap, tapered_window=self.tapered_window)
+        params = {'W': self.W, 'n_overlap': self.n_overlap}
+        sliding_window = SLIDING_WINDOW(params, sw_method=self.sw_method, \
+                tapered_window=self.tapered_window)
 
         # 1-level clustering
         # dFCM_raw = sliding_window.estimate_dFCM( \
@@ -909,8 +910,9 @@ class SLIDING_WINDOW_CLUSTR(dFC):
         assert type(time_series) is TIME_SERIES, \
             "time_series must be of TIME_SERIES class."
 
-        sliding_window = SLIDING_WINDOW(sw_method=self.sw_method, \
-            W=self.W, n_overlap=self.n_overlap, tapered_window=self.tapered_window)
+        params = {'W': self.W, 'n_overlap': self.n_overlap}
+        sliding_window = SLIDING_WINDOW(params, sw_method=self.sw_method, \
+            tapered_window=self.tapered_window)
         dFCM_raw = sliding_window.estimate_dFCM(time_series=time_series)
 
         F = self.dFC_mat2vec(dFCM_raw.get_dFC_mat(TRs=dFCM_raw.TR_array))
@@ -970,10 +972,6 @@ class HMM_DISC(dFC):
     def measure_name(self):
         return self.measure_name_ + '_' + self.sw_method
 
-    def set_swc(self, swc=None):
-        if swc.sw_method==self.sw_method:
-            self.swc = swc
-
     def estimate_FCS(self, time_series=None):
         
         assert type(time_series) is TIME_SERIES, \
@@ -982,9 +980,9 @@ class HMM_DISC(dFC):
         # self.n_regions = time_series.n_regions
         # self.n_time = time_series.n_time
 
-        self.swc = SLIDING_WINDOW_CLUSTR(sw_method=self.sw_method, \
-            n_states=self.n_states, W=self.W, n_overlap=self.n_overlap, \
-                tapered_window=self.tapered_window)
+        params = {'W': self.W, 'n_overlap': self.n_overlap, 'n_states': self.n_states}
+        self.swc = SLIDING_WINDOW_CLUSTR(params, sw_method=self.sw_method, \
+            tapered_window=self.tapered_window)
         self.swc.estimate_FCS(time_series=time_series)
         self.FCC_ = self.swc.estimate_dFCM(time_series=time_series)
 
