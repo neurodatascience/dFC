@@ -108,11 +108,14 @@ def dFC_mat_normalize(C_t, global_normalization=True, threshold=0.0):
 ############################# dFC Analyzer class ################################
 
 class DFC_ANALYZER:
+    # if self.n_jobs is None => no parallelization
 
-    def __init__(self, MEASURES_lst, save_image=False, output_root=None, \
-        n_jobs=-1, verbose=1, backend='loky'):
+    def __init__(self, MEASURES_lst, vis_TR_idx,\
+            save_image=False, output_root=None, \
+                n_jobs=-1, verbose=1, backend='loky'):
         self.analysis_name = ''
         self.MEASURES_lst_ = MEASURES_lst
+        self.vis_TR_idx = vis_TR_idx # to visualize
         self.save_image = save_image
         self.output_root = output_root
         self.n_jobs = n_jobs
@@ -141,24 +144,37 @@ class DFC_ANALYZER:
 
     def analyze(self, time_series=None):
 
+        print("FCS estimation started...")
         self.estimate_FCS(time_series=time_series)
+        print("FCS estimation done.")
+
+        self.visualize_FCS()
+
         SUBJECTs = list(set(time_series.subj_id_array))
 
-        dFCM_lst = Parallel( \
-            n_jobs=self.n_jobs, verbose=self.verbose, backend=self.backend)( \
-            delayed(self.subj_lvl_analysis)( \
-                time_series=time_series.get_subj_ts(subj_id=subject) \
-                ) \
-                for subject in SUBJECTs)
-
-        return dFCM_lst
+        print("dFCM estimation started...")
+        if self.n_jobs is None:
+            for subject in SUBJECTs:
+                self.subj_lvl_analysis( \
+                    time_series=time_series.get_subj_ts(subj_id=subject) \
+                    )
+        else:
+            Parallel( \
+                n_jobs=self.n_jobs, \
+                    verbose=self.verbose, \
+                        backend=self.backend)( \
+                delayed(self.subj_lvl_analysis)( \
+                    time_series=time_series.get_subj_ts(subj_id=subject) \
+                    ) \
+                    for subject in SUBJECTs)
+        print("dFCM estimation done.")
 
     def subj_lvl_analysis(self, time_series):
 
         dFCM_lst = self.estimate_dFCM(time_series=time_series)
 
         self.visualize_dFCMs(dFCM_lst=dFCM_lst, \
-            TR_idx=list(range(10, 20)), \
+            TR_idx=self.vis_TR_idx, \
             subj_id=time_series.subj_id_array[0], \
             )
 
@@ -166,17 +182,31 @@ class DFC_ANALYZER:
 
     def estimate_FCS(self, time_series=None):
         SB_MEASURES_lst = self.SB_MEASURES_lst
-        SB_MEASURES_lst_NEW = Parallel( \
-            n_jobs=self.n_jobs, verbose=self.verbose, backend=self.backend)( \
-            delayed(measure.estimate_FCS)(time_series=time_series) \
-                for measure in SB_MEASURES_lst)
+        if self.n_jobs is None:
+            SB_MEASURES_lst_NEW = list()
+            for measure in SB_MEASURES_lst:
+                SB_MEASURES_lst_NEW.append( \
+                    measure.estimate_FCS(time_series=time_series) \
+                    )
+        else:
+            SB_MEASURES_lst_NEW = Parallel( \
+                n_jobs=self.n_jobs, verbose=self.verbose, backend=self.backend)( \
+                delayed(measure.estimate_FCS)(time_series=time_series) \
+                    for measure in SB_MEASURES_lst)
         self.MEASURES_lst_ = self.NSB_MEASURES_lst + SB_MEASURES_lst_NEW
 
     def estimate_dFCM(self, time_series=None):
-        dFCM_lst = Parallel( \
-            n_jobs=self.n_jobs, verbose=self.verbose, backend=self.backend)( \
-            delayed(measure.estimate_dFCM)(time_series=time_series) \
-                for measure in self.MEASURES_lst)
+        if self.n_jobs is None:
+            dFCM_lst = list()
+            for measure in self.MEASURES_lst:
+                dFCM_lst.append( \
+                    measure.estimate_dFCM(time_series=time_series) \
+                )
+        else:
+            dFCM_lst = Parallel( \
+                n_jobs=self.n_jobs, verbose=self.verbose, backend=self.backend)( \
+                delayed(measure.estimate_dFCM)(time_series=time_series) \
+                    for measure in self.MEASURES_lst)
         return dFCM_lst
 
     def dFC_corr(self, dFCM_i, dFCM_j):
@@ -235,6 +265,8 @@ class DFC_ANALYZER:
     def visualize_dFCMs(self, dFCM_lst=None, TR_idx=None, normalize=True, threshold=0.0, \
                             fix_lim=True, subj_id=''):
         
+        # TR_idx is not TR values, but their indices!
+
         TRs = TR_intersection(dFCM_lst)
         if not TR_idx is None:
             assert not np.any(np.array(TR_idx)>=len(TRs)), \
@@ -305,7 +337,7 @@ class dFC:
             return
 
         if normalize:
-            C = self.dFC_mat_normalize(C_t=self.FCS, threshold=threshold)
+            C = dFC_mat_normalize(C_t=self.FCS, threshold=threshold)
         else:
             C = self.FCS
 
@@ -334,7 +366,7 @@ class dFC:
         if self.TPM == []:
             return
         if normalize:
-            C = self.dFC_mat_normalize(C_t=np.expand_dims(self.TPM, axis=0), threshold=0.0)
+            C = dFC_mat_normalize(C_t=np.expand_dims(self.TPM, axis=0), threshold=0.0)
         else:
             C = np.expand_dims(self.TPM, axis=0)
 
@@ -363,7 +395,7 @@ from hmmlearn import hmm
 class HMM_CONT(dFC):
 
     def __init__(self, params):
-        self.measure_name = 'Continuous HMM'
+        self.measure_name = 'ContinuousHMM'
         self.is_state_based = True
         self.TPM = []
         self.FCS_ = []
@@ -465,6 +497,179 @@ class WINDOWLESS(dFC):
         dFCM.add_FCP(FCPs=self.FCS_, FCP_idx=Z, subj_id_array=time_series.subj_id_array)
         return dFCM
 
+################################# Time-Frequency #################################
+
+"""
+PyCWT: 
+Authors
+Sebastian Krieger, Nabil Freij, Alexey Brazhe, Christopher Torrence, 
+Gilbert P. Compo and contributors.
+
+Disclaimer
+This module is based on routines provided by C. Torrence and G. P. Compo available 
+at http://paos.colorado.edu/research/wavelets/, on routines provided by A. Grinsted, 
+J. Moore and S. Jevrejeva available at 
+http://noc.ac.uk/using-science/crosswavelet-wavelet-coherence, and on routines 
+provided by A. Brazhe available at http://cell.biophys.msu.ru/static/swan/.
+
+This software is released under a BSD-style open source license. Please read 
+the license file for further information. This routine is provided as is 
+without any express or implied warranties whatsoever.
+
+Parameters
+    ----------
+    y1, y2 : numpy.ndarray, list
+        Input signals.
+    dt : float
+        Sample spacing.
+    dj : float, optional
+        Spacing between discrete scales. Default value is 1/12.
+        Smaller values will result in better scale resolution, but
+        slower calculation and plot.
+    s0 : float, optional
+        Smallest scale of the wavelet. Default value is 2*dt.
+    J : float, optional
+        Number of scales less one. Scales range from s0 up to
+        s0 * 2**(J * dj), which gives a total of (J + 1) scales.
+        Default is J = (log2(N*dt/so))/dj.
+    sig : bool 
+        set to compute signficance, default is True
+    significance_level (float, optional) :
+        Significance level to use. Default is 0.95.
+    normalize (boolean, optional) :
+        If set to true, normalizes CWT by the standard deviation of
+        the signals.
+
+- if n_jobs is None => no parallelization
+
+todo:
+
+- consider COI and edge effect in averaging:
+    => should we truncate the time points having at less than 20 freqs as done in Savva et al. ?
+
+"""
+import pycwt as wavelet
+
+class TIME_FREQ(dFC):
+
+    def __init__(self, params, method='WTC', coi_correction=True):
+        
+        assert method=='CWT_mag' or method=='CWT_phase_r' \
+            or method=='CWT_phase_a' or method=='WTC', \
+            "method not recognized. It must be either CWT_mag, \
+                CWT_phase_r, CWT_phase_a, or WTC."
+
+        self.measure_name_ = 'Time-Frequency '
+        self.is_state_based = False
+        self.TPM = []
+        self.FCS_ = []
+        self.method_ = method
+        self.coi_correction_ = coi_correction
+        self.n_jobs = params['n_jobs']
+        self.verbose = params['verbose']
+        self.backend = params['backend']
+    
+    @property
+    def coi_correction(self):
+        return self.coi_correction_
+
+    @property
+    def method(self):
+        return self.method_
+
+    @property
+    def measure_name(self):
+        return self.measure_name_ + '_' + self.method
+
+    def coi_correct(self, X, coi, freqs):
+        # correct the edge effect in matrix X = [freqs, time] using coi
+        # if self.coi_correction=True
+
+        if not self.coi_correction:
+            return X
+        periods = 1/freqs
+        periods = np.repeat(periods[:, None], X.shape[1], axis=1)
+        coi = np.repeat(coi[None, :], X.shape[0], axis=0)
+        X_corrected = np.multiply(X, (coi>=periods))
+        return X_corrected
+
+    def WT_dFC(self, Y1, Y2, Fs, J, s0, dj):
+        if self.method_=='CWT_mag' or self.method_=='CWT_phase_r' or self.method_=='CWT_phase_a':
+            # Cross Wavelet Transform
+            WT_xy, coi, freqs, _ = wavelet.xwt(Y1, Y2, dt=1/Fs, dj=dj, s0=s0, J=J, 
+                significance_level=0.95, wavelet='morlet', normalize=True)
+
+            if self.method_=='CWT_mag':
+                WT_xy_corrected = self.coi_correct(WT_xy, coi, freqs)
+                wt = np.abs(np.mean(WT_xy_corrected, axis=0))
+
+            if self.method_=='CWT_phase_r' or self.method_=='CWT_phase_a':
+                cosA = np.cos(np.angle(WT_xy))
+                sinA = np.sin(np.angle(WT_xy))
+
+                cosA_corrected = self.coi_correct(cosA, coi, freqs)
+                sinA_corrected = self.coi_correct(sinA, coi, freqs)
+
+                A = (cosA_corrected + sinA_corrected * 1j)
+
+                if self.method_=='CWT_phase_r':
+                    wt = np.abs(np.mean(A, axis=0))
+                else:
+                    wt = np.angle(np.mean(A, axis=0))
+        
+        if self.method_=='WTC':
+            # Wavelet Transform Coherence
+            WT_xy, _, coi, freqs, _ = wavelet.wct(Y1, Y2, dt=1/Fs, dj=dj, s0=s0, J=J, 
+                sig=False, significance_level=0.95, wavelet='morlet', normalize=True)
+            WT_xy_corrected = self.coi_correct(WT_xy, coi, freqs)
+            wt = np.abs(np.mean(WT_xy_corrected, axis=0))
+
+        return wt
+
+    def estimate_dFCM(self, time_series=None):
+        
+        '''
+        we assume calc is applied on subjects separately
+        '''
+
+        # params
+        J = 50 # -1
+        s0 = 1 # -1
+        dj = 1/8 # 1/12
+
+        assert type(time_series) is TIME_SERIES, \
+            "time_series must be of TIME_SERIES class."
+
+        # self.n_regions = time_series.n_regions
+        # self.n_time = time_series.n_time
+
+        WT = np.zeros((time_series.n_time, \
+            time_series.n_regions, time_series.n_regions))
+
+        for i in range(time_series.n_regions):
+            if self.n_jobs is None:
+                Q = list()
+                for j in range(time_series.n_regions):
+                    Q.append(self.WT_dFC( \
+                        Y1=time_series.data[i, :], \
+                        Y2=time_series.data[j, :], \
+                        Fs=time_series.Fs, \
+                        J=J, s0=s0, dj=dj))
+            else:
+                Q = Parallel( \
+                    n_jobs=self.n_jobs, verbose=self.verbose, backend=self.backend)( \
+                    delayed(self.WT_dFC)( \
+                                    Y1=time_series.data[i, :], \
+                                    Y2=time_series.data[j, :], \
+                                    Fs=time_series.Fs, \
+                                    J=J, s0=s0, dj=dj) \
+                                    for j in range(time_series.n_regions) \
+                                                                )
+            WT[:, i, :] = np.array(Q).T
+
+        dFCM = DFCM(measure=self)
+        dFCM.add_FCP(FCPs=WT, subj_id_array=time_series.subj_id_array)
+        return dFCM
 
 ################################# Sliding-Window #################################
 
@@ -485,7 +690,7 @@ class SLIDING_WINDOW(dFC):
             "sw_method not recognized. It must be either pear_corr, \
                 MI, or GraphLasso."
 
-        self.measure_name_ = 'Sliding Window'
+        self.measure_name_ = 'SlidingWindow'
         self.is_state_based = False
         self.sw_method_ = sw_method
         self.TPM = []
@@ -597,169 +802,6 @@ class SLIDING_WINDOW(dFC):
 
         return dFCM
 
-    
-################################# Time-Frequency #################################
-
-"""
-PyCWT: 
-Authors
-Sebastian Krieger, Nabil Freij, Alexey Brazhe, Christopher Torrence, 
-Gilbert P. Compo and contributors.
-
-Disclaimer
-This module is based on routines provided by C. Torrence and G. P. Compo available 
-at http://paos.colorado.edu/research/wavelets/, on routines provided by A. Grinsted, 
-J. Moore and S. Jevrejeva available at 
-http://noc.ac.uk/using-science/crosswavelet-wavelet-coherence, and on routines 
-provided by A. Brazhe available at http://cell.biophys.msu.ru/static/swan/.
-
-This software is released under a BSD-style open source license. Please read 
-the license file for further information. This routine is provided as is 
-without any express or implied warranties whatsoever.
-
-Parameters
-    ----------
-    y1, y2 : numpy.ndarray, list
-        Input signals.
-    dt : float
-        Sample spacing.
-    dj : float, optional
-        Spacing between discrete scales. Default value is 1/12.
-        Smaller values will result in better scale resolution, but
-        slower calculation and plot.
-    s0 : float, optional
-        Smallest scale of the wavelet. Default value is 2*dt.
-    J : float, optional
-        Number of scales less one. Scales range from s0 up to
-        s0 * 2**(J * dj), which gives a total of (J + 1) scales.
-        Default is J = (log2(N*dt/so))/dj.
-    sig : bool 
-        set to compute signficance, default is True
-    significance_level (float, optional) :
-        Significance level to use. Default is 0.95.
-    normalize (boolean, optional) :
-        If set to true, normalizes CWT by the standard deviation of
-        the signals.
-
-todo:
-
-- consider COI and edge effect in averaging:
-    => should we truncate the time points having at less than 20 freqs as done in Savva et al. ?
-
-"""
-import pycwt as wavelet
-
-class TIME_FREQ(dFC):
-
-    def __init__(self, params, method='WTC', coi_correction=True):
-        
-        assert method=='CWT_mag' or method=='CWT_phase_r' \
-            or method=='CWT_phase_a' or method=='WTC', \
-            "method not recognized. It must be either CWT_mag, \
-                CWT_phase_r, CWT_phase_a, or WTC."
-
-        self.measure_name_ = 'Time-Frequency '
-        self.is_state_based = False
-        self.TPM = []
-        self.FCS_ = []
-        self.method_ = method
-        self.coi_correction_ = coi_correction
-        self.n_jobs = params['n_jobs']
-        self.verbose = params['verbose']
-        self.backend = params['backend']
-    
-    @property
-    def coi_correction(self):
-        return self.coi_correction_
-
-    @property
-    def method(self):
-        return self.method_
-
-    @property
-    def measure_name(self):
-        return self.measure_name_ + '_' + self.method
-
-    def coi_correct(self, X, coi, freqs):
-        # correct the edge effect in matrix X = [freqs, time] using coi
-        # if self.coi_correction=True
-
-        if not self.coi_correction:
-            return X
-        periods = 1/freqs
-        periods = np.repeat(periods[:, None], X.shape[1], axis=1)
-        coi = np.repeat(coi[None, :], X.shape[0], axis=0)
-        X_corrected = np.multiply(X, (coi>=periods))
-        return X_corrected
-
-    def WT_dFC(self, Y1, Y2, Fs, J, s0, dj):
-        if self.method_=='CWT_mag' or self.method_=='CWT_phase_r' or self.method_=='CWT_phase_a':
-            # Cross Wavelet Transform
-            WT_xy, coi, freqs, _ = wavelet.xwt(Y1, Y2, dt=1/Fs, dj=dj, s0=s0, J=J, 
-                significance_level=0.95, wavelet='morlet', normalize=True)
-
-            if self.method_=='CWT_mag':
-                WT_xy_corrected = self.coi_correct(WT_xy, coi, freqs)
-                wt = np.abs(np.mean(WT_xy_corrected, axis=0))
-
-            if self.method_=='CWT_phase_r' or self.method_=='CWT_phase_a':
-                cosA = np.cos(np.angle(WT_xy))
-                sinA = np.sin(np.angle(WT_xy))
-
-                cosA_corrected = self.coi_correct(cosA, coi, freqs)
-                sinA_corrected = self.coi_correct(sinA, coi, freqs)
-
-                A = (cosA_corrected + sinA_corrected * 1j)
-
-                if self.method_=='CWT_phase_r':
-                    wt = np.abs(np.mean(A, axis=0))
-                else:
-                    wt = np.angle(np.mean(A, axis=0))
-        
-        if self.method_=='WTC':
-            # Wavelet Transform Coherence
-            WT_xy, _, coi, freqs, _ = wavelet.wct(Y1, Y2, dt=1/Fs, dj=dj, s0=s0, J=J, 
-                sig=False, significance_level=0.95, wavelet='morlet', normalize=True)
-            WT_xy_corrected = self.coi_correct(WT_xy, coi, freqs)
-            wt = np.abs(np.mean(WT_xy_corrected, axis=0))
-
-        return wt
-
-    def estimate_dFCM(self, time_series=None):
-        
-        '''
-        we assume calc is applied on subjects separately
-        '''
-
-        # params
-        J = 50 # -1
-        s0 = 1 # -1
-        dj = 1/8 # 1/12
-
-        assert type(time_series) is TIME_SERIES, \
-            "time_series must be of TIME_SERIES class."
-
-        # self.n_regions = time_series.n_regions
-        # self.n_time = time_series.n_time
-
-        WT = np.zeros((time_series.n_time, \
-            time_series.n_regions, time_series.n_regions))
-
-        for i in range(time_series.n_regions):
-            Q = Parallel( \
-                n_jobs=self.n_jobs, verbose=self.verbose, backend=self.backend)( \
-                delayed(self.WT_dFC)( \
-                                    Y1=time_series.data[i, :], \
-                                    Y2=time_series.data[j, :], \
-                                    Fs=time_series.Fs, \
-                                    J=J, s0=s0, dj=dj) \
-                                    for j in range(time_series.n_regions) \
-                                                                )
-            WT[:, i, :] = np.array(Q).T
-
-        dFCM = DFCM(measure=self)
-        dFCM.add_FCP(FCPs=WT, subj_id_array=time_series.subj_id_array)
-        return dFCM
 
 ########################### Sliding_Window + Clustering ###########################
 
@@ -794,6 +836,7 @@ class SLIDING_WINDOW_CLUSTR(dFC):
         self.FCS_ = []
         self.sw_method_ = sw_method
         self.n_states = params['n_states']
+        self.n_subj_clstrs = params['n_subj_clstrs']
         self.W = params['W']
         self.n_overlap = params['n_overlap']
         self.tapered_window = tapered_window
@@ -833,7 +876,7 @@ class SLIDING_WINDOW_CLUSTR(dFC):
                 Z[sample] = i
         return Z.astype(int)
 
-    def cluster_FC(self, FCS_raw, n_regions):
+    def cluster_FC(self, FCS_raw, n_clusters, n_regions):
 
         F = self.dFC_mat2vec(FCS_raw)
 
@@ -852,7 +895,7 @@ class SLIDING_WINDOW_CLUSTR(dFC):
             # F_cent = np.array(kmeans_.get_centers())
         else:
             ########### Euclidean Clustering ##############
-            kmeans_ = KMeans(n_clusters=self.n_states, n_init=500).fit(F)
+            kmeans_ = KMeans(n_clusters=n_clusters, n_init=500).fit(F)
             Z = kmeans_.predict(F)
             F_cent = kmeans_.cluster_centers_
 
@@ -891,7 +934,8 @@ class SLIDING_WINDOW_CLUSTR(dFC):
                 )
             FCS, _ = self.cluster_FC( \
                 FCS_raw = dFCM_raw.get_dFC_mat(TRs=dFCM_raw.TR_array), \
-                n_regions = dFCM_raw.n_regions
+                n_clusters = self.n_subj_clstrs, \
+                n_regions = dFCM_raw.n_regions \
                 )
             if FCS_1st_level is None:
                 FCS_1st_level = FCS
@@ -900,6 +944,7 @@ class SLIDING_WINDOW_CLUSTR(dFC):
         
         self.FCS_, self.kmeans_ = self.cluster_FC( \
             FCS_raw=FCS_1st_level, \
+            n_clusters = self.n_states, \
             n_regions = dFCM_raw.n_regions \
             )
 
@@ -939,11 +984,10 @@ class SLIDING_WINDOW_CLUSTR(dFC):
 
 """
 - Z is state time course
-- can use the results from SWC
+- M (num of observations/n_state) of 16 and N (num of hidden states) of 24
 
 todo:
 - two-level hierarchical clustering ?
-- add slice method to DFCM for III
 - find a better name for FCC
 """
 # from HMM_discrete import *
@@ -959,6 +1003,7 @@ class HMM_DISC(dFC):
         self.sw_method_ = sw_method
         self.swc = None
         self.n_states = params['n_states']
+        self.n_subj_clstrs = params['n_subj_clstrs']
         self.n_hid_states = params['n_hid_states']
         self.W = params['W']
         self.n_overlap = params['n_overlap']
@@ -980,7 +1025,8 @@ class HMM_DISC(dFC):
         # self.n_regions = time_series.n_regions
         # self.n_time = time_series.n_time
 
-        params = {'W': self.W, 'n_overlap': self.n_overlap, 'n_states': self.n_states}
+        params = {'W': self.W, 'n_overlap': self.n_overlap, \
+            'n_subj_clstrs': self.n_subj_clstrs, 'n_states': self.n_states}
         self.swc = SLIDING_WINDOW_CLUSTR(params, sw_method=self.sw_method, \
             tapered_window=self.tapered_window)
         self.swc.estimate_FCS(time_series=time_series)
@@ -996,9 +1042,10 @@ class HMM_DISC(dFC):
         self.FCS_ = np.zeros((self.n_hid_states, \
             time_series.n_regions, time_series.n_regions))
         for i in range(self.n_hid_states):
-            self.FCS_[i,:,:] = np.mean(self.FCC_.get_dFC_mat(\
-                TRs=self.FCC_.TR_array[np.squeeze(np.argwhere(self.Z==i))]\
-                    ), axis=0)  # III
+            if len(np.argwhere(self.Z==i))>0:
+                self.FCS_[i,:,:] = np.mean(self.FCC_.get_dFC_mat(\
+                    TRs=self.FCC_.TR_array[np.squeeze(np.argwhere(self.Z==i))]\
+                        ), axis=0)  # III
 
         return self
 
@@ -1346,7 +1393,7 @@ class DFCM():
         threshold=0.0, save_image=False, fig_name=None, fix_lim=True):
 
         if TRs is None:
-            TRs = list(range(self.n_time))
+            TRs = self.TR_array
 
         if normalize:
             C = dFC_mat_normalize(C_t=self.get_dFC_mat(TRs=TRs), \

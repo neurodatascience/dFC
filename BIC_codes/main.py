@@ -3,7 +3,6 @@ import numpy as np
 import time
 import hdf5storage
 import scipy.io as sio
-from joblib import Parallel, delayed
 import os
 os.environ["MKL_NUM_THREADS"] = '64'
 os.environ["NUMEXPR_NUM_THREADS"] = '64'
@@ -12,11 +11,23 @@ os.environ["OMP_NUM_THREADS"] = '64'
 ################################# Parameters #################################
 
 DATA_type = 'real' # 'real' or 'simulated'
+num_subj = 4
+select_nodes = False
+num_select_nodes = 50
 
+n_states = 12
+n_subj_clstrs = 24
+n_hid_states = 6
 n_overlap = 0.5
 W_sw = 44 # in seconds, 44, choose even Ws!?
+n_jobs = 2
+n_jobs_methods = None
+verbose=0
 
-output_root = '../../../../RESULTs/methods_implementation/'
+# output_root = '../../../../RESULTs/methods_implementation/'
+output_root = '/data/origami/dFC/RESULTs/methods_implementation/'
+# output_root = '/Users/mte/Documents/McGill/Project/dFC/RESULTs/methods_implementation/'
+
 if DATA_type=='simulated':
     data_root = '../../../../DATA/TVB data/'
 else:
@@ -39,7 +50,7 @@ if DATA_type=='real':
     SUBJECTS = list(set(SUBJECTS))
     SUBJECTS.sort()
 
-    SUBJECTS = SUBJECTS[0:100]
+    SUBJECTS = SUBJECTS[0:num_subj]
 
     BOLD = None
     for subject in SUBJECTS:
@@ -69,10 +80,11 @@ if DATA_type=='real':
         else:
             BOLD.append_ts(new_time_series=time_series, subj_id=subject)
 
-        # # select nodes
-        # nodes_idx = np.random.choice(range(BOLD.n_regions), size = 50, replace=False)
-        # nodes_idx.sort()
-        # BOLD.select_nodes(nodes_idx=None)
+        # select nodes
+        if select_nodes:
+            nodes_idx = np.random.choice(range(BOLD.n_regions), size=num_select_nodes, replace=False)
+            nodes_idx.sort()
+            BOLD.select_nodes(nodes_idx=nodes_idx)
 
     print(BOLD.n_regions, BOLD.n_time)
 
@@ -95,20 +107,29 @@ if DATA_type=='simulated':
 
 ################################# Measure dFC #################################
 
-hmm_cont = HMM_CONT()
-windowless = WINDOWLESS(n_states=5)
-sw_pc = SLIDING_WINDOW(sw_method='pear_corr', W=int(W_sw*BOLD.Fs), n_overlap=n_overlap)
-sw_mi = SLIDING_WINDOW(sw_method='MI', W=int(W_sw*BOLD.Fs), n_overlap=n_overlap)
-sw_gLasso = SLIDING_WINDOW(sw_method='GraphLasso', W=int(W_sw*BOLD.Fs), n_overlap=n_overlap)
-time_freq_cwt = TIME_FREQ(method='CWT_mag')
-time_freq_cwt_r = TIME_FREQ(method='CWT_phase_r')
-time_freq_wtc = TIME_FREQ(method='WTC')
-swc_pc = SLIDING_WINDOW_CLUSTR(sw_method='pear_corr', W=int(W_sw*BOLD.Fs), n_overlap=n_overlap)
-swc_mi = SLIDING_WINDOW_CLUSTR(sw_method='MI', W=int(W_sw*BOLD.Fs), n_overlap=n_overlap)
-swc_gLasso = SLIDING_WINDOW_CLUSTR(sw_method='GraphLasso', W=int(W_sw*BOLD.Fs), n_overlap=n_overlap)
-hmm_disc_pc = HMM_DISC(sw_method='pear_corr', W=int(W_sw*BOLD.Fs), n_overlap=n_overlap)
-hmm_disc_mi = HMM_DISC(sw_method='MI', W=int(W_sw*BOLD.Fs), n_overlap=n_overlap)
-hmm_disc_gLasso = HMM_DISC(sw_method='GraphLasso', W=int(W_sw*BOLD.Fs), n_overlap=n_overlap)
+params = {'W': int(W_sw*BOLD.Fs), 'n_overlap': n_overlap, \
+    'n_states': n_states, 'n_subj_clstrs': n_subj_clstrs, 'n_hid_states': n_hid_states, \
+    'n_jobs': n_jobs_methods, 'verbose': verbose, 'backend': 'loky' \
+            }
+
+hmm_cont = HMM_CONT(params=params)
+windowless = WINDOWLESS(params=params)
+
+sw_pc = SLIDING_WINDOW(params=params, sw_method='pear_corr')
+sw_mi = SLIDING_WINDOW(params=params, sw_method='MI')
+# sw_gLasso = SLIDING_WINDOW(params=params, sw_method='GraphLasso')
+
+time_freq_cwt = TIME_FREQ(params=params, method='CWT_mag')
+time_freq_cwt_r = TIME_FREQ(params=params, method='CWT_phase_r')
+time_freq_wtc = TIME_FREQ(params=params, method='WTC')
+
+swc_pc = SLIDING_WINDOW_CLUSTR(params=params, sw_method='pear_corr')
+swc_mi = SLIDING_WINDOW_CLUSTR(params=params, sw_method='MI')
+# swc_gLasso = SLIDING_WINDOW_CLUSTR(params=params, sw_method='GraphLasso')
+
+hmm_disc_pc = HMM_DISC(params=params, sw_method='pear_corr')
+hmm_disc_mi = HMM_DISC(params=params, sw_method='MI')
+# hmm_disc_gLasso = HMM_DISC(params=params, sw_method='GraphLasso')
 
 BOLD.visualize(interval=list(range(200)), save_image=True, fig_name=output_root+'BOLD_signal')
 
@@ -118,47 +139,38 @@ MEASURES = [
     hmm_cont, \
     windowless, \
     sw_pc, \
-    sw_mi, \
+    # sw_mi, \
     # sw_gLasso, \
     time_freq_cwt, \
-    time_freq_cwt_r, \
-    time_freq_wtc, \
+    # time_freq_cwt_r, \
+    # time_freq_wtc, \
     swc_pc, \
-    swc_mi, \
+    # swc_mi, \
     # swc_gLasso, \
-    swc_mi, \
+    # swc_mi, \
     hmm_disc_pc,\
     # hmm_disc_gLasso, \
-    hmm_disc_mi \
+    # hmm_disc_mi \
             ]
 
 tic = time.time()
 print('Measurement Started ...')
-MEASURES_NEW = Parallel(n_jobs=-1, verbose=1, backend='loky')(delayed(measure.calc)(time_series=BOLD) for measure in MEASURES)
+dFC_analyzer = DFC_ANALYZER(MEASURES_lst = MEASURES, vis_TR_idx=list(range(10, 20)),\
+    save_image=True, output_root=output_root,
+    n_jobs=n_jobs, verbose=1, backend='loky' \
+    )
+dFC_analyzer.analyze(time_series=BOLD)
 print('Measurement required %0.3f seconds.' % (time.time() - tic, ))
 
-dFC_analyzer = DFC_ANALYZER(MEASURES_lst = MEASURES_NEW)
-
-################################# Visualize dFC mats #################################
+################################# Visualize FCS #################################
 
 dFC_analyzer.visualize_FCS(normalize=True, \
                         threshold=0.0, \
-                        save_image=True, \
-                        output_root=output_root + 'FCS/' \
                         )
-
-# dFC_analyzer.visualize_dFC_mats(TR_idx=list(range(200, 300, 10)))
-dFC_analyzer.visualize_dFC_mats(TR_idx=list(range(200, 300, 10)), \
-                                normalize=True, \
-                                threshold=0.0, \
-                                fix_lim=True, \
-                                save_image=True, \
-                                output_root=output_root+'dFC/' \
-                                )
 
 ################################# Methods dFC Corr MAT #################################
 
-dFC_analyzer.visualize_dFC_corr(
-                                save_image=True, \
-                                fig_name=output_root+'dFC_corr'
-                                )
+# dFC_analyzer.visualize_dFC_corr(
+#                                 save_image=True, \
+#                                 fig_name=output_root+'dFC_corr'
+#                                 )
