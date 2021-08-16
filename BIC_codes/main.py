@@ -11,7 +11,7 @@ os.environ["OMP_NUM_THREADS"] = '64'
 ################################# Parameters #################################
 
 DATA_type = 'real' # 'real' or 'simulated'
-num_subj = 4
+num_subj = 20
 select_nodes = False
 num_select_nodes = 50
 
@@ -170,7 +170,4 @@ dFC_analyzer.visualize_FCS(normalize=True, \
 
 ################################# Methods dFC Corr MAT #################################
 
-# dFC_analyzer.visualize_dFC_corr(
-#                                 save_image=True, \
-#                                 fig_name=output_root+'dFC_corr'
-#                                 )
+dFC_analyzer.visualize_dFC_corr()

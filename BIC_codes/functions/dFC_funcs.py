@@ -122,6 +122,16 @@ class DFC_ANALYZER:
         self.verbose = verbose 
         self.backend = backend
 
+        self.methods_corr_lst_ = list()
+
+    @property
+    def methods_corr(self):
+        return np.mean(self.methods_corr_lst, axis=0)
+
+    @property
+    def methods_corr_lst(self):
+        return np.array(self.methods_corr_lst_)
+
     @property
     def MEASURES_lst(self):
         return self.MEASURES_lst_
@@ -178,6 +188,8 @@ class DFC_ANALYZER:
             subj_id=time_series.subj_id_array[0], \
             )
 
+        self.methods_corr_lst_.append(self.dFC_corr_mat(dFCM_lst=dFCM_lst))
+
         return dFCM_lst
 
     def estimate_FCS(self, time_series=None):
@@ -222,16 +234,16 @@ class DFC_ANALYZER:
         corr= np.array(corr)
         return corr
 
-    def dFC_corr_mat(self):
+    def dFC_corr_mat(self, dFCM_lst):
 
         # returns averaged correlation of dFC measures 
 
         a = 0.1 # portion of the dFCs to ignore from the beginning and the end
-        methods_corr = np.zeros((len(self.MEASURES_lst), len(self.MEASURES_lst)))
-        for i in range(len(self.MEASURES_lst)):
-            for j in range(i+1, len(self.MEASURES_lst)):
+        methods_corr = np.zeros((len(dFCM_lst), len(dFCM_lst)))
+        for i in range(len(dFCM_lst)):
+            for j in range(i+1, len(dFCM_lst)):
                 corr_ij = self.dFC_corr( \
-                    self.MEASURES_lst[i], self.MEASURES_lst[j] \
+                    dFCM_lst[i], dFCM_lst[j] \
                         )
                 methods_corr[i,j] = np.mean(corr_ij[ \
                     int(len(corr_ij)*a) : int(len(corr_ij)*(1-a)) \
@@ -239,7 +251,7 @@ class DFC_ANALYZER:
                 methods_corr[j,i] = methods_corr[i,j] 
         return methods_corr
 
-    def visualize_dFC_corr(self, save_image=False, fig_name=None):
+    def visualize_dFC_corr(self):
 
         # visualize avergaed dFC corr mat
 
@@ -247,7 +259,7 @@ class DFC_ANALYZER:
         for measure in self.MEASURES_lst:
             measure_list.append(measure.measure_name)
         fig, ax = plt.subplots(figsize=(7, 7))
-        im = ax.imshow(self.dFC_corr_mat(), interpolation='nearest', aspect='equal', cmap='jet')
+        im = ax.imshow(self.methods_corr, interpolation='nearest', aspect='equal', cmap='jet')
         ax.set_xticks(np.arange(len(measure_list)))
         ax.set_yticks(np.arange(len(measure_list)))
         ax.set_xticklabels(measure_list, rotation=90)
