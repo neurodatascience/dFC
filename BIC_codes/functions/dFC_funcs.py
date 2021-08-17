@@ -440,7 +440,7 @@ from hmmlearn import hmm
 
 class HMM_CONT(dFC):
 
-    def __init__(self, params):
+    def __init__(self, **params):
         self.measure_name = 'ContinuousHMM'
         self.is_state_based = True
         self.TPM = []
@@ -505,7 +505,7 @@ from ksvd import ApproximateKSVD
 
 class WINDOWLESS(dFC):
 
-    def __init__(self, params):
+    def __init__(self, **params):
         self.measure_name = 'Windowless'
         self.is_state_based = True
         self.TPM = []
@@ -605,7 +605,7 @@ import pycwt as wavelet
 
 class TIME_FREQ(dFC):
 
-    def __init__(self, params, method='WTC', coi_correction=True):
+    def __init__(self, method='WTC', coi_correction=True, **params):
         
         assert method in self.methods_name_lst, \
             "Time-frequency method not recognized."
@@ -740,7 +740,7 @@ from sklearn.covariance import GraphicalLassoCV
 
 class SLIDING_WINDOW(dFC):
 
-    def __init__(self, params, sw_method='pear_corr', tapered_window=True):
+    def __init__(self, sw_method='pear_corr', tapered_window=True, **params):
 
         assert sw_method in self.sw_methods_name_lst, \
             "sw_method not recognized."
@@ -886,8 +886,8 @@ from pyclustering.utils.metric import distance_metric, type_metric
 
 class SLIDING_WINDOW_CLUSTR(dFC):
 
-    def __init__(self, params, base_method='pear_corr', clstr_distance='euclidean',
-    tapered_window=True):
+    def __init__(self, base_method='pear_corr', clstr_distance='euclidean',
+    tapered_window=True, **params):
 
         assert clstr_distance=='euclidean' or clstr_distance=='manhattan', \
             "Clustering distance not recognized. It must be either \
@@ -984,11 +984,11 @@ class SLIDING_WINDOW_CLUSTR(dFC):
         if self.base_method=='CWT_mag' or self.base_method=='CWT_phase_r' \
             or self.base_method=='CWT_phase_a' or self.base_method=='WTC':
             params = {'n_jobs': self.n_jobs, 'verbose': self.verbose, 'backend': self.backend}
-            base_dFC = TIME_FREQ(params=params, method=self.base_method)
+            base_dFC = TIME_FREQ(method=self.base_method, **params)
         else:
             params = {'W': self.W, 'n_overlap': self.n_overlap}
-            base_dFC = SLIDING_WINDOW(params, sw_method=self.base_method, \
-                    tapered_window=self.tapered_window)
+            base_dFC = SLIDING_WINDOW(sw_method=self.base_method, \
+                    tapered_window=self.tapered_window, **params)
 
         # 1-level clustering
         # dFCM_raw = base_dFC.estimate_dFCM( \
@@ -1033,11 +1033,11 @@ class SLIDING_WINDOW_CLUSTR(dFC):
         if self.base_method=='CWT_mag' or self.base_method=='CWT_phase_r' \
             or self.base_method=='CWT_phase_a' or self.base_method=='WTC':
             params = {'n_jobs': self.n_jobs, 'verbose': self.verbose, 'backend': self.backend}
-            base_dFC = TIME_FREQ(params=params, method=self.base_method)
+            base_dFC = TIME_FREQ(method=self.base_method, **params)
         else:
             params = {'W': self.W, 'n_overlap': self.n_overlap}
-            base_dFC = SLIDING_WINDOW(params, sw_method=self.base_method, \
-                    tapered_window=self.tapered_window)
+            base_dFC = SLIDING_WINDOW(sw_method=self.base_method, \
+                    tapered_window=self.tapered_window, **params)
                     
         dFCM_raw = base_dFC.estimate_dFCM(time_series=time_series)
 
@@ -1083,7 +1083,7 @@ from hmmlearn import hmm
 
 class HMM_DISC(dFC):
 
-    def __init__(self, params, base_method='pear_corr', tapered_window=True):
+    def __init__(self, base_method='pear_corr', tapered_window=True, **params):
         
         assert base_method in self.base_methods_name_lst, \
             "Base method not recognized."
@@ -1123,8 +1123,8 @@ class HMM_DISC(dFC):
         params = {'W': self.W, 'n_overlap': self.n_overlap, \
             'n_subj_clstrs': self.n_subj_clstrs, 'n_states': self.n_states, \
             'n_jobs': self.n_jobs, 'verbose': self.verbose, 'backend': self.backend}
-        self.swc = SLIDING_WINDOW_CLUSTR(params, base_method=self.base_method, \
-            tapered_window=self.tapered_window)
+        self.swc = SLIDING_WINDOW_CLUSTR(base_method=self.base_method, \
+            tapered_window=self.tapered_window, **params)
         self.swc.estimate_FCS(time_series=time_series)
         self.FCC_ = self.swc.estimate_dFCM(time_series=time_series)
 
