@@ -335,6 +335,21 @@ todo:
 
 class dFC:
 
+    methods_name_lst = [ \
+        'CWT_mag', \
+        'CWT_phase_r', \
+        'CWT_phase_a', \
+        'WTC' \
+    ]
+
+    sw_methods_name_lst = [ \
+        'pear_corr', \
+        'MI', \
+        'GraphLasso', \
+    ]
+
+    base_methods_name_lst = sw_methods_name_lst + methods_name_lst
+
     def __init__(self):
         self.measure_name = ''
         self.is_state_based = bool()
@@ -408,6 +423,14 @@ class dFC:
 
 """
 by hmmlearn
+
+Parameters
+    ----------
+    y1, y2 : numpy.ndarray, list
+        Input signals.
+    dt : float
+        Sample spacing.
+
 todo:
 - number of iter?
 - ValueError: 'covars' must be symmetric, positive-definite
@@ -468,6 +491,13 @@ by : https://github.com/nel215/ksvd
 Reference: Rubinstein, R., Zibulevsky, M. and Elad, M., Efficient Implementation 
 of the K-SVD Algorithm using Batch Orthogonal Matching Pursuit Technical 
 Report - CS Technion, April 2008
+
+Parameters
+    ----------
+    y1, y2 : numpy.ndarray, list
+        Input signals.
+    dt : float
+        Sample spacing.
 
 todo:
 """
@@ -577,10 +607,8 @@ class TIME_FREQ(dFC):
 
     def __init__(self, params, method='WTC', coi_correction=True):
         
-        assert method=='CWT_mag' or method=='CWT_phase_r' \
-            or method=='CWT_phase_a' or method=='WTC', \
-            "method not recognized. It must be either CWT_mag, \
-                CWT_phase_r, CWT_phase_a, or WTC."
+        assert method in self.methods_name_lst, \
+            "Time-frequency method not recognized."
 
         self.measure_name_ = 'Time-Frequency '
         self.is_state_based = False
@@ -697,10 +725,15 @@ class TIME_FREQ(dFC):
 ################################# Sliding-Window #################################
 
 """
+
+Parameters
+    ----------
+    y1, y2 : numpy.ndarray, list
+        Input signals.
+    dt : float
+        Sample spacing.
+
 todo:
-- switch between corr and MI
-- dFC_mat normalization ? 
-_ the problem with corr
 """
 
 from sklearn.covariance import GraphicalLassoCV
@@ -709,9 +742,8 @@ class SLIDING_WINDOW(dFC):
 
     def __init__(self, params, sw_method='pear_corr', tapered_window=True):
 
-        assert sw_method=='pear_corr' or sw_method=='MI' or sw_method=='GraphLasso', \
-            "sw_method not recognized. It must be either pear_corr, \
-                MI, or GraphLasso."
+        assert sw_method in self.sw_methods_name_lst, \
+            "sw_method not recognized."
 
         self.measure_name_ = 'SlidingWindow'
         self.is_state_based = False
@@ -835,9 +867,18 @@ class SLIDING_WINDOW(dFC):
 - for clustering, we have a 2-level kmeans clustering. First, we cluster FCPs of each subject. Then, we
     cluster all clustering centers from all subjects. the final estimate_dFCM is using the second kmeans
     model (Allen et al., 2014; Ou et al., 2015). 
+
+Parameters
+    ----------
+    y1, y2 : numpy.ndarray, list
+        Input signals.
+    dt : float
+        Sample spacing.
+
 todo:
 - pyclustering(manhattan) has a problem when suing predict
 """
+
 from sklearn.cluster import KMeans
 from pyclustering.cluster.kmeans import kmeans
 from pyclustering.cluster.center_initializer import kmeans_plusplus_initializer
@@ -851,6 +892,9 @@ class SLIDING_WINDOW_CLUSTR(dFC):
         assert clstr_distance=='euclidean' or clstr_distance=='manhattan', \
             "Clustering distance not recognized. It must be either \
                 euclidean or manhattan."
+
+        assert base_method in self.base_methods_name_lst, \
+            "Base method not recognized."
     
         self.measure_name_ = 'SlidingWindow+Clustering'
         self.is_state_based = True
@@ -1020,8 +1064,15 @@ class SLIDING_WINDOW_CLUSTR(dFC):
 ################################# HMM Discrete #################################
 
 """
-- Z is state time course
-- M (num of observations/n_state) of 16 and N (num of hidden states) of 24
+
+Parameters
+    ----------
+    Z : numpy.ndarray
+        state time course
+    M : int
+        (num of observations/n_state) of 16
+    N : int
+        (num of hidden states) of 24
 
 todo:
 - two-level hierarchical clustering ?
@@ -1033,6 +1084,10 @@ from hmmlearn import hmm
 class HMM_DISC(dFC):
 
     def __init__(self, params, base_method='pear_corr', tapered_window=True):
+        
+        assert base_method in self.base_methods_name_lst, \
+            "Base method not recognized."
+            
         self.measure_name_ = 'DiscreteHMM'
         self.is_state_based = True
         self.TPM = []
@@ -1044,6 +1099,9 @@ class HMM_DISC(dFC):
         self.n_hid_states = params['n_hid_states']
         self.W = params['W']
         self.n_overlap = params['n_overlap']
+        self.n_jobs = params['n_jobs']
+        self.verbose = params['verbose']
+        self.backend = params['backend']
         self.tapered_window = tapered_window
 
     @property
@@ -1063,7 +1121,8 @@ class HMM_DISC(dFC):
         # self.n_time = time_series.n_time
 
         params = {'W': self.W, 'n_overlap': self.n_overlap, \
-            'n_subj_clstrs': self.n_subj_clstrs, 'n_states': self.n_states}
+            'n_subj_clstrs': self.n_subj_clstrs, 'n_states': self.n_states, \
+            'n_jobs': self.n_jobs, 'verbose': self.verbose, 'backend': self.backend}
         self.swc = SLIDING_WINDOW_CLUSTR(params, base_method=self.base_method, \
             tapered_window=self.tapered_window)
         self.swc.estimate_FCS(time_series=time_series)
