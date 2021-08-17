@@ -165,18 +165,19 @@ class DFC_ANALYZER:
         print("dFCM estimation started...")
         if self.n_jobs is None:
             for subject in SUBJECTs:
-                self.subj_lvl_analysis( \
+                self.methods_corr_lst_.append( \
+                    self.subj_lvl_analysis( \
                     time_series=time_series.get_subj_ts(subj_id=subject) \
-                    )
+                    ))
         else:
-            Parallel( \
-                n_jobs=self.n_jobs, \
-                    verbose=self.verbose, \
+            self.methods_corr_lst_ = Parallel( \
+                        n_jobs=self.n_jobs, \
+                        verbose=self.verbose, \
                         backend=self.backend)( \
-                delayed(self.subj_lvl_analysis)( \
-                    time_series=time_series.get_subj_ts(subj_id=subject) \
-                    ) \
-                    for subject in SUBJECTs)
+                    delayed(self.subj_lvl_analysis)( \
+                        time_series=time_series.get_subj_ts(subj_id=subject) \
+                        ) \
+                        for subject in SUBJECTs)
         print("dFCM estimation done.")
 
     def subj_lvl_analysis(self, time_series):
@@ -188,9 +189,7 @@ class DFC_ANALYZER:
             subj_id=time_series.subj_id_array[0], \
             )
 
-        self.methods_corr_lst_.append(self.dFC_corr_mat(dFCM_lst=dFCM_lst))
-
-        return dFCM_lst
+        return self.dFC_corr_mat(dFCM_lst=dFCM_lst)
 
     def estimate_FCS(self, time_series=None):
         SB_MEASURES_lst = self.SB_MEASURES_lst
