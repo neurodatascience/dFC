@@ -123,13 +123,13 @@ time_freq_cwt = TIME_FREQ(params=params, method='CWT_mag')
 time_freq_cwt_r = TIME_FREQ(params=params, method='CWT_phase_r')
 time_freq_wtc = TIME_FREQ(params=params, method='WTC')
 
-swc_pc = SLIDING_WINDOW_CLUSTR(params=params, sw_method='pear_corr')
-swc_mi = SLIDING_WINDOW_CLUSTR(params=params, sw_method='MI')
-# swc_gLasso = SLIDING_WINDOW_CLUSTR(params=params, sw_method='GraphLasso')
+swc_pc = SLIDING_WINDOW_CLUSTR(params=params, base_method='pear_corr')
+swc_mi = SLIDING_WINDOW_CLUSTR(params=params, base_method='MI')
+# swc_gLasso = SLIDING_WINDOW_CLUSTR(params=params, base_method='GraphLasso')
 
-hmm_disc_pc = HMM_DISC(params=params, sw_method='pear_corr')
-hmm_disc_mi = HMM_DISC(params=params, sw_method='MI')
-# hmm_disc_gLasso = HMM_DISC(params=params, sw_method='GraphLasso')
+hmm_disc_pc = HMM_DISC(params=params, base_method='pear_corr')
+hmm_disc_mi = HMM_DISC(params=params, base_method='MI')
+# hmm_disc_gLasso = HMM_DISC(params=params, base_method='GraphLasso')
 
 BOLD.visualize(interval=list(range(200)), save_image=True, fig_name=output_root+'BOLD_signal')
 
@@ -161,13 +161,3 @@ dFC_analyzer = DFC_ANALYZER(MEASURES_lst = MEASURES, vis_TR_idx=list(range(10, 2
     )
 dFC_analyzer.analyze(time_series=BOLD)
 print('Measurement required %0.3f seconds.' % (time.time() - tic, ))
-
-################################# Visualize FCS #################################
-
-dFC_analyzer.visualize_FCS(normalize=True, \
-                        threshold=0.0, \
-                        )
-
-################################# Methods dFC Corr MAT #################################
-
-dFC_analyzer.visualize_dFC_corr()

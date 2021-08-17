@@ -154,11 +154,19 @@ class DFC_ANALYZER:
 
     def analyze(self, time_series=None):
 
+        ### estimate FCS ###
+
         print("FCS estimation started...")
         self.estimate_FCS(time_series=time_series)
         print("FCS estimation done.")
 
-        self.visualize_FCS()
+        ### Visualize FCS ###
+
+        self.visualize_FCS(normalize=True, \
+                                threshold=0.0, \
+                                )
+
+        ### estimate dFCM ###
 
         SUBJECTs = list(set(time_series.subj_id_array))
 
@@ -179,6 +187,10 @@ class DFC_ANALYZER:
                         ) \
                         for subject in SUBJECTs)
         print("dFCM estimation done.")
+
+        #### Methods dFC Corr MAT ###
+
+        self.visualize_dFC_corr()
 
     def subj_lvl_analysis(self, time_series):
 
@@ -833,7 +845,7 @@ from pyclustering.utils.metric import distance_metric, type_metric
 
 class SLIDING_WINDOW_CLUSTR(dFC):
 
-    def __init__(self, params, sw_method='pear_corr', clstr_distance='euclidean',
+    def __init__(self, params, base_method='pear_corr', clstr_distance='euclidean',
     tapered_window=True):
 
         assert clstr_distance=='euclidean' or clstr_distance=='manhattan', \
@@ -845,20 +857,23 @@ class SLIDING_WINDOW_CLUSTR(dFC):
         self.clstr_distance = clstr_distance
         self.TPM = []
         self.FCS_ = []
-        self.sw_method_ = sw_method
+        self.base_method_ = base_method
         self.n_states = params['n_states']
         self.n_subj_clstrs = params['n_subj_clstrs']
         self.W = params['W']
         self.n_overlap = params['n_overlap']
+        self.n_jobs = params['n_jobs']
+        self.verbose = params['verbose']
+        self.backend = params['backend']
         self.tapered_window = tapered_window
     
     @property
-    def sw_method(self):
-        return self.sw_method_
+    def base_method(self):
+        return self.base_method_
 
     @property
     def measure_name(self):
-        return self.measure_name_ + '_' + self.sw_method
+        return self.measure_name_ + '_' + self.base_method
 
     def dFC_mat2vec(self, C_t):
         F = list()
@@ -922,12 +937,17 @@ class SLIDING_WINDOW_CLUSTR(dFC):
         # self.n_regions = time_series.n_regions
         # self.n_time = time_series.n_time
 
-        params = {'W': self.W, 'n_overlap': self.n_overlap}
-        sliding_window = SLIDING_WINDOW(params, sw_method=self.sw_method, \
-                tapered_window=self.tapered_window)
+        if self.base_method=='CWT_mag' or self.base_method=='CWT_phase_r' \
+            or self.base_method=='CWT_phase_a' or self.base_method=='WTC':
+            params = {'n_jobs': self.n_jobs, 'verbose': self.verbose, 'backend': self.backend}
+            base_dFC = TIME_FREQ(params=params, method=self.base_method)
+        else:
+            params = {'W': self.W, 'n_overlap': self.n_overlap}
+            base_dFC = SLIDING_WINDOW(params, sw_method=self.base_method, \
+                    tapered_window=self.tapered_window)
 
         # 1-level clustering
-        # dFCM_raw = sliding_window.estimate_dFCM( \
+        # dFCM_raw = base_dFC.estimate_dFCM( \
         #         time_series=time_series \
         #         )
         # self.FCS_, self.kmeans_ = self.cluster_FC( \
@@ -940,7 +960,7 @@ class SLIDING_WINDOW_CLUSTR(dFC):
         FCS_1st_level = None
         for subject in SUBJECTs:
             
-            dFCM_raw = sliding_window.estimate_dFCM( \
+            dFCM_raw = base_dFC.estimate_dFCM( \
                 time_series=time_series.get_subj_ts(subj_id=subject) \
                 )
             FCS, _ = self.cluster_FC( \
@@ -966,10 +986,16 @@ class SLIDING_WINDOW_CLUSTR(dFC):
         assert type(time_series) is TIME_SERIES, \
             "time_series must be of TIME_SERIES class."
 
-        params = {'W': self.W, 'n_overlap': self.n_overlap}
-        sliding_window = SLIDING_WINDOW(params, sw_method=self.sw_method, \
-            tapered_window=self.tapered_window)
-        dFCM_raw = sliding_window.estimate_dFCM(time_series=time_series)
+        if self.base_method=='CWT_mag' or self.base_method=='CWT_phase_r' \
+            or self.base_method=='CWT_phase_a' or self.base_method=='WTC':
+            params = {'n_jobs': self.n_jobs, 'verbose': self.verbose, 'backend': self.backend}
+            base_dFC = TIME_FREQ(params=params, method=self.base_method)
+        else:
+            params = {'W': self.W, 'n_overlap': self.n_overlap}
+            base_dFC = SLIDING_WINDOW(params, sw_method=self.base_method, \
+                    tapered_window=self.tapered_window)
+                    
+        dFCM_raw = base_dFC.estimate_dFCM(time_series=time_series)
 
         F = self.dFC_mat2vec(dFCM_raw.get_dFC_mat(TRs=dFCM_raw.TR_array))
 
@@ -1006,12 +1032,12 @@ from hmmlearn import hmm
 
 class HMM_DISC(dFC):
 
-    def __init__(self, params, sw_method='pear_corr', tapered_window=True):
+    def __init__(self, params, base_method='pear_corr', tapered_window=True):
         self.measure_name_ = 'DiscreteHMM'
         self.is_state_based = True
         self.TPM = []
         self.FCS_ = []
-        self.sw_method_ = sw_method
+        self.base_method_ = base_method
         self.swc = None
         self.n_states = params['n_states']
         self.n_subj_clstrs = params['n_subj_clstrs']
@@ -1021,12 +1047,12 @@ class HMM_DISC(dFC):
         self.tapered_window = tapered_window
 
     @property
-    def sw_method(self):
-        return self.sw_method_
+    def base_method(self):
+        return self.base_method_
 
     @property
     def measure_name(self):
-        return self.measure_name_ + '_' + self.sw_method
+        return self.measure_name_ + '_' + self.base_method
 
     def estimate_FCS(self, time_series=None):
         
@@ -1038,7 +1064,7 @@ class HMM_DISC(dFC):
 
         params = {'W': self.W, 'n_overlap': self.n_overlap, \
             'n_subj_clstrs': self.n_subj_clstrs, 'n_states': self.n_states}
-        self.swc = SLIDING_WINDOW_CLUSTR(params, sw_method=self.sw_method, \
+        self.swc = SLIDING_WINDOW_CLUSTR(params, base_method=self.base_method, \
             tapered_window=self.tapered_window)
         self.swc.estimate_FCS(time_series=time_series)
         self.FCC_ = self.swc.estimate_dFCM(time_series=time_series)
