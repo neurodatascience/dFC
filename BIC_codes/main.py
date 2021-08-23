@@ -4,15 +4,16 @@ import time
 import hdf5storage
 import scipy.io as sio
 import os
-os.environ["MKL_NUM_THREADS"] = '64'
-os.environ["NUMEXPR_NUM_THREADS"] = '64'
-os.environ["OMP_NUM_THREADS"] = '64'
+# os.environ["MKL_NUM_THREADS"] = '64'
+# os.environ["NUMEXPR_NUM_THREADS"] = '64'
+# os.environ["OMP_NUM_THREADS"] = '64'
 
 ################################# Parameters #################################
 
 DATA_type = 'real' # 'real' or 'simulated'
 num_subj = 20
-select_nodes = False
+select_nodes = True
+rand_node_slct = False
 num_select_nodes = 50
 
 n_states = 12
@@ -82,8 +83,11 @@ if DATA_type=='real':
 
         # select nodes
         if select_nodes:
-            nodes_idx = np.random.choice(range(BOLD.n_regions), size=num_select_nodes, replace=False)
-            nodes_idx.sort()
+            if rand_node_slct:
+                nodes_idx = np.random.choice(range(BOLD.n_regions), size=num_select_nodes, replace=False)
+                nodes_idx.sort()
+            else:
+                nodes_idx = np.array(list(range(47, 88)) + list(range(224, 263)))
             BOLD.select_nodes(nodes_idx=nodes_idx)
 
     print(BOLD.n_regions, BOLD.n_time)
@@ -112,24 +116,24 @@ params = {'W': int(W_sw*BOLD.Fs), 'n_overlap': n_overlap, \
     'n_jobs': n_jobs_methods, 'verbose': verbose, 'backend': 'loky' \
             }
 
-hmm_cont = HMM_CONT(params=params)
-windowless = WINDOWLESS(params=params)
+hmm_cont = HMM_CONT(**params)
+windowless = WINDOWLESS(**params)
 
-sw_pc = SLIDING_WINDOW(params=params, sw_method='pear_corr')
-sw_mi = SLIDING_WINDOW(params=params, sw_method='MI')
-# sw_gLasso = SLIDING_WINDOW(params=params, sw_method='GraphLasso')
+sw_pc = SLIDING_WINDOW(sw_method='pear_corr', **params)
+sw_mi = SLIDING_WINDOW(sw_method='MI', **params)
+# sw_gLasso = SLIDING_WINDOW(sw_method='GraphLasso', **params)
 
-time_freq_cwt = TIME_FREQ(params=params, method='CWT_mag')
-time_freq_cwt_r = TIME_FREQ(params=params, method='CWT_phase_r')
-time_freq_wtc = TIME_FREQ(params=params, method='WTC')
+time_freq_cwt = TIME_FREQ(method='CWT_mag', **params)
+time_freq_cwt_r = TIME_FREQ(method='CWT_phase_r', **params)
+time_freq_wtc = TIME_FREQ(method='WTC', **params)
 
-swc_pc = SLIDING_WINDOW_CLUSTR(params=params, base_method='pear_corr')
-swc_mi = SLIDING_WINDOW_CLUSTR(params=params, base_method='MI')
-# swc_gLasso = SLIDING_WINDOW_CLUSTR(params=params, base_method='GraphLasso')
+swc_pc = SLIDING_WINDOW_CLUSTR(base_method='pear_corr', **params)
+swc_mi = SLIDING_WINDOW_CLUSTR(base_method='MI', **params)
+# swc_gLasso = SLIDING_WINDOW_CLUSTR(base_method='GraphLasso', **params)
 
-hmm_disc_pc = HMM_DISC(params=params, base_method='pear_corr')
-hmm_disc_mi = HMM_DISC(params=params, base_method='MI')
-# hmm_disc_gLasso = HMM_DISC(params=params, base_method='GraphLasso')
+hmm_disc_pc = HMM_DISC(base_method='pear_corr', **params)
+hmm_disc_mi = HMM_DISC(base_method='MI', **params)
+# hmm_disc_gLasso = HMM_DISC(base_method='GraphLasso', **params)
 
 BOLD.visualize(interval=list(range(200)), save_image=True, fig_name=output_root+'BOLD_signal')
 
@@ -143,7 +147,7 @@ MEASURES = [
     # sw_gLasso, \
     time_freq_cwt, \
     # time_freq_cwt_r, \
-    # time_freq_wtc, \
+    time_freq_wtc, \
     swc_pc, \
     # swc_mi, \
     # swc_gLasso, \

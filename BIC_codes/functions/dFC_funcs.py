@@ -178,7 +178,7 @@ class DFC_ANALYZER:
                     time_series=time_series.get_subj_ts(subj_id=subject) \
                     ))
         else:
-            self.methods_corr_lst_ = Parallel( \
+            new_methods_corr_lst = Parallel( \
                         n_jobs=self.n_jobs, \
                         verbose=self.verbose, \
                         backend=self.backend)( \
@@ -186,6 +186,7 @@ class DFC_ANALYZER:
                         time_series=time_series.get_subj_ts(subj_id=subject) \
                         ) \
                         for subject in SUBJECTs)
+            self.methods_corr_lst_ = new_methods_corr_lst
         print("dFCM estimation done.")
 
         #### Methods dFC Corr MAT ###
@@ -269,7 +270,7 @@ class DFC_ANALYZER:
         measure_list = list()
         for measure in self.MEASURES_lst:
             measure_list.append(measure.measure_name)
-        fig, ax = plt.subplots(figsize=(7, 7))
+        fig, ax = plt.subplots(figsize=(10, 10))
         im = ax.imshow(self.methods_corr, interpolation='nearest', aspect='equal', cmap='jet')
         ax.set_xticks(np.arange(len(measure_list)))
         ax.set_yticks(np.arange(len(measure_list)))
@@ -1296,7 +1297,7 @@ class TIME_SERIES():
         #check if not out of total interval
 
         start = 0
-        end = self.n_time
+        end = self.n_time_
 
         if not start_point is None:
             start = start_point
