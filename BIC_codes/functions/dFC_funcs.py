@@ -382,7 +382,7 @@ class dFC:
 
         fig, axs = plt.subplots(1,C.shape[0], figsize=(25, 10), facecolor='w', edgecolor='k')
         fig.suptitle(self.measure_name+' FCS', fontsize=20, size=20)
-        fig.subplots_adjust(hspace = .001, wspace=.2)
+        fig.subplots_adjust(hspace = .001, wspace=.2, top=1.5, bottom=0.1)
         axs = axs.ravel()
 
         for i, c in enumerate(C):
@@ -391,7 +391,7 @@ class dFC:
             # axs[i].colorbar(shrink=0.8)
             axs[i].set_title('FCS '+str(i+1))
 
-        fig.tight_layout()
+        # fig.tight_layout()
         # fig.subplots_adjust(top=1.4)
 
         if save_image:
@@ -1217,7 +1217,7 @@ class TIME_SERIES():
 
     @property
     def subj_id_array(self):
-        return [self.subj_id_array_[i] for i in self.interval_]
+        return [self.subj_id_array_[i] for i in self.interval[0]]
 
     @property
     def nodes_lst(self):
@@ -1235,7 +1235,7 @@ class TIME_SERIES():
 
     @property
     def nodes_info(self):
-        return self.nodes_info_[self.nodes_lst]
+        return [self.nodes_info_[i[0]+1] for i in self.nodes_lst] 
 
     @property
     def Fs(self):
@@ -1251,7 +1251,7 @@ class TIME_SERIES():
 
     @property
     def time(self):
-        return self.time_array_[self.interval]
+        return self.time_array_[self.interval[0]]
 
     @property
     def TS_name(self):
@@ -1265,18 +1265,26 @@ class TIME_SERIES():
         """
         you can select time samples by their subj_id
         ! be careful about the original properties of TS hidden in new TS
+        node selection will be kept.
         """
-        new_TS = deepcopy(self)
+        TS_temp = deepcopy(self)
         idx = [i for i,j in enumerate(self.subj_id_array) if j==subj_id]
-        new_TS.truncate(start_point=idx[0], end_point=idx[-1])
+        TS_temp.truncate(start_point=idx[0], end_point=idx[-1])
+
+        new_TS = TIME_SERIES(data=TS_temp.data, subj_id=subj_id, Fs=self.Fs_, \
+            time_array=TS_temp.time, locs=self.locs, nodes_info=self.nodes_info, \
+            TS_name=self.TS_name+' subject '+subj_id)
+        new_TS.time_array_ = new_TS.time_array_ - (new_TS.time_array_[0] - 1/new_TS.Fs_)
+
         return new_TS
 
 
-    def append_ts(self, new_time_series=None, subj_id=None):
+    def append_ts(self, new_time_series=None, time_array=None, subj_id=None):
         # append new time series to existing ones
         # truncate will not be considered anymore, while node selection is; 
         # the whole old time series will be concat to new one
         # append_ts resets the truncate but not the node selection
+        # we assume the new time array starts from 0 (or 1/Fs)
 
         assert self.n_regions_ == new_time_series.shape[0], \
             "Number of nodes mismatch."
@@ -1284,7 +1292,12 @@ class TIME_SERIES():
         assert not subj_id is None, \
             "subj_id must be provided."
 
+        if time_array is None:
+            time_array = 1/self.Fs_ + np.arange(0, new_time_series.shape[1]/self.Fs_, 1/self.Fs_)
+        time_array = self.time_array_[-1] + time_array
+
         self.data_ = np.concatenate((self.data_, new_time_series), axis=1)
+        self.time_array_ = np.concatenate((self.time_array_, time_array), axis=0)
         self.subj_id_array_ = self.subj_id_array_ + [subj_id] * new_time_series.shape[1]
         self.n_time_ = self.data_.shape[1]
         self.interval_ = list(range(self.n_time_))
@@ -1323,12 +1336,28 @@ class TIME_SERIES():
         else:
             self.nodes_selection_ = nodes_idx    
 
-    def visualize(self, interval=None, save_image=False, fig_name=None):
+    def visualize(self, start_time=None, end_time=None, \
+        nodes_lst=None, save_image=False, fig_name=None):
 
-        # interval or start+end ?
+        start = 0
+        end = self.n_time
+
+        if not start_time is None:
+            start = np.argwhere(self.time>=start_time)[0,0]
+
+        if not end_time is None:
+            end = np.argwhere(self.time<=end_time)[-1,0] + 1
+        
+        interval = list(range(start, end))
+
+        if nodes_lst is None:
+            nodes_lst = self.nodes_lst
+        else:
+            nodes_lst = np.array(nodes_lst)[:, np.newaxis]
 
         plt.figure(figsize=(15, 5))
-        plt.plot(self.data_.T[interval,:])
+        plt.plot(self.time[interval], self.data[nodes_lst, interval].T)
+        plt.xlabel('time (sec)')
         plt.title(self.TS_name_)
         if save_image:
             plt.savefig(fig_name + '.png', dpi=fig_dpi)  
@@ -1532,7 +1561,7 @@ class DFCM():
         #set the colorbar ticks and tick labels
         cbar.set_ticks(np.arange(0, 1.1, 0.5))
         cbar.set_ticklabels(['0', '0.5', '1'])
-
+        
         if save_image:
             plt.savefig(fig_name + '.png', dpi=fig_dpi)  
             plt.close()
