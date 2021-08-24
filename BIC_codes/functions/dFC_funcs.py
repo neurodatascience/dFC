@@ -1008,6 +1008,13 @@ class SLIDING_WINDOW_CLUSTR(dFC):
             dFCM_raw = base_dFC.estimate_dFCM( \
                 time_series=time_series.get_subj_ts(subj_id=subject) \
                 )
+                
+            if dFCM_raw.n_time<self.n_subj_clstrs:
+                print( \
+                    'Number of subject-level clusters cannot be more than SW dFCM samples! n_subj_clstrs was changed to ' \
+                        + str(dFCM_raw.n_time))
+                self.n_subj_clstrs = dFCM_raw.n_time
+
             FCS, _ = self.cluster_FC( \
                 FCS_raw = dFCM_raw.get_dFC_mat(TRs=dFCM_raw.TR_array), \
                 n_clusters = self.n_subj_clstrs, \
