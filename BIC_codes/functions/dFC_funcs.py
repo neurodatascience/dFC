@@ -38,7 +38,7 @@ def TR_intersection(dFCM_lst): # input is a list of dFCM objs
 def visualize_corr_mat():
     pass
 
-def dFC_mat_normalize(C_t, global_normalization=True, threshold=0.0):
+def dFC_mat_normalize(C_t, global_normalization=False, threshold=0.0):
 
     # threshold is ratio of connections wanted to be zero
     C_t_z = deepcopy(C_t)
@@ -820,7 +820,7 @@ class SLIDING_WINDOW(dFC):
         for l in range(0, L-W+1, step):
 
             ######### creating a rectangel window ############
-            window = np.zeros((time_series.shape[1]))
+            window = np.zeros((L))
             window[l:l+W] = 1
             
             ########### tapering the window ##############
@@ -829,7 +829,12 @@ class SLIDING_WINDOW(dFC):
 
             window = np.repeat(np.expand_dims(window, axis=0), time_series.shape[0], axis=0)
 
-            C.add_FCP(FCPs=self.FC(np.multiply(time_series, window)), \
+            # int(l-W/2):int(l+3*W/2) is the nonzero interval after tapering
+            C.add_FCP(FCPs=self.FC( \
+                        np.multiply(time_series, window)[ \
+                            :,max(int(l-W/2),0):min(int(l+3*W/2),L) \
+                                ] \
+                                    ), \
                         subj_id_array = subj_id, \
                         TR_array=np.array( [ int(l + (l+W)) / 2 ] ) \
                         )
@@ -1008,7 +1013,7 @@ class SLIDING_WINDOW_CLUSTR(dFC):
             dFCM_raw = base_dFC.estimate_dFCM( \
                 time_series=time_series.get_subj_ts(subj_id=subject) \
                 )
-                
+
             if dFCM_raw.n_time<self.n_subj_clstrs:
                 print( \
                     'Number of subject-level clusters cannot be more than SW dFCM samples! n_subj_clstrs was changed to ' \

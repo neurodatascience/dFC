@@ -16,12 +16,12 @@ select_nodes = True
 rand_node_slct = False
 num_select_nodes = 50
 
-n_states = 12
-n_subj_clstrs = 24
+n_states = 6 #12
+n_subj_clstrs = 20
 n_hid_states = 6
 n_overlap = 0.5
 W_sw = 44 # in seconds, 44, choose even Ws!?
-n_jobs = 2
+n_jobs = 8
 n_jobs_methods = None
 verbose=0
 
@@ -96,7 +96,7 @@ if DATA_type=='real':
 ################################# Load Simulated BOLD data #################################
 
 if DATA_type=='simulated':
-    time_BOLD = np.load(data_root+'bold_time.npy')    
+    time_BOLD = np.load(data_root+'bold_time.npy')/1e3    
     time_series_BOLD = np.load(data_root+'bold_data.npy')
 
     BOLD = TIME_SERIES(data=time_series_BOLD.T, subj_id=1, Fs=1/0.5, time_array=time_BOLD, TS_name='BOLD Simulation')
@@ -104,7 +104,7 @@ if DATA_type=='simulated':
 ################################# Load Simulated Tavg data #################################
 
 if DATA_type=='simulated':
-    time_Tavg = np.load(data_root+'tavg_time.npy')    
+    time_Tavg = np.load(data_root+'tavg_time.npy')/1e3    
     time_series_Tavg = np.load(data_root+'tavg_data.npy')
 
     TAVG = TIME_SERIES(data=time_series_Tavg.T, subj_id=1, Fs=200, time_array=time_Tavg, TS_name='Tavg Simulation')
@@ -135,7 +135,8 @@ hmm_disc_pc = HMM_DISC(base_method='pear_corr', **params)
 hmm_disc_mi = HMM_DISC(base_method='MI', **params)
 # hmm_disc_gLasso = HMM_DISC(base_method='GraphLasso', **params)
 
-BOLD.visualize(interval=list(range(200)), save_image=True, fig_name=output_root+'BOLD_signal')
+BOLD.visualize(start_time=0, end_time=50, nodes_lst=list(range(10)), \
+     save_image=True, fig_name=output_root+'BOLD_signal')
 
 BOLD.truncate(start_point=None, end_point=None)    #10000
 
@@ -165,3 +166,5 @@ dFC_analyzer = DFC_ANALYZER(MEASURES_lst = MEASURES, vis_TR_idx=list(range(10, 2
     )
 dFC_analyzer.analyze(time_series=BOLD)
 print('Measurement required %0.3f seconds.' % (time.time() - tic, ))
+
+#########################################################################################
