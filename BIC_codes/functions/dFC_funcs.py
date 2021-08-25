@@ -107,6 +107,14 @@ def dFC_mat_normalize(C_t, global_normalization=False, threshold=0.0):
 
 ############################# dFC Analyzer class ################################
 
+"""
+
+todo:
+- 
+"""
+
+import time
+
 class DFC_ANALYZER:
     # if self.n_jobs is None => no parallelization
 
@@ -151,6 +159,25 @@ class DFC_ANALYZER:
             if not measure.is_state_based:
                 NSB_MEASURES.append(measure)
         return NSB_MEASURES
+
+    def time_analyze(self, time_series=None):
+
+        time_lst = list()
+        for measure in self.MEASURES_lst:
+
+            tic = time.time()
+            if measure.is_state_based:
+                measure.estimate_FCS(time_series=time_series)
+
+            measure.estimate_dFCM(time_series=time_series)
+
+            time_lst.append(time.time() - tic)
+
+        for i, measure in enumerate(self.MEASURES_lst):
+            print('Measure '+measure.measure_name+' time = '+str(time_lst[i]))
+
+    def dynamic_conns(self):
+        pass
 
     def analyze(self, time_series=None):
 
@@ -1243,11 +1270,17 @@ class TIME_SERIES():
 
     @property
     def locs(self):
-        return self.locs_[self.nodes_lst, :]
+        if self.locs_ is None:
+            return None
+        else:
+            return self.locs_[self.nodes_lst, :]
 
     @property
     def nodes_info(self):
-        return [self.nodes_info_[i[0]+1] for i in self.nodes_lst] 
+        if self.nodes_info_ is None:
+            return None
+        else:
+            return [self.nodes_info_[0]] + [self.nodes_info_[i[0]+1] for i in self.nodes_lst] 
 
     @property
     def Fs(self):
@@ -1402,8 +1435,8 @@ todo:
 class DFCM():
     def __init__(self, measure=None):
 
-        assert not measure is None, \
-            "measure arg must be provided."
+        # assert not measure is None, \
+        #     "measure arg must be provided."
         self.measure_ = measure
         self.FCPs_ = None 
         self.FCP_idx_ = None
@@ -1529,6 +1562,9 @@ class DFCM():
 
     def visualize_dFC(self, TRs=None, normalize=True, \
         threshold=0.0, save_image=False, fig_name=None, fix_lim=True):
+
+        assert not self.measure is None, \
+            'Measure is not provided.'
 
         if TRs is None:
             TRs = self.TR_array

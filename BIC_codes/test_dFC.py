@@ -77,51 +77,52 @@ class Test_DFCM_CLASS:
 
     def test_one(self):
         self.dFCM = DFCM()
-        self.dFCM.add_FCP(FCPs=self.FCPs, FCP_idx=self.FCP_idx, TR_array=self.TR_array)
+        self.dFCM.add_FCP(FCPs=self.FCPs, FCP_idx=self.FCP_idx, subj_id_array=[1]*len(self.FCP_idx), TR_array=self.TR_array)
         assert self.dFCM.TR_array[2] == 131
 
     def test_two(self):
         self.dFCM = DFCM()
-        self.dFCM.add_FCP(FCPs=self.FCPs, FCP_idx=self.FCP_idx, TR_array=self.TR_array)
+        self.dFCM.add_FCP(FCPs=self.FCPs, FCP_idx=self.FCP_idx, subj_id_array=[1]*len(self.FCP_idx), TR_array=self.TR_array)
         assert self.dFCM.n_time == 27
 
 class Test_methods:
 
     Fs = 2
-    data = np.random.randn(333, 1200)
-    data2 = np.random.randn(333, 1200)
+    data = np.random.randn(50, 300)
+    data2 = np.random.randn(50, 300)
     time_BOLD = 1/Fs + np.arange(0, data.shape[1]/Fs, 1/Fs)
 
-    n_states = 12
-    n_hid_states = 6
+    n_states = 2
+    n_subj_clstrs = 4
+    n_hid_states = 3
     n_overlap = 0.5
     W_sw = 44 # in seconds, 44, choose even Ws!?
-    n_jobs = 10
+    n_jobs = None
     verbose=0
 
     params = {'W': int(W_sw*Fs), 'n_overlap': n_overlap, \
-    'n_states': n_states, 'n_hid_states': n_hid_states, 
+    'n_states': n_states, 'n_subj_clstrs': n_subj_clstrs, 'n_hid_states': n_hid_states, \
     'n_jobs': n_jobs, 'verbose': verbose, 'backend': 'loky' \
             }
 
-    hmm_cont = HMM_CONT(params=params)
-    windowless = WINDOWLESS(params=params)
+    hmm_cont = HMM_CONT(**params)
+    windowless = WINDOWLESS(**params)
 
-    sw_pc = SLIDING_WINDOW(params=params, sw_method='pear_corr')
-    sw_mi = SLIDING_WINDOW(params=params, sw_method='MI')
-    # sw_gLasso = SLIDING_WINDOW(params=params, sw_method='GraphLasso')
+    sw_pc = SLIDING_WINDOW(sw_method='pear_corr', **params)
+    sw_mi = SLIDING_WINDOW(sw_method='MI', **params)
+    # sw_gLasso = SLIDING_WINDOW(sw_method='GraphLasso', **params)
 
-    time_freq_cwt = TIME_FREQ(params=params, method='CWT_mag')
-    time_freq_cwt_r = TIME_FREQ(params=params, method='CWT_phase_r')
-    time_freq_wtc = TIME_FREQ(params=params, method='WTC')
+    time_freq_cwt = TIME_FREQ(method='CWT_mag', **params)
+    time_freq_cwt_r = TIME_FREQ(method='CWT_phase_r', **params)
+    time_freq_wtc = TIME_FREQ(method='WTC', **params)
 
-    swc_pc = SLIDING_WINDOW_CLUSTR(params=params, sw_method='pear_corr')
-    swc_mi = SLIDING_WINDOW_CLUSTR(params=params, sw_method='MI')
-    # swc_gLasso = SLIDING_WINDOW_CLUSTR(params=params, sw_method='GraphLasso')
+    swc_pc = SLIDING_WINDOW_CLUSTR(sw_method='pear_corr', **params)
+    swc_mi = SLIDING_WINDOW_CLUSTR(sw_method='MI', **params)
+    # swc_gLasso = SLIDING_WINDOW_CLUSTR(sw_method='GraphLasso', **params)
 
-    hmm_disc_pc = HMM_DISC(params=params, sw_method='pear_corr')
-    hmm_disc_mi = HMM_DISC(params=params, sw_method='MI')
-    # hmm_disc_gLasso = HMM_DISC(params=params, sw_method='GraphLasso')
+    hmm_disc_pc = HMM_DISC(sw_method='pear_corr', **params)
+    hmm_disc_mi = HMM_DISC(sw_method='MI', **params)
+    # hmm_disc_gLasso = HMM_DISC(sw_method='GraphLasso', **params)
 
     time_series = TIME_SERIES(data=data, Fs=Fs, subj_id='1', time_array=time_BOLD, TS_name='BOLD Simulation')
 
@@ -148,12 +149,12 @@ class Test_methods:
         for measure in MEASURES:
             if measure.is_state_based:
                 measure.estimate_FCS(time_series=self.time_series)
-            measure.estimate_dFCM(time_series=self.time_series)
+            dFCM = measure.estimate_dFCM(time_series=self.time_series)
 
-            assert not measure.dFCM is None, \
+            assert not dFCM is None, \
                 measure.measure_name + " has None dFCM."
 
-            assert measure.dFCM.n_regions==self.time_series.n_regions, \
+            assert dFCM.n_regions==self.time_series.n_regions, \
                 measure.measure_name + " has n_regions mismatch."
 ################################# INTEGRATION TESTs ######################################
 

@@ -4,14 +4,14 @@ import time
 import hdf5storage
 import scipy.io as sio
 import os
-# os.environ["MKL_NUM_THREADS"] = '64'
-# os.environ["NUMEXPR_NUM_THREADS"] = '64'
-# os.environ["OMP_NUM_THREADS"] = '64'
+os.environ["MKL_NUM_THREADS"] = '64'
+os.environ["NUMEXPR_NUM_THREADS"] = '64'
+os.environ["OMP_NUM_THREADS"] = '64'
 
 ################################# Parameters #################################
 
 DATA_type = 'real' # 'real' or 'simulated'
-num_subj = 20
+num_subj = 100
 select_nodes = True
 rand_node_slct = False
 num_select_nodes = 50
