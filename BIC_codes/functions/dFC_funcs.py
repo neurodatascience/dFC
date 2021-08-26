@@ -163,18 +163,32 @@ class DFC_ANALYZER:
     def time_analyze(self, time_series=None):
 
         time_lst = list()
+        estimate_FCS_time_lst = list()
         for measure in self.MEASURES_lst:
 
             tic = time.time()
             if measure.is_state_based:
+                tic_FCS = time.time()
                 measure.estimate_FCS(time_series=time_series)
+                estimate_FCS_time_lst.append(time.time() - tic_FCS)
+            else:
+                estimate_FCS_time_lst.append(0.0)
 
             measure.estimate_dFCM(time_series=time_series)
 
             time_lst.append(time.time() - tic)
 
         for i, measure in enumerate(self.MEASURES_lst):
-            print('Measure '+measure.measure_name+' time = '+str(time_lst[i]))
+            if measure.is_state_based:
+                print('Measure '+measure.measure_name+' time = ' + \
+                    str(time_lst[i]) + ' = ' + \
+                    str(estimate_FCS_time_lst[i]) + ' + ' + \
+                    str(time_lst[i] - estimate_FCS_time_lst[i]) \
+                    )
+            else:
+                print('Measure '+measure.measure_name+' time = ' + \
+                    str(time_lst[i]) \
+                    )
 
     def dynamic_conns(self):
         pass
@@ -1329,7 +1343,8 @@ class TIME_SERIES():
         # truncate will not be considered anymore, while node selection is; 
         # the whole old time series will be concat to new one
         # append_ts resets the truncate but not the node selection
-        # we assume the new time array starts from 0 (or 1/Fs)
+        # the new ts will be appended to the original data and then node_selection is applied again
+        # we assume the new time array starts from about 0 (or 1/Fs)
 
         assert self.n_regions_ == new_time_series.shape[0], \
             "Number of nodes mismatch."
