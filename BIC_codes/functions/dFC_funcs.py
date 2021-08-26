@@ -66,7 +66,8 @@ def dFC_mat_normalize(C_t, global_normalization=False, threshold=0.0):
             slice_non_diag = slice[np.where(~np.eye(slice.shape[0],dtype=bool))]
             maX.append(np.max(slice_non_diag))
 
-        C_t_z = np.divide(C_t_z, np.max(maX))
+        if np.max(maX) != 0:
+            C_t_z = np.divide(C_t_z, np.max(maX))
 
         # thresholding
         d = deepcopy(np.ravel(C_t_z))
@@ -87,7 +88,8 @@ def dFC_mat_normalize(C_t, global_normalization=False, threshold=0.0):
             slice_non_diag = slice[np.where(~np.eye(slice.shape[0],dtype=bool))]
             slice = slice - np.min(slice_non_diag)
             slice_non_diag = slice[np.where(~np.eye(slice.shape[0],dtype=bool))]
-            slice = np.divide(slice, np.max(slice_non_diag))
+            if np.max(slice_non_diag) != 0:
+                slice = np.divide(slice, np.max(slice_non_diag))
 
             # thresholding
             d = deepcopy(np.ravel(slice))

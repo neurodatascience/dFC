@@ -24,7 +24,69 @@ def check_symmetric(A, rtol=1e-05, atol=1e-08):
             return False
     return True
 
+def sign_maintenance(C, C_z):
+    sign_check = True
+    for t in range(C.shape[0]):
+        slice_C = C[t, :, :]
+        slice_C_z = C_z[t, :, :]
+        slice_C = slice_C[np.where(~np.eye(slice_C.shape[0],dtype=bool))]
+        slice_C_z = slice_C_z[np.where(~np.eye(slice_C_z.shape[0],dtype=bool))]
+        if not np.all(np.sign(slice_C[slice_C_z!=0])==np.sign(slice_C_z[slice_C_z!=0])):
+            sign_check = False
+    return sign_check
+
 ################################# UNIT TESTs ######################################
+class Test_dFC_mat_normalize:
+
+    def test_constant(self):
+        C = 2 * np.ones((120, 333, 333))
+        C_z = dFC_mat_normalize(C, global_normalization=False, threshold=0.0)
+        assert np.all(C_z==0), \
+            "constant matrix normalization failed."
+        C_z = dFC_mat_normalize(C, global_normalization=True, threshold=0.0)
+        assert np.all(C_z==0), \
+            "constant matrix normalization failed."
+
+    def test_random_C(self):
+        C = -1 + 2 * np.random.randn(120, 333, 333)
+        for i in range(C.shape[1]):
+            C[:,i,i] = 1
+        C_z = dFC_mat_normalize(C, global_normalization=False, threshold=0.0)
+        
+        assert sign_maintenance(C=C, C_z=C_z), \
+            "random matrix normalization sign maintenance failed."
+            
+        assert np.all(C_z<=1) and np.all(C_z>=-1), \
+            "random matrix normalization failed."
+        
+
+    def test_cov_C(self):
+        TS = np.random.randn(333, 200)
+        C = list()
+        for l in range(100):
+            C.append(np.cov(TS[:,l:l+100], bias=False))
+        C = np.array(C)
+        assert check_symmetric(C), \
+            "Covariance matrix Not symmetric."
+
+        C_z = dFC_mat_normalize(C, global_normalization=False, threshold=0.0)
+        
+        assert np.all(C_z<=1) and np.all(C_z>=-1), \
+            "Covariance matrix normalization failed."
+        assert sign_maintenance(C=C, C_z=C_z), \
+            "Covariance matrix normalization sign maintenance failed."
+        assert check_symmetric(C_z), \
+            "Covariance matrix normalization failed. Not symmetric."
+
+
+    # def test_threshold(self):
+    #     C = -1 + 2 * np.random.randn(120, 333, 333)
+    #     for i in range(C.shape[1]):
+    #         C[:,i,i] = 1
+    #     C_z = dFC_mat_normalize(C, global_normalization=False, threshold=0.0)
+    #     assert time_series.n_regions==333, \
+    #         "n_regions property failed."
+
 class Test_TIME_SERIES_CLASS:
 
     data = np.random.randn(333, 1200)
@@ -175,15 +237,48 @@ class Test_DFCM_CLASS:
     FCP_idx2 = np.random.randint(low=0, high=12, size=(27,))
     TR_array2 = np.arange(43, 1200, 44)
 
-    def test_one(self):
-        self.dFCM = DFCM()
-        self.dFCM.add_FCP(FCPs=self.FCPs, FCP_idx=self.FCP_idx, subj_id_array=[1]*len(self.FCP_idx), TR_array=self.TR_array)
-        assert self.dFCM.TR_array[2] == 131
+    def test_get_dFC_mat(self):
+        dFCM = DFCM()
+        dFCM.add_FCP(FCPs=self.FCPs, FCP_idx=self.FCP_idx, subj_id_array=[1]*len(self.FCP_idx), TR_array=self.TR_array)
+
+        assert np.all(dFCM.get_dFC_mat(TRs=[131]) == self.FCPs[self.FCP_idx[2]]), \
+            'get_dFC_mat method failed.'
+
+        idx = np.random.randint(low=0, high=27, size=(10,))
+        assert np.all(dFCM.get_dFC_mat(TRs=self.TR_array[idx]) == self.FCPs[self.FCP_idx[idx]]), \
+            'get_dFC_mat method failed.'
+
+    def test_add_FCP_multiple(self):
+        ########## add_FCP multiple ##############
+        dFCM = DFCM()
+        dFCM.add_FCP(FCPs=self.FCPs, FCP_idx=self.FCP_idx, subj_id_array=[1]*len(self.FCP_idx), TR_array=self.TR_array)
+        assert dFCM.TR_array[2] == 131, \
+            'add_FCP method failed.'
+        assert dFCM.n_time == 27, \
+            'add_FCP method failed.'
+
+    def test_add_FCP_single(self):
+        ########## add_FCP one-by-one ##############
+        # for SW class
+
+        dFCM = DFCM()
+        for i in range(12):
+            dFCM.add_FCP(FCPs=self.FCPs[i], subj_id_array='1', TR_array=self.TR_array[i:i+1])
+
+        assert dFCM.TR_array[2] == 131, \
+            'add_FCP method failed.'
+        assert dFCM.n_time == 12, \
+            'add_FCP method failed.'
+
+        idx = np.random.randint(low=0, high=12, size=(10,))
+        assert np.all(dFCM.get_dFC_mat(TRs=self.TR_array[idx]) == self.FCPs[idx]), \
+            'get_dFC_mat method failed.'
+
 
     def test_two(self):
-        self.dFCM = DFCM()
-        self.dFCM.add_FCP(FCPs=self.FCPs, FCP_idx=self.FCP_idx, subj_id_array=[1]*len(self.FCP_idx), TR_array=self.TR_array)
-        assert self.dFCM.n_time == 27
+        dFCM = DFCM()
+        dFCM.add_FCP(FCPs=self.FCPs, FCP_idx=self.FCP_idx, subj_id_array=[1]*len(self.FCP_idx), TR_array=self.TR_array)
+        assert dFCM.n_time == 27
 
 # class Test_methods:
 
