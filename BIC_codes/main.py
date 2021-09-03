@@ -10,7 +10,8 @@ os.environ["OMP_NUM_THREADS"] = '64'
 
 ################################# Parameters #################################
 
-DATA_type = 'real' # 'real' or 'simulated'
+DATA_type = 'Gordon' # 'Gordon' or 'simulated' or 'ICA'
+
 num_subj = 100
 select_nodes = True
 rand_node_slct = False
@@ -25,43 +26,94 @@ n_jobs = 8
 n_jobs_methods = None
 verbose=0
 
-# output_root = '../../../../RESULTs/methods_implementation/'
-output_root = '/data/origami/dFC/RESULTs/methods_implementation/'
+output_root = './../../../../RESULTs/methods_implementation/'
+# output_root = '/data/origami/dFC/RESULTs/methods_implementation/'
 # output_root = '/Users/mte/Documents/McGill/Project/dFC/RESULTs/methods_implementation/'
 
-if DATA_type=='simulated':
-    data_root = '../../../../DATA/TVB data/'
-else:
-    data_root = '../../../../DATA/HCP/HCP_Gordon/'
+data_root_simul = './../../../DATA/TVB data/'
+data_root_gordon = './../../../DATA/HCP/HCP_Gordon/'
+data_root_ica = './../../../DATA/HCP/HCP_PTN1200/node_timeseries/3T_HCP1200_MSMAll_d50_ts2/'
 
+################################# FINDING SUBJECTs LIST #################################
+
+# ICA
+ALL_RECORDS = os.listdir(data_root_ica)
+ALL_RECORDS = [i for i in ALL_RECORDS if '.txt' in i]
+ALL_RECORDS.sort()
+SUBJECTS_ica = list()
+for s in ALL_RECORDS:
+    num = s[:s.find('.')]
+    SUBJECTS_ica.append(num)
+SUBJECTS_ica = list(set(SUBJECTS_ica))
+SUBJECTS_ica.sort()
+
+# GORDON
+ALL_RECORDS = os.listdir(data_root_gordon)
+ALL_RECORDS = [i for i in ALL_RECORDS if 'Rest' in i]
+ALL_RECORDS.sort()
+SUBJECTS_gordon = list()
+for s in ALL_RECORDS:
+    num = s[:s.find('_')]
+    SUBJECTS_gordon.append(num)
+SUBJECTS_gordon = list(set(SUBJECTS_gordon))
+SUBJECTS_gordon.sort()
+
+SUBJECTS = intersection(SUBJECTS_gordon, SUBJECTS_ica)
+
+print( str(len(SUBJECTS)) + ' subjects were found. ' + str(num_subj) + ' subjects were selected.')
+
+SUBJECTS = SUBJECTS[0:num_subj]
+
+################################# Load ICA BOLD data (HCP) #################################
+
+if DATA_type=='ICA':
+
+    BOLD = None
+    for subject in SUBJECTS:
+        time_series = np.loadtxt( \
+            data_root_ica + subject + '.txt', dtype='float64' \
+            )
+        time_series = time_series.T
+        
+        # time_series = time_series - np.repeat(np.mean(time_series, axis=1)[:,None], time_series.shape[1], axis=1) # ???????????????????????
+
+        if BOLD is None:
+            BOLD = TIME_SERIES(data=time_series, subj_id=subject, Fs=1/0.72, TS_name='BOLD ICA')
+        else:
+            BOLD.append_ts(new_time_series=time_series, subj_id=subject)
+
+    print(BOLD.n_regions, BOLD.n_time)
 
 ################################# Load Real BOLD data (HCP) #################################
 
-session = '_Rest1_LR'
+if DATA_type=='Gordon':
 
-if DATA_type=='real':
+    session = '_Rest1_LR'
 
-    ALL_RECORDS = os.listdir(data_root)
-    ALL_RECORDS = [i for i in ALL_RECORDS if 'Rest' in i]
-    ALL_RECORDS.sort()
-    SUBJECTS = list()
-    for s in ALL_RECORDS:
-        num = s[:s.find('_')]
-        SUBJECTS.append(num)
-    SUBJECTS = list(set(SUBJECTS))
-    SUBJECTS.sort()
+    # LOAD Region Location DATA
 
-    SUBJECTS = SUBJECTS[0:num_subj]
+    locs = sio.loadmat(data_root_gordon+'Gordon333_LOCS.mat')
+    locs = locs['locs']
+
+    # LOAD Region Data
+
+    file = data_root_gordon+'Gordon333_Key.txt'
+    f = open(file, 'r')
+
+    atlas_data = []
+    for line in f:
+        row = line.split()
+        atlas_data.append(row)
 
     BOLD = None
     for subject in SUBJECTS:
 
         subj_fldr = subject + session
 
-        locs = sio.loadmat(data_root+'Gordon333_LOCS.mat')
+        locs = sio.loadmat(data_root_gordon+'Gordon333_LOCS.mat')
         locs = locs['locs']
 
-        file = data_root+'Gordon333_Key.txt'
+        file = data_root_gordon+'Gordon333_Key.txt'
         f = open(file, 'r')
 
         atlas_data = []
@@ -69,7 +121,7 @@ if DATA_type=='real':
             row = line.split()
             atlas_data.append(row)
 
-        DATA = hdf5storage.loadmat(data_root+subj_fldr+'/ROI_data_Gordon_333_surf.mat')
+        DATA = hdf5storage.loadmat(data_root_gordon+subj_fldr+'/ROI_data_Gordon_333_surf.mat')
         time_series = DATA['ROI_data']
 
         time_series = time_series.T
@@ -96,16 +148,16 @@ if DATA_type=='real':
 ################################# Load Simulated BOLD data #################################
 
 if DATA_type=='simulated':
-    time_BOLD = np.load(data_root+'bold_time.npy')/1e3    
-    time_series_BOLD = np.load(data_root+'bold_data.npy')
+    time_BOLD = np.load(data_root_simul+'bold_time.npy')/1e3    
+    time_series_BOLD = np.load(data_root_simul+'bold_data.npy')
 
     BOLD = TIME_SERIES(data=time_series_BOLD.T, subj_id=1, Fs=1/0.5, time_array=time_BOLD, TS_name='BOLD Simulation')
 
 ################################# Load Simulated Tavg data #################################
 
 if DATA_type=='simulated':
-    time_Tavg = np.load(data_root+'tavg_time.npy')/1e3    
-    time_series_Tavg = np.load(data_root+'tavg_data.npy')
+    time_Tavg = np.load(data_root_simul+'tavg_time.npy')/1e3    
+    time_series_Tavg = np.load(data_root_simul+'tavg_data.npy')
 
     TAVG = TIME_SERIES(data=time_series_Tavg.T, subj_id=1, Fs=200, time_array=time_Tavg, TS_name='Tavg Simulation')
 

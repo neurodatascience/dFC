@@ -164,6 +164,8 @@ class DFC_ANALYZER:
 
     def time_analyze(self, time_series=None):
 
+        print('Total Time = estimate_FCS Time + estimate_dFCM Time')
+        
         time_lst = list()
         estimate_FCS_time_lst = list()
         for measure in self.MEASURES_lst:
