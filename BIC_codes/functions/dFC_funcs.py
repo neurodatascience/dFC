@@ -909,7 +909,7 @@ class SLIDING_WINDOW(dFC):
         return dFCM
 
 
-########################### Sliding_Window + Clustering ###########################
+########################### Sliding_Window + Clustering ############################
 
 """
 - We used a tapered window as in Allen et al., created by convolving a rectangle (width = 22 TRs = 44s) 
