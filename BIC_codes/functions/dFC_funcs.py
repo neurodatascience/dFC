@@ -120,17 +120,36 @@ import time
 class DFC_ANALYZER:
     # if self.n_jobs is None => no parallelization
 
-    def __init__(self, MEASURES_lst, vis_TR_idx=None,\
-            save_image=False, output_root=None, \
-                n_jobs=-1, verbose=1, backend='loky'):
-        self.analysis_name = ''
+    def __init__(self, MEASURES_lst, analysis_name='', **params):
+    
+        self.vis_TR_idx=None
+        self.save_image=False
+        self.output_root=None, 
+        self.n_jobs=-1
+        self.verbose=1
+        self.backend='loky'
+
+        self.analysis_name = analysis_name
         self.MEASURES_lst_ = MEASURES_lst
-        self.vis_TR_idx = vis_TR_idx # to visualize
-        self.save_image = save_image
-        self.output_root = output_root
-        self.n_jobs = n_jobs
-        self.verbose = verbose 
-        self.backend = backend
+        if 'vis_TR_idx' in params:
+            self.vis_TR_idx = params['vis_TR_idx'] # to visualize
+        if 'save_image' in params:
+            self.save_image = params['save_image']
+        if 'output_root' in params:
+            self.output_root = params['output_root']
+        if 'n_jobs' in params:
+            self.n_jobs = params['n_jobs']
+        if 'verbose' in params:
+            self.verbose = params['verbose'] 
+        if 'backend' in params:
+            self.backend = params['backend']
+        
+        if 'dyn_conn_det_params' in params:
+            self.dyn_conn_det_params['N'] = params['dyn_conn_det_params']['N']
+            self.dyn_conn_det_params['L'] = params['dyn_conn_det_params']['L']
+            self.dyn_conn_det_params['p'] = params['dyn_conn_det_params']['p']
+            self.dyn_conn_det_params['n_jobs'] = params['dyn_conn_det_params']['n_jobs']
+            self.dyn_conn_det_params['backend'] = params['dyn_conn_det_params']['backend']
 
         self.methods_corr_lst_ = list()
 
@@ -197,11 +216,7 @@ class DFC_ANALYZER:
     def dynamic_conns(self, time_series=None):
         pass
 
-    def analyze(self, time_series=None):
-
-        ### DYNAMIC CONN DETEC ###
-        
-        
+    def analyze(self, time_series):
 
         ### estimate FCS ###
 
@@ -218,12 +233,31 @@ class DFC_ANALYZER:
         ### estimate dFCM ###
 
         print("dFCM estimation started...")
-        self.estimate_all_dFCM(time_series=time_series)
+        dFCM_var_lst = self.estimate_all_dFCM(time_series=time_series)
         print("dFCM estimation done.")
+
+        ### DYNAMIC CONN DETEC ###
+
+        
+        
+        dyn_conn_detector = DYN_CONN_DETECTOR( \
+            n_jobs=self.dyn_conn_det_params['n_jobs'], \
+            verbose=self.verbose, \
+            backend=self.dyn_conn_det_params['backend']\
+                )
+
+        print("Dynamic Connection Detection started...")
+        dyn_conn_detector.train_VAR(time_series=time_series, p=self.dyn_conn_det_params['p'])
+        SUBJs_TH_mask_lst = dyn_conn_detector.calc_subj_TH_mask_lst(time_series, self.MEASURES_lst, \
+            N=self.dyn_conn_det_params['N'], L=self.dyn_conn_det_params['L'], verbose=self.verbose)
+        SUBJs_dyn_conn_lst = dyn_conn_detector.mask_SUBJs_dFC(dFCM_var_lst, SUBJs_TH_mask_lst)
+        print("Dynamic Connection Detection done.")
 
         #### Methods dFC Corr MAT ###
 
         self.visualize_dFC_corr()
+
+        return SUBJs_dyn_conn_lst
 
     def dFCM_var(self, dFCM_lst):
 
@@ -427,6 +461,21 @@ class DYN_CONN_DETECTOR:
 
         self.lag_order = self.VAR_model.k_ar
 
+    def calc_subj_TH_mask_lst(self, time_series, MEASURES_lst, \
+        N, L=None, verbose=0):
+
+        SUBJECTs = list(set(time_series.subj_id_array))
+        SUBJs_TH_mask_lst = list()
+        for subject in SUBJECTs:
+            SURROGATE = self.gen_surrogate( \
+                time_series=time_series.get_subj_ts(subj_id=subject), \
+                N=N, L=L, verbose=verbose \
+                    )
+            dFCM_var = self.calc_dFC_var(time_series=SURROGATE, MEASURES_lst=MEASURES_lst)
+            TH_mask_lst = self.calc_TH_mask(dFCM_var, a=0.95)
+            SUBJs_TH_mask_lst.append(TH_mask_lst)
+        return SUBJs_TH_mask_lst
+
     def gen_surrogate(self, time_series, N, L=None, verbose=0):
         if L is None:
             L = time_series.n_time
@@ -491,17 +540,20 @@ class DYN_CONN_DETECTOR:
 
         return TH_mask_lst
 
-    def mask_dFC(self, dFCM_var_lst, TH_mask_lst):
+    def mask_SUBJs_dFC(self, SUBJs_dFCM_var_lst, SUBJs_TH_mask_lst):
         # the items of the lists must be in the same order 
         # (of different measures)
 
-        dyn_conn_lst = list()
-        for i, dFCM_var in enumerate(dFCM_var_lst):
-            dyn_conn_lst.append( \
-                (dFCM_var>=TH_mask_lst[i])*[1] \
-                )
+        SUBJs_dyn_conn_lst = list()
+        for subject, dFCM_var_lst in enumerate(SUBJs_dFCM_var_lst):
+            dyn_conn_lst = list()
+            for m, dFCM_var in enumerate(dFCM_var_lst):
+                dyn_conn_lst.append( \
+                    (dFCM_var>=SUBJs_TH_mask_lst[subject][m])*[1] \
+                    )
+            SUBJs_dyn_conn_lst.append(dyn_conn_lst)
 
-        return dyn_conn_lst
+        return SUBJs_dyn_conn_lst
 
 
 ################################# dFC class ####################################
