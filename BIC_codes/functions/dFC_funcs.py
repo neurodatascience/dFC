@@ -120,7 +120,7 @@ import time
 class DFC_ANALYZER:
     # if self.n_jobs is None => no parallelization
 
-    def __init__(self, MEASURES_lst, vis_TR_idx,\
+    def __init__(self, MEASURES_lst, vis_TR_idx=None,\
             save_image=False, output_root=None, \
                 n_jobs=-1, verbose=1, backend='loky'):
         self.analysis_name = ''
@@ -194,10 +194,14 @@ class DFC_ANALYZER:
                     str(time_lst[i]) \
                     )
 
-    def dynamic_conns(self):
+    def dynamic_conns(self, time_series=None):
         pass
 
     def analyze(self, time_series=None):
+
+        ### DYNAMIC CONN DETEC ###
+        
+        
 
         ### estimate FCS ###
 
@@ -207,49 +211,55 @@ class DFC_ANALYZER:
 
         ### Visualize FCS ###
 
-        self.visualize_FCS(normalize=True, \
+        self.estimate_all_FCS(normalize=True, \
                                 threshold=0.0, \
                                 )
 
         ### estimate dFCM ###
 
-        SUBJECTs = list(set(time_series.subj_id_array))
-
         print("dFCM estimation started...")
-        if self.n_jobs is None:
-            for subject in SUBJECTs:
-                self.methods_corr_lst_.append( \
-                    self.subj_lvl_analysis( \
-                    time_series=time_series.get_subj_ts(subj_id=subject) \
-                    ))
-        else:
-            new_methods_corr_lst = Parallel( \
-                        n_jobs=self.n_jobs, \
-                        verbose=self.verbose, \
-                        backend=self.backend)( \
-                    delayed(self.subj_lvl_analysis)( \
-                        time_series=time_series.get_subj_ts(subj_id=subject) \
-                        ) \
-                        for subject in SUBJECTs)
-            self.methods_corr_lst_ = new_methods_corr_lst
+        self.estimate_all_dFCM(time_series=time_series)
         print("dFCM estimation done.")
 
         #### Methods dFC Corr MAT ###
 
         self.visualize_dFC_corr()
 
-    def subj_lvl_analysis(self, time_series):
+    def dFCM_var(self, dFCM_lst):
 
-        dFCM_lst = self.estimate_dFCM(time_series=time_series)
+        dFCM_var_lst = list()
+        for dFCM in dFCM_lst:
+            dFC_mat = dFCM.get_dFC_mat(TRs = dFCM.TR_array)
+            V = np.var(dFC_mat, axis=0)
+            dFCM_var_lst.append(V)
+        return dFCM_var_lst
 
-        self.visualize_dFCMs(dFCM_lst=dFCM_lst, \
-            TR_idx=self.vis_TR_idx, \
-            subj_id=time_series.subj_id_array[0], \
-            )
+    def subj_lvl_analysis(self, time_series, visualize_dFCM=True):
 
-        return self.dFC_corr_mat(dFCM_lst=dFCM_lst)
+        # dFCM_lst = self.estimate_dFCM(time_series=time_series)
+        if self.n_jobs is None:
+            dFCM_lst = list()
+            for measure in self.MEASURES_lst:
+                dFCM_lst.append( \
+                    measure.estimate_dFCM(time_series=time_series) \
+                )
+        else:
+            dFCM_lst = Parallel( \
+                n_jobs=self.n_jobs, verbose=self.verbose, backend=self.backend)( \
+                delayed(measure.estimate_dFCM)(time_series=time_series) \
+                    for measure in self.MEASURES_lst)
 
-    def estimate_FCS(self, time_series=None):
+        dFCM_var_lst = self.dFCM_var(dFCM_lst)
+
+        if visualize_dFCM:
+            self.visualize_dFCMs(dFCM_lst=dFCM_lst, \
+                TR_idx=self.vis_TR_idx, \
+                subj_id=time_series.subj_id_array[0], \
+                )
+
+        return dFCM_var_lst, self.dFC_corr_mat(dFCM_lst=dFCM_lst)
+
+    def estimate_all_FCS(self, time_series):
         SB_MEASURES_lst = self.SB_MEASURES_lst
         if self.n_jobs is None:
             SB_MEASURES_lst_NEW = list()
@@ -264,19 +274,34 @@ class DFC_ANALYZER:
                     for measure in SB_MEASURES_lst)
         self.MEASURES_lst_ = self.NSB_MEASURES_lst + SB_MEASURES_lst_NEW
 
-    def estimate_dFCM(self, time_series=None):
+    def estimate_all_dFCM(self, time_series, visualize_dFCM=True):
+        
+        SUBJECTs = list(set(time_series.subj_id_array))
+
         if self.n_jobs is None:
-            dFCM_lst = list()
-            for measure in self.MEASURES_lst:
-                dFCM_lst.append( \
-                    measure.estimate_dFCM(time_series=time_series) \
-                )
+            OUT = list()
+            for subject in SUBJECTs:
+                OUT.append( \
+                    self.subj_lvl_analysis( \
+                    time_series=time_series.get_subj_ts(subj_id=subject), \
+                    visualize_dFCM=visualize_dFCM \
+                    ))
         else:
-            dFCM_lst = Parallel( \
-                n_jobs=self.n_jobs, verbose=self.verbose, backend=self.backend)( \
-                delayed(measure.estimate_dFCM)(time_series=time_series) \
-                    for measure in self.MEASURES_lst)
-        return dFCM_lst
+            OUT = Parallel( \
+                        n_jobs=self.n_jobs, \
+                        verbose=self.verbose, \
+                        backend=self.backend)( \
+                    delayed(self.subj_lvl_analysis)( \
+                        time_series=time_series.get_subj_ts(subj_id=subject), \
+                        visualize_dFCM=visualize_dFCM \
+                        ) \
+                        for subject in SUBJECTs)
+            
+        dFCM_var_lst = [out[0] for out in OUT]
+        self.methods_corr_lst_ = [out[1] for out in OUT]
+
+        return dFCM_var_lst
+
 
     def dFC_corr(self, dFCM_i, dFCM_j):
 
@@ -364,6 +389,119 @@ class DFC_ANALYZER:
                 measure.visualize_FCS(normalize=normalize, threshold=threshold) # normalize?
                 # measure.visualize_TPM(normalize=normalize)
                 
+
+############################# Dynamic Connection Detector class ################################
+
+"""
+
+todo:
+- 
+"""
+
+from statsmodels.tsa.api import VAR
+from scipy.stats import norm
+
+class DYN_CONN_DETECTOR:
+
+    def __init__(self, \
+        n_jobs=-1, verbose=1, backend='loky'\
+            ):
+        self.VAR_model = None
+        self.lag_order = None
+        self.TH_mask = None
+        self.n_jobs = n_jobs
+        self.verbose = verbose 
+        self.backend = backend
+
+    # @property
+    # def methods_corr(self):
+    #     return np.mean(self.methods_corr_lst, axis=0)
+
+    def train_VAR(self, time_series, p=None):
+        self.VAR_model = VAR(time_series.data.T)
+
+        if p is None:
+            self.VAR_model = self.VAR_model.fit(maxlags=10, ic='aic')
+        else:
+            self.VAR_model = self.VAR_model.fit(p)
+
+        self.lag_order = self.VAR_model.k_ar
+
+    def gen_surrogate(self, time_series, N, L=None, verbose=0):
+        if L is None:
+            L = time_series.n_time
+
+        SURROGATE = None
+        for n in range(N):
+
+            t0 = np.random.choice(\
+                range(time_series.n_time-self.lag_order), \
+                size=1, replace=False)[0]
+
+            simul = self.VAR_model.forecast(time_series.data.T[t0:t0+self.lag_order, :], L)
+
+            if SURROGATE is None:
+                SURROGATE = TIME_SERIES(data=simul.T, subj_id='surrogate'+str(n+1), Fs=1/0.72, TS_name='BOLD Surrogate')
+            else:
+                SURROGATE.append_ts(new_time_series=simul.T, subj_id='surrogate'+str(n+1))
+
+        if verbose==1:
+            print(SURROGATE.n_regions, SURROGATE.n_time)
+
+        return SURROGATE
+
+    def calc_dFC_var(self, time_series, MEASURES_lst):
+
+        # OUTPUT shape = [sample, measure, node, node]
+
+        dFC_analyzer = DFC_ANALYZER(MEASURES_lst=MEASURES_lst, \
+            n_jobs=self.n_jobs, verbose=self.verbose, backend=self.backend \
+            )
+
+        print("FCS estimation started...")
+        dFC_analyzer.estimate_all_FCS(time_series=time_series)
+        print("FCS estimation done.")
+
+        ### estimate dFCM ###
+
+        print("dFCM estimation started...")
+        dFCM_var_lst = dFC_analyzer.estimate_all_dFCM( \
+            time_series=time_series, visualize_dFCM=False \
+            )
+        print("dFCM estimation done.")
+
+        return np.array(dFCM_var_lst)
+
+    def calc_TH_mask(self, dFCM_var, a=0.95):
+
+        # returns list of TH_masks for different measures
+        
+        n_regions = dFCM_var.shape[2]
+        num_MEASURES = dFCM_var.shape[1]
+
+        TH_mask_lst = list()
+        for m in range(num_MEASURES):
+            TH_mask = np.zeros((n_regions, n_regions))
+            for i in range(n_regions):
+                for j in range(n_regions):
+                    C = np.squeeze(dFCM_var[:, m, i, j])
+                    mu, sigma = norm.fit(C)
+                    TH_mask[i, j] = norm.ppf(a, mu, sigma)
+            TH_mask_lst.append(TH_mask)
+
+        return TH_mask_lst
+
+    def mask_dFC(self, dFCM_var_lst, TH_mask_lst):
+        # the items of the lists must be in the same order 
+        # (of different measures)
+
+        dyn_conn_lst = list()
+        for i, dFCM_var in enumerate(dFCM_var_lst):
+            dyn_conn_lst.append( \
+                (dFCM_var>=TH_mask_lst[i])*[1] \
+                )
+
+        return dyn_conn_lst
 
 
 ################################# dFC class ####################################

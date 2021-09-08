@@ -19,7 +19,7 @@ num_select_nodes = 50
 
 n_states = 6 #12
 n_subj_clstrs = 20
-n_hid_states = 6
+n_hid_states = 4
 n_overlap = 0.5
 W_sw = 44 # in seconds, 44, choose even Ws!?
 n_jobs = 8
