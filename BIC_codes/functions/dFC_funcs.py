@@ -135,6 +135,8 @@ class DFC_ANALYZER:
 
         self.analysis_name = analysis_name
         self.MEASURES_lst_ = MEASURES_lst
+        self.MEASURES_lst_ = self.NSB_MEASURES_lst + self.SB_MEASURES_lst
+    
         if 'vis_TR_idx' in params:
             self.vis_TR_idx = params['vis_TR_idx'] # to visualize
         if 'save_image' in params:
@@ -248,8 +250,9 @@ class DFC_ANALYZER:
 
         print("Dynamic Connection Detection started...")
         dyn_conn_detector.train_VAR(time_series=time_series, p=self.dyn_conn_det_params['p'])
-        SUBJs_TH_mask = dyn_conn_detector.calc_subj_TH_mask_lst(time_series, self.MEASURES_lst, \
+        SUBJs_TH_mask = dyn_conn_detector.calc_subj_TH_mask(time_series, self.MEASURES_lst, \
             N=self.dyn_conn_det_params['N'], L=self.dyn_conn_det_params['L'])
+
         SUBJs_dyn_conn = dyn_conn_detector.mask_SUBJs_dFC(SUBJs_dFC_var, SUBJs_TH_mask)
         print("Dynamic Connection Detection done.")
 
@@ -285,8 +288,8 @@ class DFC_ANALYZER:
 
         MEASURES_dFCM = {}
         for dFCM in dFCM_lst:
-            # test if self.MEASURES_lst[m].measure_name=dFCM.measure
-            MEASURES_dFCM[dFCM.measure] = dFCM
+            # test if self.MEASURES_lst[m].measure_name=dFCM.measure.measure_name
+            MEASURES_dFCM[dFCM.measure.measure_name] = dFCM
 
         MEASURES_dFC_var = self.dFCM_var(MEASURES_dFCM)
 
@@ -369,6 +372,15 @@ class DFC_ANALYZER:
         methods_corr = np.zeros((len(dFCM_lst), len(dFCM_lst)))
         for i in range(len(dFCM_lst)):
             for j in range(i+1, len(dFCM_lst)):
+
+                # assert dFCM_lst[i].measure==self.MEASURES_lst[i] and \
+                #     dFCM_lst[j].measure==self.MEASURES_lst[j], \
+                #     'mismatch in MEASURES_lst order'
+
+                assert dFCM_lst[i].measure.measure_name==self.MEASURES_lst[i].measure_name and \
+                    dFCM_lst[j].measure.measure_name==self.MEASURES_lst[j].measure_name, \
+                    'mismatch in MEASURES_lst order'
+
                 corr_ij = self.dFC_corr( \
                     dFCM_lst[i], dFCM_lst[j] \
                         )
@@ -473,7 +485,7 @@ class DYN_CONN_DETECTOR:
 
         self.lag_order = self.VAR_model.k_ar
 
-    def calc_subj_TH_mask_lst(self, time_series, MEASURES_lst, \
+    def calc_subj_TH_mask(self, time_series, MEASURES_lst, \
         N, L=None):
 
         SUBJECTs = list(set(time_series.subj_id_array))
