@@ -259,6 +259,7 @@ class DFC_ANALYZER:
         #### Methods dFC Corr MAT ###
 
         self.visualize_dFC_corr()
+        self.visualize_dyn_conns(SUBJs_dyn_conn)
 
         return SUBJs_dyn_conn
 
@@ -373,10 +374,6 @@ class DFC_ANALYZER:
         for i in range(len(dFCM_lst)):
             for j in range(i+1, len(dFCM_lst)):
 
-                # assert dFCM_lst[i].measure==self.MEASURES_lst[i] and \
-                #     dFCM_lst[j].measure==self.MEASURES_lst[j], \
-                #     'mismatch in MEASURES_lst order'
-
                 assert dFCM_lst[i].measure.measure_name==self.MEASURES_lst[i].measure_name and \
                     dFCM_lst[j].measure.measure_name==self.MEASURES_lst[j].measure_name, \
                     'mismatch in MEASURES_lst order'
@@ -390,8 +387,33 @@ class DFC_ANALYZER:
                 methods_corr[j,i] = methods_corr[i,j] 
         return methods_corr
 
-    def visualize_dyn_conns(self, SUBJs_dyn_conn_lst):
-        pass
+    def visualize_dyn_conns(self, SUBJs_dyn_conn):
+        
+        for subject in SUBJs_dyn_conn:
+
+            fig, axs = plt.subplots(1, len(SUBJs_dyn_conn[subject]), figsize=(25, 10), \
+                facecolor='w', edgecolor='k')
+            fig.suptitle('Subject '+subject+' Dynamic Connections', fontsize=20, size=20)
+            axs = axs.ravel()
+
+            for i, measure in enumerate(SUBJs_dyn_conn[subject]):
+
+                C = SUBJs_dyn_conn[subject][measure]
+                axs[i].set_axis_off()
+                im = axs[i].imshow(C, interpolation='nearest', aspect='equal', cmap='jet',    # 'viridis'
+                )
+                axs[i].set_title(measure)
+
+                # fig.subplots_adjust(bottom=0.1, top=1.5, left=0.1, right=0.9,
+                #                     wspace=0.02, hspace=0.02)
+                
+            if self.save_image:
+                output_root = self.output_root+'DYN_CONN/'
+                fig_name= output_root+'subject'+subject+'_dyn_conn'
+                plt.savefig(fig_name + '.png', dpi=fig_dpi)  
+                plt.close()
+            else:
+                plt.show()
 
     def visualize_dFC_corr(self):
 
@@ -1829,6 +1851,7 @@ class DFCM():
             V_MAX = np.max(C)
             V_MIN = np.min(C)
 
+        # todo if C.shape[0]=1 !
         fig, axs = plt.subplots(1, C.shape[0], figsize=(25, 10), \
             facecolor='w', edgecolor='k')
         fig.suptitle(self.measure.measure_name+' dFC', fontsize=20, size=20)
