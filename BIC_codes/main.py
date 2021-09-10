@@ -210,12 +210,26 @@ MEASURES = [
     # hmm_disc_mi \
             ]
 
+dyn_conn_det_params = { \
+    'N': 10, 'L': 1000, 'p': 100, \
+    'n_jobs': n_jobs, 'backend': 'loky' \
+}
+params = { \
+    # VISUALIZATION
+    'vis_TR_idx': list(range(10, 20, 1)),'save_image': True, 'output_root': output_root, \
+    # Parallelization Parameters
+    'n_jobs': n_jobs, 'verbose': 1, 'backend': 'loky', \
+    # Dynamic Connection Detector Parameters
+    'dyn_conn_det_params': dyn_conn_det_params \
+}
+
+dFC_analyzer = DFC_ANALYZER(MEASURES_lst=MEASURES, \
+    analysis_name='dyn_conn', \
+    **params \
+)
+
 tic = time.time()
 print('Measurement Started ...')
-dFC_analyzer = DFC_ANALYZER(MEASURES_lst = MEASURES, vis_TR_idx=list(range(10, 20)),\
-    save_image=True, output_root=output_root,
-    n_jobs=n_jobs, verbose=1, backend='loky' \
-    )
 dFC_analyzer.analyze(time_series=BOLD)
 print('Measurement required %0.3f seconds.' % (time.time() - tic, ))
 
