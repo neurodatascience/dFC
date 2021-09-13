@@ -449,30 +449,6 @@ class DFC_ANALYZER:
                 fix_lim=True \
             )
 
-            # fig, axs = plt.subplots(1, len(SUBJs_dyn_conn[subject]), figsize=(25, 10), \
-            #     facecolor='w', edgecolor='k')
-            # fig.suptitle('Subject '+subject+' Dynamic Connections', fontsize=20, size=20)
-            # axs = axs.ravel()
-
-            # for i, measure in enumerate(SUBJs_dyn_conn[subject]):
-
-            #     C = SUBJs_dyn_conn[subject][measure]
-            #     axs[i].set_axis_off()
-            #     im = axs[i].imshow(C, interpolation='nearest', aspect='equal', cmap='jet',    # 'viridis'
-            #     )
-            #     axs[i].set_title(measure)
-
-            #     # fig.subplots_adjust(bottom=0.1, top=1.5, left=0.1, right=0.9,
-            #     #                     wspace=0.02, hspace=0.02)
-                
-            # if self.save_image:
-            #     output_root = self.output_root+'DYN_CONN/'
-            #     fig_name= output_root+'subject'+subject+'_dyn_conn'
-            #     plt.savefig(fig_name + '.png', dpi=fig_dpi)  
-            #     plt.close()
-            # else:
-            #     plt.show()
-
     def visualize_dFC_corr(self):
 
         # visualize avergaed dFC corr mat
@@ -738,26 +714,6 @@ class dFC:
             fix_lim=True \
         )
 
-        # fig, axs = plt.subplots(1,C.shape[0], figsize=(25, 10), facecolor='w', edgecolor='k')
-        # fig.suptitle(self.measure_name+' FCS', fontsize=20, size=20)
-        # fig.subplots_adjust(hspace = .001, wspace=.2, top=1.5, bottom=0.1)
-        # axs = axs.ravel()
-
-        # for i, c in enumerate(C):
-        #     axs[i].imshow(c, interpolation='nearest', aspect='equal', cmap='jet',\
-        #         vmin=0, vmax=1)
-        #     # axs[i].colorbar(shrink=0.8)
-        #     axs[i].set_title('FCS '+str(i+1))
-
-        # # fig.tight_layout()
-        # # fig.subplots_adjust(top=1.4)
-
-        # if save_image:
-        #     plt.savefig(fig_name + '.png', dpi=fig_dpi)  
-        #     plt.close()
-        # else:
-        #     plt.show()
-
     def visualize_TPM(self, normalize=True, save_image=False, fig_name=None):
         
         if self.TPM == []:
@@ -838,7 +794,7 @@ class HMM_CONT(dFC):
 
         Z = self.hmm_model.predict(time_series.data.T)
         dFCM = DFCM(measure=self)
-        dFCM.add_FCP(FCPs=self.FCS_, FCP_idx=Z, subj_id_array=time_series.subj_id_array)
+        dFCM.add_FC(FCSs=self.FCS_, FCS_idx=Z, subj_id_array=time_series.subj_id_array)
 
         return dFCM
 
@@ -906,7 +862,7 @@ class WINDOWLESS(dFC):
             Z.append(np.argwhere(gamma[i, :] != 0)[0,0])
             
         dFCM = DFCM(measure=self)
-        dFCM.add_FCP(FCPs=self.FCS_, FCP_idx=Z, subj_id_array=time_series.subj_id_array)
+        dFCM.add_FC(FCSs=self.FCS_, FCS_idx=Z, subj_id_array=time_series.subj_id_array)
         return dFCM
 
 ################################# Time-Frequency #################################
@@ -969,7 +925,7 @@ class TIME_FREQ(dFC):
         assert method in self.methods_name_lst, \
             "Time-frequency method not recognized."
 
-        self.measure_name_ = 'Time-Frequency '
+        self.measure_name_ = 'Time-Freq '
         self.is_state_based = False
         self.TPM = []
         self.FCS_ = []
@@ -1078,7 +1034,7 @@ class TIME_FREQ(dFC):
             WT[:, i, :] = np.array(Q).T
 
         dFCM = DFCM(measure=self)
-        dFCM.add_FCP(FCPs=WT, subj_id_array=time_series.subj_id_array)
+        dFCM.add_FC(FCSs=WT, subj_id_array=time_series.subj_id_array)
         return dFCM
 
 ################################# Sliding-Window #################################
@@ -1188,13 +1144,13 @@ class SLIDING_WINDOW(dFC):
             window = np.repeat(np.expand_dims(window, axis=0), time_series.shape[0], axis=0)
 
             # int(l-W/2):int(l+3*W/2) is the nonzero interval after tapering
-            C.add_FCP(FCPs=self.FC( \
+            C.add_FC(FCSs=self.FC( \
                         np.multiply(time_series, window)[ \
                             :,max(int(l-W/2),0):min(int(l+3*W/2),L) \
                                 ] \
                                     ), \
                         subj_id_array = subj_id, \
-                        TR_array=np.array( [ int(l + (l+W)) / 2 ] ) \
+                        TR_array=np.array( [ int((l + (l+W)) / 2) ] ) \
                         )
             # print('dFC step = %d' %(l))
 
@@ -1228,7 +1184,7 @@ class SLIDING_WINDOW(dFC):
 - We used a tapered window as in Allen et al., created by convolving a rectangle (width = 22 TRs = 44s) 
   with a Gaussian (σ = 3 TRs) and slid in steps of 1 TR, resulting in W= 126 windows (Allen et al., 2014).
 - Kmeans Clustering is repeated 500 times to escape local minima (Allen et al., 2014)
-- for clustering, we have a 2-level kmeans clustering. First, we cluster FCPs of each subject. Then, we
+- for clustering, we have a 2-level kmeans clustering. First, we cluster FCSs of each subject. Then, we
     cluster all clustering centers from all subjects. the final estimate_dFCM is using the second kmeans
     model (Allen et al., 2014; Ou et al., 2015). 
 
@@ -1260,7 +1216,7 @@ class SLIDING_WINDOW_CLUSTR(dFC):
         assert base_method in self.base_methods_name_lst, \
             "Base method not recognized."
     
-        self.measure_name_ = 'SlidingWindow+Clustering'
+        self.measure_name_ = 'Clustering'
         self.is_state_based = True
         self.clstr_distance = clstr_distance
         self.TPM = []
@@ -1424,8 +1380,8 @@ class SLIDING_WINDOW_CLUSTR(dFC):
             Z = self.kmeans_.predict(F)
 
         dFCM = DFCM(measure=self)
-        dFCM.add_FCP(FCPs=self.FCS_, \
-            FCP_idx=Z, \
+        dFCM.add_FC(FCSs=self.FCS_, \
+            FCS_idx=Z, \
             subj_id_array=dFCM_raw.subj_id_array, \
             TR_array=dFCM_raw.TR_array \
             )
@@ -1444,6 +1400,10 @@ Parameters
         (num of observations/n_state) of 16
     N : int
         (num of hidden states) of 24
+    self.FCC_ : 
+        dFCM estimated by Clustering which is then used to fit Discrete HMM 
+    self.FCS_ : 
+        collection FCS pattern coded in numbers for Discrete HMM
 
 todo:
 - two-level hierarchical clustering ?
@@ -1500,9 +1460,9 @@ class HMM_DISC(dFC):
         self.FCC_ = self.swc.estimate_dFCM(time_series=time_series)
 
         self.hmm_model = hmm.MultinomialHMM(n_components=self.n_hid_states)
-        self.hmm_model.fit(self.FCC_.FCP_idx.reshape(-1, 1))
+        self.hmm_model.fit(self.FCC_.FCS_idx_array.reshape(-1, 1))
 
-        self.Z = self.hmm_model.predict(self.FCC_.FCP_idx.reshape(-1, 1))
+        self.Z = self.hmm_model.predict(self.FCC_.FCS_idx_array.reshape(-1, 1))
         self.TPM = self.hmm_model.transmat_
         self.EPM = self.hmm_model.emissionprob_ 
 
@@ -1523,11 +1483,11 @@ class HMM_DISC(dFC):
 
         FCC = self.swc.estimate_dFCM(time_series=time_series)
 
-        Z = self.hmm_model.predict(FCC.FCP_idx.reshape(-1, 1))
+        Z = self.hmm_model.predict(FCC.FCS_idx_array.reshape(-1, 1))
 
         dFCM = DFCM(measure=self)
-        dFCM.add_FCP(FCPs=self.FCS_, \
-            FCP_idx=Z, \
+        dFCM.add_FC(FCSs=self.FCS_, \
+            FCS_idx=Z, \
             subj_id_array=FCC.subj_id_array, \
             TR_array=FCC.TR_array \
                 )
@@ -1753,10 +1713,10 @@ Parameters
 
 Variables
     ----------
-    FCPs : Functional Connecitivity 
-        Patterns
-    FCP_idx : the  index of the 
-        FCP that corresponds to each 
+    FCSs : Functional Connecitivity 
+        States patterns
+    FCS_idx : the  index of the 
+        FCS that corresponds to each 
         timepoint
     
 
@@ -1770,8 +1730,8 @@ class DFCM():
         # assert not measure is None, \
         #     "measure arg must be provided."
         self.measure_ = measure
-        self.FCPs_ = None 
-        self.FCP_idx_ = None
+        self.FCSs_ = None # is a dict
+        self.FCS_idx_ = None # is a dict
         self.subj_id_array_ = None
         self.TR_array_ = None
         self.n_regions_ = None
@@ -1780,10 +1740,6 @@ class DFCM():
     @classmethod
     def from_numpy(cls, array=None):
         pass
-
-    # @property
-    # def dFC_mat(self):
-    #     return self.FCPs[self.FCP_idx,:,:]
 
     @property
     def measure(self):
@@ -1801,95 +1757,125 @@ class DFCM():
     def n_time(self):
         return self.n_time_
 
+    # test this
     @property
-    def FCPs(self):
-        return self.FCPs_
+    def FCSs(self):
+        return self.FCSs_
 
+    # test this
     @property
-    def FCP_idx(self):
-        return self.FCP_idx_
+    def FCS_idx(self):
+        return self.FCS_idx_
+
+    # test this
+    @property
+    def FCS_idx_array(self):
+        return np.array([int(self.FCS_idx[TR][self.FCS_idx[TR].find('S')+1:])-1 for TR in self.FCS_idx])
 
     @property
     def subj_id_array(self):
         return self.subj_id_array_
 
+    # test this
     def get_dFC_mat(self, TRs=None):
         # get dFC matrices corresponding to 
-        # the specified TRs
+        # the specified TRs 
+        # TRs should be list not necessarily in order ?
 
         if type(TRs) is np.int32 or type(TRs) is np.int64 or type(TRs) is int:
             TRs = [TRs]
-
-        idxs = list()
-        for tr in TRs:
-            idxs.append(np.argwhere(self.TR_array==tr)[0,0])
-
-        return self.FCPs[self.FCP_idx[idxs],:,:] 
-
-    def concat(self, dFCM):
-
-        # test this method
-
-        assert type(dFCM) is DFCM, \
-                "The input must be of DFCM class"
-
-        if self.FCPs_ is None:
-            self.FCPs_ = dFCM.FCPs
-            self.FCP_idx_ = dFCM.FCP_idx
-            self.n_regions_ = dFCM.n_regions
-            self.n_time_ = dFCM.n_time
-            self.TR_array_ = dFCM.TR_array
-        else:
-            assert self.n_regions== dFCM.n_regions, \
-                "dFCM region numbers missmatch."
-            FCP_idx = dFCM.FCP_idx + self.FCPs.shape[0]
-            self.FCPs_ = np.concatenate((self.FCPs_, dFCM.FCPs), axis=0)
-            self.FCP_idx_ = np.concatenate((self.FCP_idx_, FCP_idx), axis=0)
-            self.n_time_ = self.FCP_idx.shape[0]
-            self.TR_array_ = np.concatenate((self.TR_array, dFCM.TR_array))
-
-    def add_FCP(self, FCPs, FCP_idx=None, subj_id_array=None, TR_array=None):
         
-        if len(FCPs.shape)==2:
-            FCPs = np.expand_dims(FCPs, axis=0)
+        dFC_mat = list()
+        for TR in TRs:
+            dFC_mat.append(self.FCSs[self.FCS_idx['TR'+str(TR)]])
 
-        if FCP_idx is None:
-            FCP_idx = np.arange(start=0, stop=FCPs.shape[0], step=1)
+        dFC_mat = np.array(dFC_mat)
 
-        if type(FCP_idx) is list:
-            FCP_idx = np.array(FCP_idx)
+        return dFC_mat
 
-        if len(FCP_idx.shape)>1:
-            FCP_idx = np.squeeze(FCP_idx)
+    # def concat(self, dFCM):
+
+    #     # test this method
+
+    #     assert type(dFCM) is DFCM, \
+    #             "The input must be of DFCM class"
+
+    #     if self.FCPs_ is None:
+    #         self.FCPs_ = dFCM.FCPs
+    #         self.FCP_idx_ = dFCM.FCP_idx
+    #         self.n_regions_ = dFCM.n_regions
+    #         self.n_time_ = dFCM.n_time
+    #         self.TR_array_ = dFCM.TR_array
+    #     else:
+    #         assert self.n_regions== dFCM.n_regions, \
+    #             "dFCM region numbers missmatch."
+    #         FCP_idx = dFCM.FCP_idx + self.FCPs.shape[0]
+    #         self.FCPs_ = np.concatenate((self.FCPs_, dFCM.FCPs), axis=0)
+    #         self.FCP_idx_ = np.concatenate((self.FCP_idx_, FCP_idx), axis=0)
+    #         self.n_time_ = self.FCP_idx.shape[0]
+    #         self.TR_array_ = np.concatenate((self.TR_array, dFCM.TR_array))
+
+    def add_FC(self, FCSs, FCS_idx=None, subj_id_array=None, TR_array=None):
+        
+        if len(FCSs.shape)==2:
+            FCSs = np.expand_dims(FCSs, axis=0)
+
+        if FCS_idx is None:
+            FCS_idx = np.arange(start=0, stop=FCSs.shape[0], step=1)
+
+        if type(FCS_idx) is list:
+            FCS_idx = np.array(FCS_idx)
+
+        if len(FCS_idx.shape)>1:
+            FCS_idx = np.squeeze(FCS_idx)
 
         if not type(subj_id_array) is list:
             subj_id_array = list(subj_id_array)
         
-        assert FCPs.shape[1] == FCPs.shape[2], \
+        assert FCSs.shape[1] == FCSs.shape[2], \
                 "FC matrices must be square."
 
-        assert len(subj_id_array)==FCP_idx.shape[0], \
-            "FCP_idx and subj_id_array length mismatch."
+        assert len(subj_id_array)==FCS_idx.shape[0], \
+            "FCS_idx and subj_id_array length mismatch."
 
         if TR_array is None:
-            TR_array = np.arange(start=self.n_time+1, stop=self.n_time+len(FCP_idx)+1, step=1)
+            TR_array = np.arange(start=self.n_time+1, stop=self.n_time+len(FCS_idx)+1, step=1)
 
-        if self.FCPs_ is None:
-            self.FCPs_ = FCPs
-            self.FCP_idx_ = FCP_idx
+        assert np.sum(np.abs(np.sort(TR_array)-TR_array))==0.0, \
+            'TRs not sorted !'
+
+        if self.FCSs_ is None:
+            self.FCSs_ = {}
+            for i, FCS in enumerate(FCSs):
+                self.FCSs_['FCS'+str(i+1)] = FCS
+
+            self.FCS_idx_ = {}
+            for i, idx in enumerate(FCS_idx):
+                self.FCS_idx_['TR'+str(TR_array[i])] = 'FCS'+str(idx+1)
+
             self.subj_id_array_ = subj_id_array
-            self.n_regions_ = self.FCPs.shape[1]
-            self.n_time_ = self.FCP_idx.shape[0]
+            self.n_regions_ = FCSs.shape[1]
+            self.n_time_ = len(self.FCS_idx_)
             self.TR_array_ = TR_array
         else:
             # test this part
-            assert self.n_regions == FCPs.shape[1], \
-                "FCP region numbers mismatch."
-            FCP_idx = FCP_idx + self.FCPs.shape[0]
-            self.FCPs_ = np.concatenate((self.FCPs_, FCPs), axis=0)
-            self.FCP_idx_ = np.concatenate((self.FCP_idx_, FCP_idx), axis=0)
+            assert self.n_regions == FCSs.shape[1], \
+                "FCS region numbers mismatch."
+
+            for i, FCS in enumerate(FCSs):
+                assert not 'FCS'+str(i+1+len(self.FCSs_)) in self.FCSs_, \
+                    'key already exists in self.FCSs_ !' 
+                self.FCSs_['FCS'+str(i+1+len(self.FCSs_))] = FCS
+
+            for i, idx in enumerate(FCS_idx):
+                assert not 'TR'+str(TR_array[i]) in self.FCS_idx_, \
+                    'key already exists in self.FCS_idx_ !' 
+                assert TR_array[i] > self.TR_array_[-1], \
+                    'TR overlap !' 
+                self.FCS_idx_['TR'+str(TR_array[i])] = 'FCS'+str(idx+1+len(self.FCS_idx_))
+
             self.subj_id_array_ = self.subj_id_array_ + subj_id_array
-            self.n_time_ = self.FCP_idx.shape[0]
+            self.n_time_ = len(self.FCS_idx_) 
             self.TR_array_ = np.concatenate((self.TR_array, TR_array))
 
     def visualize_dFC(self, TRs=None, normalize=True, \
@@ -1917,34 +1903,5 @@ class DFCM():
             output_root=fig_name, \
             fix_lim=True \
         )
-
-        # # todo if C.shape[0]=1 !
-        # fig, axs = plt.subplots(1, C.shape[0], figsize=(25, 10), \
-        #     facecolor='w', edgecolor='k')
-        # fig.suptitle(self.measure.measure_name+' dFC', fontsize=20, size=20)
-        # axs = axs.ravel()
-
-        # for l in range(0, C.shape[0]):
-        #     axs[l].set_axis_off()
-        #     im = axs[l].imshow(C[l, :, :], interpolation='nearest', aspect='equal', cmap='jet',    # 'viridis'
-        #                 vmin=V_MIN, vmax=V_MAX)
-        #     axs[l].set_title('TR '+str(TRs[l]))
-
-        # fig.subplots_adjust(bottom=0.1, top=1.5, left=0.1, right=0.9,
-        #                     wspace=0.02, hspace=0.02)
-
-        # # [x, y, w, h]
-        # cb_ax = fig.add_axes([0.91, 0.75, 0.007, 0.1])
-        # cbar = fig.colorbar(im, cax=cb_ax)
-
-        # #set the colorbar ticks and tick labels
-        # cbar.set_ticks(np.arange(0, 1.1, 0.5))
-        # cbar.set_ticklabels(['0', '0.5', '1'])
-        
-        # if save_image:
-        #     plt.savefig(fig_name + '.png', dpi=fig_dpi)  
-        #     plt.close()
-        # else:
-        #     plt.show()
 
 
