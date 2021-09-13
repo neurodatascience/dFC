@@ -35,12 +35,63 @@ def TR_intersection(dFCM_lst): # input is a list of dFCM objs
         print('No TR intersection.')
     return TRs_lst_old
 
-def visualize_corr_mat(C, title=''):
-    plt.figure(figsize=(5, 5))
-    plt.imshow(C, interpolation='nearest', aspect='equal', cmap='jet')
-    cb = plt.colorbar(shrink=0.8)
-    plt.title(title)
-    plt.show()
+def visualize_conn_mat(data, title='', \
+    save_image=False, output_root=None, \
+        fix_lim=True \
+    ):
+
+    # data must be a dict of correlation/connectivity matrices
+
+    fig, axs = plt.subplots(1, len(data), figsize=(25*(len(data)/10), 10), \
+        facecolor='w', edgecolor='k')
+
+    fig.suptitle(title) #, fontsize=20, size=20
+
+    axs = axs.ravel()
+
+    for i, key in enumerate(data):
+
+        C = data[key]
+
+        C = np.abs(C) # ?????? should we do this?
+
+        if np.any(C<0): # ?????? should we do this?
+            V_MIN = -1
+            V_MAX = 1
+        else: # ?????? should we do this?
+            V_MIN = 0
+            V_MAX = 1
+
+        if not fix_lim:
+            V_MAX = np.max(C)
+            V_MIN = np.min(C)
+
+        axs[i].set_axis_off()
+        im = axs[i].imshow(C, interpolation='nearest', aspect='equal', cmap='jet',    # 'viridis'
+            vmin=V_MIN, vmax=V_MAX)
+        axs[i].set_title(key)
+
+    fig.subplots_adjust(
+        bottom=0.1, \
+        top=1.5, \
+        left=0.1, \
+        right=0.9,
+        # wspace=0.02, \
+        # hspace=0.02\
+    )
+        
+    cb_ax = fig.add_axes([0.91, 0.75, 0.007, 0.1])
+    cbar = fig.colorbar(im, cax=cb_ax, shrink=0.8) # shrink=0.8??
+
+    # # set the colorbar ticks and tick labels
+    # cbar.set_ticks(np.arange(0, 1.1, 0.5))
+    # cbar.set_ticklabels(['0', '0.5', '1'])
+
+    if save_image:
+        plt.savefig(output_root + '.png', dpi=fig_dpi)  
+        plt.close()
+    else:
+        plt.show()
 
 def dFC_mat_normalize(C_t, global_normalization=False, threshold=0.0):
 
@@ -391,29 +442,36 @@ class DFC_ANALYZER:
         
         for subject in SUBJs_dyn_conn:
 
-            fig, axs = plt.subplots(1, len(SUBJs_dyn_conn[subject]), figsize=(25, 10), \
-                facecolor='w', edgecolor='k')
-            fig.suptitle('Subject '+subject+' Dynamic Connections', fontsize=20, size=20)
-            axs = axs.ravel()
+            visualize_conn_mat(data=SUBJs_dyn_conn[subject], \
+                title='Subject '+subject+' Dynamic Connections', \
+                save_image=self.save_image, \
+                output_root=self.output_root+'DYN_CONN/'+'subject'+subject+'_dyn_conn', \
+                fix_lim=True \
+            )
 
-            for i, measure in enumerate(SUBJs_dyn_conn[subject]):
+            # fig, axs = plt.subplots(1, len(SUBJs_dyn_conn[subject]), figsize=(25, 10), \
+            #     facecolor='w', edgecolor='k')
+            # fig.suptitle('Subject '+subject+' Dynamic Connections', fontsize=20, size=20)
+            # axs = axs.ravel()
 
-                C = SUBJs_dyn_conn[subject][measure]
-                axs[i].set_axis_off()
-                im = axs[i].imshow(C, interpolation='nearest', aspect='equal', cmap='jet',    # 'viridis'
-                )
-                axs[i].set_title(measure)
+            # for i, measure in enumerate(SUBJs_dyn_conn[subject]):
 
-                # fig.subplots_adjust(bottom=0.1, top=1.5, left=0.1, right=0.9,
-                #                     wspace=0.02, hspace=0.02)
+            #     C = SUBJs_dyn_conn[subject][measure]
+            #     axs[i].set_axis_off()
+            #     im = axs[i].imshow(C, interpolation='nearest', aspect='equal', cmap='jet',    # 'viridis'
+            #     )
+            #     axs[i].set_title(measure)
+
+            #     # fig.subplots_adjust(bottom=0.1, top=1.5, left=0.1, right=0.9,
+            #     #                     wspace=0.02, hspace=0.02)
                 
-            if self.save_image:
-                output_root = self.output_root+'DYN_CONN/'
-                fig_name= output_root+'subject'+subject+'_dyn_conn'
-                plt.savefig(fig_name + '.png', dpi=fig_dpi)  
-                plt.close()
-            else:
-                plt.show()
+            # if self.save_image:
+            #     output_root = self.output_root+'DYN_CONN/'
+            #     fig_name= output_root+'subject'+subject+'_dyn_conn'
+            #     plt.savefig(fig_name + '.png', dpi=fig_dpi)  
+            #     plt.close()
+            # else:
+            #     plt.show()
 
     def visualize_dFC_corr(self):
 
@@ -669,25 +727,36 @@ class dFC:
         else:
             C = self.FCS
 
-        fig, axs = plt.subplots(1,C.shape[0], figsize=(25, 10), facecolor='w', edgecolor='k')
-        fig.suptitle(self.measure_name+' FCS', fontsize=20, size=20)
-        fig.subplots_adjust(hspace = .001, wspace=.2, top=1.5, bottom=0.1)
-        axs = axs.ravel()
+        FCS_dict = {}
+        for i in range(C.shape[0]):
+            FCS_dict['FCS '+str(i+1)] = C[i]
 
-        for i, c in enumerate(C):
-            axs[i].imshow(c, interpolation='nearest', aspect='equal', cmap='jet',\
-                vmin=0, vmax=1)
-            # axs[i].colorbar(shrink=0.8)
-            axs[i].set_title('FCS '+str(i+1))
+        visualize_conn_mat(data=FCS_dict, \
+            title=self.measure_name+' FCS', \
+            save_image=save_image, \
+            output_root=fig_name, \
+            fix_lim=True \
+        )
 
-        # fig.tight_layout()
-        # fig.subplots_adjust(top=1.4)
+        # fig, axs = plt.subplots(1,C.shape[0], figsize=(25, 10), facecolor='w', edgecolor='k')
+        # fig.suptitle(self.measure_name+' FCS', fontsize=20, size=20)
+        # fig.subplots_adjust(hspace = .001, wspace=.2, top=1.5, bottom=0.1)
+        # axs = axs.ravel()
 
-        if save_image:
-            plt.savefig(fig_name + '.png', dpi=fig_dpi)  
-            plt.close()
-        else:
-            plt.show()
+        # for i, c in enumerate(C):
+        #     axs[i].imshow(c, interpolation='nearest', aspect='equal', cmap='jet',\
+        #         vmin=0, vmax=1)
+        #     # axs[i].colorbar(shrink=0.8)
+        #     axs[i].set_title('FCS '+str(i+1))
+
+        # # fig.tight_layout()
+        # # fig.subplots_adjust(top=1.4)
+
+        # if save_image:
+        #     plt.savefig(fig_name + '.png', dpi=fig_dpi)  
+        #     plt.close()
+        # else:
+        #     plt.show()
 
     def visualize_TPM(self, normalize=True, save_image=False, fig_name=None):
         
@@ -1838,46 +1907,44 @@ class DFCM():
         else:
             C = self.get_dFC_mat(TRs=TRs)
 
-        C = np.abs(C) # ?????? should we do this?
+        dFC_dict = {}
+        for i, TR in enumerate(TRs):
+            dFC_dict['TR'+str(TR)] = C[i]
 
-        if np.any(C<0):
-            V_MIN = -1
-            V_MAX = 1
-        else:
-            V_MIN = 0
-            V_MAX = 1
+        visualize_conn_mat(data=dFC_dict, \
+            title=self.measure.measure_name+' dFC', \
+            save_image=save_image, \
+            output_root=fig_name, \
+            fix_lim=True \
+        )
 
-        if not fix_lim:
-            V_MAX = np.max(C)
-            V_MIN = np.min(C)
+        # # todo if C.shape[0]=1 !
+        # fig, axs = plt.subplots(1, C.shape[0], figsize=(25, 10), \
+        #     facecolor='w', edgecolor='k')
+        # fig.suptitle(self.measure.measure_name+' dFC', fontsize=20, size=20)
+        # axs = axs.ravel()
 
-        # todo if C.shape[0]=1 !
-        fig, axs = plt.subplots(1, C.shape[0], figsize=(25, 10), \
-            facecolor='w', edgecolor='k')
-        fig.suptitle(self.measure.measure_name+' dFC', fontsize=20, size=20)
-        axs = axs.ravel()
+        # for l in range(0, C.shape[0]):
+        #     axs[l].set_axis_off()
+        #     im = axs[l].imshow(C[l, :, :], interpolation='nearest', aspect='equal', cmap='jet',    # 'viridis'
+        #                 vmin=V_MIN, vmax=V_MAX)
+        #     axs[l].set_title('TR '+str(TRs[l]))
 
-        for l in range(0, C.shape[0]):
-            axs[l].set_axis_off()
-            im = axs[l].imshow(C[l, :, :], interpolation='nearest', aspect='equal', cmap='jet',    # 'viridis'
-                        vmin=V_MIN, vmax=V_MAX)
-            axs[l].set_title('TR '+str(TRs[l]))
+        # fig.subplots_adjust(bottom=0.1, top=1.5, left=0.1, right=0.9,
+        #                     wspace=0.02, hspace=0.02)
 
-        fig.subplots_adjust(bottom=0.1, top=1.5, left=0.1, right=0.9,
-                            wspace=0.02, hspace=0.02)
+        # # [x, y, w, h]
+        # cb_ax = fig.add_axes([0.91, 0.75, 0.007, 0.1])
+        # cbar = fig.colorbar(im, cax=cb_ax)
 
-        # [x, y, w, h]
-        cb_ax = fig.add_axes([0.91, 0.75, 0.007, 0.1])
-        cbar = fig.colorbar(im, cax=cb_ax)
-
-        #set the colorbar ticks and tick labels
-        cbar.set_ticks(np.arange(0, 1.1, 0.5))
-        cbar.set_ticklabels(['0', '0.5', '1'])
+        # #set the colorbar ticks and tick labels
+        # cbar.set_ticks(np.arange(0, 1.1, 0.5))
+        # cbar.set_ticklabels(['0', '0.5', '1'])
         
-        if save_image:
-            plt.savefig(fig_name + '.png', dpi=fig_dpi)  
-            plt.close()
-        else:
-            plt.show()
+        # if save_image:
+        #     plt.savefig(fig_name + '.png', dpi=fig_dpi)  
+        #     plt.close()
+        # else:
+        #     plt.show()
 
 
