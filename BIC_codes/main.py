@@ -10,21 +10,8 @@ os.environ["OMP_NUM_THREADS"] = '64'
 
 ################################# Parameters #################################
 
+###### DATA PARAMETERS ######
 DATA_type = 'Gordon' # 'Gordon' or 'simulated' or 'ICA'
-
-num_subj = 100
-select_nodes = True
-rand_node_slct = False
-num_select_nodes = 50
-
-n_states = 6 #12
-n_subj_clstrs = 20
-n_hid_states = 4
-n_overlap = 0.5
-W_sw = 44 # in seconds, 44, choose even Ws!?
-n_jobs = 8
-n_jobs_methods = None
-verbose=0
 
 output_root = './../../../../RESULTs/methods_implementation/'
 # output_root = '/data/origami/dFC/RESULTs/methods_implementation/'
@@ -33,6 +20,25 @@ output_root = './../../../../RESULTs/methods_implementation/'
 data_root_simul = './../../../DATA/TVB data/'
 data_root_gordon = './../../../DATA/HCP/HCP_Gordon/'
 data_root_ica = './../../../DATA/HCP/HCP_PTN1200/node_timeseries/3T_HCP1200_MSMAll_d50_ts2/'
+
+num_subj = 100
+select_nodes = True
+rand_node_slct = False
+num_select_nodes = 50
+
+###### MEASUREMENT PARAMETERS ######
+n_states = 6 #12
+n_subj_clstrs = 20
+n_hid_states = 4
+n_overlap = 0.5
+W_sw = 44 # in seconds, 44, choose even Ws!?
+
+###### PARALLELIZATION PARAMETERS ######
+n_jobs = 8
+n_jobs_methods = None
+verbose=0
+
+
 
 ################################# FINDING SUBJECTs LIST #################################
 

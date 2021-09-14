@@ -519,6 +519,8 @@ from scipy.stats import norm
 
 class DYN_CONN_DETECTOR:
 
+    a = 0.95
+
     def __init__(self, **params):
         self.VAR_model = None
         self.lag_order = None
@@ -541,19 +543,47 @@ class DYN_CONN_DETECTOR:
 
         self.lag_order = self.VAR_model.k_ar
 
+    def subj_lvl_calc_TH_mask(self, time_series, MEASURES_lst, N, L):
+
+        SURROGATE = self.gen_surrogate( \
+            time_series=time_series, \
+            N=N, L=L, verbose=self.verbose \
+        )
+        dFCM_var = self.calc_dFC_var(time_series=SURROGATE, MEASURES_lst=MEASURES_lst)
+        TH_mask = self.calc_TH_mask(dFCM_var, a=self.a)
+        return TH_mask
+
     def calc_subj_TH_mask(self, time_series, MEASURES_lst, \
         N, L=None):
 
         SUBJECTs = list(set(time_series.subj_id_array))
+        
+        if self.n_jobs is None:
+            SUBJs_TH_mask_lst = list()
+            for subject in SUBJECTs:
+                SURROGATE = self.gen_surrogate( \
+                    time_series=time_series.get_subj_ts(subj_id=subject), \
+                    N=N, L=L, verbose=self.verbose \
+                )
+                dFCM_var = self.calc_dFC_var(time_series=SURROGATE, MEASURES_lst=MEASURES_lst)
+                TH_mask = self.calc_TH_mask(dFCM_var, a=self.a)
+                SUBJs_TH_mask_lst.append(TH_mask)
+        else:
+            SUBJs_TH_mask_lst = Parallel( \
+                    n_jobs=self.n_jobs, \
+                    verbose=self.verbose, \
+                    backend=self.backend)( \
+                delayed(self.subj_lvl_calc_TH_mask)( \
+                    time_series=time_series.get_subj_ts(subj_id=subject), \
+                    MEASURES_lst=MEASURES_lst, \
+                    N=N, L=L \
+                    ) \
+                    for subject in SUBJECTs)
+
         SUBJs_TH_mask = {}
-        for subject in SUBJECTs:
-            SURROGATE = self.gen_surrogate( \
-                time_series=time_series.get_subj_ts(subj_id=subject), \
-                N=N, L=L, verbose=self.verbose \
-                    )
-            dFCM_var = self.calc_dFC_var(time_series=SURROGATE, MEASURES_lst=MEASURES_lst)
-            TH_mask = self.calc_TH_mask(dFCM_var, a=0.95)
-            SUBJs_TH_mask[subject] = TH_mask
+        for i, TH_mask in enumerate(SUBJs_TH_mask_lst):
+            SUBJs_TH_mask[SUBJECTs[i]] = TH_mask
+
         return SUBJs_TH_mask
 
     def gen_surrogate(self, time_series, N, L=None, verbose=0):
