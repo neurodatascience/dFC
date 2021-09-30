@@ -13,13 +13,13 @@ os.environ["OMP_NUM_THREADS"] = '64'
 ###### DATA PARAMETERS ######
 DATA_type = 'Gordon' # 'Gordon' or 'simulated' or 'ICA'
 
-output_root = './../../../../RESULTs/methods_implementation/'
+output_root = './../../../../../RESULTs/methods_implementation/'
 # output_root = '/data/origami/dFC/RESULTs/methods_implementation/'
 # output_root = '/Users/mte/Documents/McGill/Project/dFC/RESULTs/methods_implementation/'
 
-data_root_simul = './../../../DATA/TVB data/'
-data_root_gordon = './../../../DATA/HCP/HCP_Gordon/'
-data_root_ica = './../../../DATA/HCP/HCP_PTN1200/node_timeseries/3T_HCP1200_MSMAll_d50_ts2/'
+data_root_simul = './../../../../DATA/TVB data/'
+data_root_gordon = './../../../../DATA/HCP/HCP_Gordon/'
+data_root_ica = './../../../../DATA/HCP/HCP_PTN1200/node_timeseries/3T_HCP1200_MSMAll_d50_ts2/'
 
 num_subj = 100
 select_nodes = True
@@ -169,29 +169,39 @@ if DATA_type=='simulated':
 
 ################################# Measure dFC #################################
 
-params = {'W': int(W_sw*BOLD.Fs), 'n_overlap': n_overlap, \
+params = { \
+    # Sliding Parameters
+    'W': int(W_sw*BOLD.Fs), 'n_overlap': n_overlap, \
+    # State Parameters
     'n_states': n_states, 'n_subj_clstrs': n_subj_clstrs, 'n_hid_states': n_hid_states, \
-    'n_jobs': n_jobs_methods, 'verbose': verbose, 'backend': 'loky' \
-            }
+    # Parallelization Parameters
+    'n_jobs': n_jobs_methods, 'verbose': 0, 'backend': 'loky' \
+}
 
+###### CONTINUOUS HMM ######
 hmm_cont = HMM_CONT(**params)
+
+###### WINDOW_LESS ######
 windowless = WINDOWLESS(**params)
 
+###### SLIDING WINDOW ######
 sw_pc = SLIDING_WINDOW(sw_method='pear_corr', **params)
 sw_mi = SLIDING_WINDOW(sw_method='MI', **params)
 # sw_gLasso = SLIDING_WINDOW(sw_method='GraphLasso', **params)
 
+###### TIME FREQUENCY ######
 time_freq_cwt = TIME_FREQ(method='CWT_mag', **params)
-time_freq_cwt_r = TIME_FREQ(method='CWT_phase_r', **params)
+# time_freq_cwt_r = TIME_FREQ(method='CWT_phase_r', **params)
 time_freq_wtc = TIME_FREQ(method='WTC', **params)
 
+###### SLIDING WINDOW + CLUSTERING ######
 swc_pc = SLIDING_WINDOW_CLUSTR(base_method='pear_corr', **params)
-swc_mi = SLIDING_WINDOW_CLUSTR(base_method='MI', **params)
 # swc_gLasso = SLIDING_WINDOW_CLUSTR(base_method='GraphLasso', **params)
 
+###### DISCRETE HMM ######
 hmm_disc_pc = HMM_DISC(base_method='pear_corr', **params)
-hmm_disc_mi = HMM_DISC(base_method='MI', **params)
 # hmm_disc_gLasso = HMM_DISC(base_method='GraphLasso', **params)
+
 
 BOLD.visualize(start_time=0, end_time=50, nodes_lst=list(range(10)), \
      save_image=True, fig_name=output_root+'BOLD_signal')
@@ -199,25 +209,30 @@ BOLD.visualize(start_time=0, end_time=50, nodes_lst=list(range(10)), \
 BOLD.truncate(start_point=None, end_point=None)    #10000
 
 MEASURES = [
+
     hmm_cont, \
+
     windowless, \
+
     sw_pc, \
     # sw_mi, \
     # sw_gLasso, \
-    time_freq_cwt, \
+
+    # time_freq_cwt, \
     # time_freq_cwt_r, \
-    time_freq_wtc, \
+    # time_freq_wtc, \
+
     swc_pc, \
-    # swc_mi, \
     # swc_gLasso, \
-    # swc_mi, \
+
     hmm_disc_pc,\
     # hmm_disc_gLasso, \
-    # hmm_disc_mi \
-            ]
+
+]
 
 dyn_conn_det_params = { \
-    'N': 10, 'L': 1000, 'p': 100, \
+    'run_analysis': False, \
+    'N': 30, 'L': 1200, 'p': 100, \
     'n_jobs': n_jobs, 'backend': 'loky' \
 }
 params = { \
@@ -236,7 +251,7 @@ dFC_analyzer = DFC_ANALYZER(MEASURES_lst=MEASURES, \
 
 tic = time.time()
 print('Measurement Started ...')
-dFC_analyzer.analyze(time_series=BOLD)
+SUBJs_dyn_conn = dFC_analyzer.analyze(time_series=BOLD)
 print('Measurement required %0.3f seconds.' % (time.time() - tic, ))
 
 #########################################################################################

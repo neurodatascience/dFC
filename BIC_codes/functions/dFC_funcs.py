@@ -93,6 +93,24 @@ def visualize_conn_mat(data, title='', \
     else:
         plt.show()
 
+def dFC_dict_normalize(D, global_normalization=False, threshold=0.0):
+
+    C = list()
+    for key in D:
+        C.append(D[key])
+    C = np.array(C)
+
+    C_z = dFC_mat_normalize(C, \
+        global_normalization=global_normalization, \
+        threshold=threshold \
+    )
+
+    D_z = {}
+    for i, key in enumerate(D):
+        D_z[key] = C_z[i,:,:]
+
+    return D_z
+
 def dFC_mat_normalize(C_t, global_normalization=False, threshold=0.0):
 
     # threshold is ratio of connections wanted to be zero
@@ -203,6 +221,7 @@ class DFC_ANALYZER:
         
         self.dyn_conn_det_params = {}
         if 'dyn_conn_det_params' in params:
+            self.dyn_conn_det_params['run_analysis'] = params['dyn_conn_det_params']['run_analysis']
             self.dyn_conn_det_params['N'] = params['dyn_conn_det_params']['N']
             self.dyn_conn_det_params['L'] = params['dyn_conn_det_params']['L']
             self.dyn_conn_det_params['p'] = params['dyn_conn_det_params']['p']
@@ -272,9 +291,6 @@ class DFC_ANALYZER:
                     str(time_lst[i]) \
                     )
 
-    def dynamic_conns(self, time_series=None):
-        pass
-
     def analyze(self, time_series):
 
         ### estimate FCS ###
@@ -295,24 +311,27 @@ class DFC_ANALYZER:
         SUBJs_dFC_var = self.estimate_all_dFCM(time_series=time_series)
         print("dFCM estimation done.")
 
-        ### DYNAMIC CONN DETEC ###
-        
-        dyn_conn_detector = DYN_CONN_DETECTOR(**self.dyn_conn_det_params)
-
-        print("Dynamic Connection Detection started...")
-        dyn_conn_detector.train_VAR(time_series=time_series, p=self.dyn_conn_det_params['p'])
-        SUBJs_TH_mask = dyn_conn_detector.calc_subj_TH_mask(time_series, self.MEASURES_lst, \
-            N=self.dyn_conn_det_params['N'], L=self.dyn_conn_det_params['L'])
-
-        SUBJs_dyn_conn = dyn_conn_detector.mask_SUBJs_dFC(SUBJs_dFC_var, SUBJs_TH_mask)
-        print("Dynamic Connection Detection done.")
-
         #### Methods dFC Corr MAT ###
 
         self.visualize_dFC_corr()
-        self.visualize_dyn_conns(SUBJs_dyn_conn)
 
-        return SUBJs_dyn_conn
+        ### DYNAMIC CONN DETEC ###
+        
+        if self.dyn_conn_det_params['run_analysis']:
+
+            dyn_conn_detector = DYN_CONN_DETECTOR(**self.dyn_conn_det_params)
+
+            print("Dynamic Connection Detection started...")
+            dyn_conn_detector.train_VAR(time_series=time_series, p=self.dyn_conn_det_params['p'])
+            SUBJs_TH_mask = dyn_conn_detector.calc_subj_TH_mask(time_series, self.MEASURES_lst, \
+                N=self.dyn_conn_det_params['N'], L=self.dyn_conn_det_params['L'])
+
+            SUBJs_dyn_conn = dyn_conn_detector.mask_SUBJs_dFC(SUBJs_dFC_var, SUBJs_TH_mask)
+            print("Dynamic Connection Detection done.")
+
+            self.visualize_dyn_conns(SUBJs_dyn_conn)
+
+            return SUBJs_dyn_conn
 
     def dFCM_var(self, MEASURES_dFCM):
 
@@ -1931,7 +1950,7 @@ class DFCM():
             title=self.measure.measure_name+' dFC', \
             save_image=save_image, \
             output_root=fig_name, \
-            fix_lim=True \
+            fix_lim=fix_lim \
         )
 
 
