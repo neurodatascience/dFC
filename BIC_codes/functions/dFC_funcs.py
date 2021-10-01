@@ -21,6 +21,23 @@ fig_dpi = 120
 
 ################################# Other Functions ####################################
 
+# test
+def get_subj_ts_dict(time_series_dict, subj_id):
+    subj_ts_dict = {}
+    for session in time_series_dict:
+        subj_ts_dict[session] = time_series_dict[session].get_subj_ts(subj_id=subj_id)
+    return subj_ts_dict
+
+# test
+def common_subj_lst(time_series_dict):
+    SUBJECTs = None
+    for session in time_series_dict:
+        if SUBJECTs is None:
+            SUBJECTs = list(set(time_series_dict[session].subj_id_array))
+        else:
+            SUBJECTs = intersection(SUBJECTs, list(set(time_series_dict[session].subj_id_array)))
+    return SUBJECTs
+
 def intersection(lst1, lst2): # input is a list 
     lst3 = [value for value in lst1 if value in lst2]
     return lst3
@@ -203,8 +220,9 @@ class DFC_ANALYZER:
         self.backend='loky'
 
         self.analysis_name = analysis_name
-        self.MEASURES_lst_ = MEASURES_lst
-        self.MEASURES_lst_ = self.NSB_MEASURES_lst + self.SB_MEASURES_lst
+        # self.MEASURES_lst_ = MEASURES_lst
+        self.MEASURES_lst_ = self.DD_MEASURES_lst(MEASURES_lst) + self.SB_MEASURES_lst(MEASURES_lst)
+        self.MEASURES_fit_lst_ = {}
     
         if 'vis_TR_idx' in params:
             self.vis_TR_idx = params['vis_TR_idx'] # to visualize
@@ -244,20 +262,60 @@ class DFC_ANALYZER:
         return self.MEASURES_lst_
 
     @property
-    def SB_MEASURES_lst(self): # returns state_based measures
+    def MEASURES_fit_lst(self):
+        return self.MEASURES_fit_lst_
+
+    def SB_MEASURES_lst(self, MEASURES_lst): # returns state_based measures
         SB_MEASURES = list()
-        for measure in self.MEASURES_lst:
+        for measure in MEASURES_lst:
             if measure.is_state_based:
                 SB_MEASURES.append(measure)
         return SB_MEASURES
 
-    @property
-    def NSB_MEASURES_lst(self): # returns non_state_based measures
-        NSB_MEASURES = list()
-        for measure in self.MEASURES_lst:
+    def DD_MEASURES_lst(self, MEASURES_lst): # returns data_driven measures
+        DD_MEASURES = list()
+        for measure in MEASURES_lst:
             if not measure.is_state_based:
-                NSB_MEASURES.append(measure)
-        return NSB_MEASURES
+                DD_MEASURES.append(measure)
+        return DD_MEASURES
+
+    def FC_mat_corr(self, A, B):
+        return np.corrcoef(A.flatten(), B.flatten())[0,1]
+
+    def similarity(self, D_A, D_B, normalize=False, visual=False):
+        # searchs D_B FC_mats in D_A
+        similarity_dict = {}
+        for key_b in D_B:
+            similarity_vec = np.zeros((len(D_A)))
+            a_keys = [key for key in D_A]
+            for a, key_a in enumerate(D_A):
+                if normalize:
+                    similarity_vec[a] = self.FC_mat_corr( \
+                        dFC_mat_normalize(C_t=D_A[key_a], \
+                            global_normalization=False), \
+                        dFC_mat_normalize(C_t=D_B[key_b], \
+                            global_normalization=False) \
+                    ) 
+                else:
+                    similarity_vec[a] = self.FC_mat_corr( \
+                        D_A[key_a], \
+                        D_B[key_b]\
+                    ) 
+            similarity_dict[key_b] = {}
+            similarity_dict[key_b]['match'] = a_keys[np.argmax(similarity_vec)]
+            similarity_dict[key_b]['score'] = np.max(similarity_vec)
+        similarity_score = np.mean([similarity_dict[key_b]['score'] for key_b in similarity_dict])
+
+        D_A_sorted = {}
+        for key_b in similarity_dict:
+            D_A_sorted[key_b] = D_A[similarity_dict[key_b]['match']]
+
+        if visual:
+            visualize_conn_mat(D_B)
+            visualize_conn_mat(D_A_sorted)
+
+        # np.argmax(similarity_mat, axis=1)
+        return similarity_score
 
     def time_analyze(self, time_series=None):
 
@@ -291,12 +349,14 @@ class DFC_ANALYZER:
                     str(time_lst[i]) \
                     )
 
-    def analyze(self, time_series):
+    def analyze(self, time_series_dict):
+
+        #time_series_dict is a dict of time_series
 
         ### estimate FCS ###
 
         print("FCS estimation started...")
-        self.estimate_all_FCS(time_series=time_series)
+        self.estimate_all_FCS(time_series_dict=time_series_dict)
         print("FCS estimation done.")
 
         ### Visualize FCS ###
@@ -305,10 +365,14 @@ class DFC_ANALYZER:
                                 threshold=0.0, \
                                 )
 
+        ### FCS similarity ###
+
+        
+        
         ### estimate dFCM ###
 
         print("dFCM estimation started...")
-        SUBJs_dFC_var = self.estimate_all_dFCM(time_series=time_series)
+        SUBJs_dFC_var = self.estimate_all_dFCM(time_series_dict=time_series_dict)
         print("dFCM estimation done.")
 
         #### Methods dFC Corr MAT ###
@@ -316,22 +380,24 @@ class DFC_ANALYZER:
         self.visualize_dFC_corr()
 
         ### DYNAMIC CONN DETEC ###
+
+        # todo not corrected for time_series_dict
         
-        if self.dyn_conn_det_params['run_analysis']:
+        # if self.dyn_conn_det_params['run_analysis']:
 
-            dyn_conn_detector = DYN_CONN_DETECTOR(**self.dyn_conn_det_params)
+        #     dyn_conn_detector = DYN_CONN_DETECTOR(**self.dyn_conn_det_params)
 
-            print("Dynamic Connection Detection started...")
-            dyn_conn_detector.train_VAR(time_series=time_series, p=self.dyn_conn_det_params['p'])
-            SUBJs_TH_mask = dyn_conn_detector.calc_subj_TH_mask(time_series, self.MEASURES_lst, \
-                N=self.dyn_conn_det_params['N'], L=self.dyn_conn_det_params['L'])
+        #     print("Dynamic Connection Detection started...")
+        #     dyn_conn_detector.train_VAR(time_series=time_series, p=self.dyn_conn_det_params['p'])
+        #     SUBJs_TH_mask = dyn_conn_detector.calc_subj_TH_mask(time_series, self.MEASURES_lst, \
+        #         N=self.dyn_conn_det_params['N'], L=self.dyn_conn_det_params['L'])
 
-            SUBJs_dyn_conn = dyn_conn_detector.mask_SUBJs_dFC(SUBJs_dFC_var, SUBJs_TH_mask)
-            print("Dynamic Connection Detection done.")
+        #     SUBJs_dyn_conn = dyn_conn_detector.mask_SUBJs_dFC(SUBJs_dFC_var, SUBJs_TH_mask)
+        #     print("Dynamic Connection Detection done.")
 
-            self.visualize_dyn_conns(SUBJs_dyn_conn)
+        #     self.visualize_dyn_conns(SUBJs_dyn_conn)
 
-            return SUBJs_dyn_conn
+        #     return SUBJs_dyn_conn
 
     def dFCM_var(self, MEASURES_dFCM):
 
@@ -342,61 +408,88 @@ class DFC_ANALYZER:
             MEASURES_dFC_var[measure] = V
         return MEASURES_dFC_var
 
-    def subj_lvl_analysis(self, time_series, visualize_dFCM=True):
+    def FCS_similarity(self):
+        pass
 
-        # dFCM_lst = self.estimate_dFCM(time_series=time_series)
-        if self.n_jobs is None:
-            dFCM_lst = list()
-            for measure in self.MEASURES_lst:
-                dFCM_lst.append( \
-                    measure.estimate_dFCM(time_series=time_series) \
-                )
-        else:
-            dFCM_lst = Parallel( \
-                n_jobs=self.n_jobs, verbose=self.verbose, backend=self.backend)( \
-                delayed(measure.estimate_dFCM)(time_series=time_series) \
-                    for measure in self.MEASURES_lst)
+    def dFC_similarity(self):
+        pass
+    
+    def subj_lvl_analysis(self, time_series_dict, visualize_dFCM=True):
 
-        MEASURES_dFCM = {}
-        for dFCM in dFCM_lst:
-            # test if self.MEASURES_lst[m].measure_name=dFCM.measure.measure_name
-            MEASURES_dFCM[dFCM.measure.measure_name] = dFCM
+        # time_series_dict is a dict of time_series
 
-        MEASURES_dFC_var = self.dFCM_var(MEASURES_dFCM)
-
-        if visualize_dFCM:
-            self.visualize_dFCMs(dFCM_lst=dFCM_lst, \
-                TR_idx=self.vis_TR_idx, \
-                subj_id=time_series.subj_id_array[0], \
-                )
-
-        return MEASURES_dFC_var, self.dFC_corr_mat(dFCM_lst=dFCM_lst)
-
-    def estimate_all_FCS(self, time_series):
-        SB_MEASURES_lst = self.SB_MEASURES_lst
-        if self.n_jobs is None:
-            SB_MEASURES_lst_NEW = list()
-            for measure in SB_MEASURES_lst:
-                SB_MEASURES_lst_NEW.append( \
-                    measure.estimate_FCS(time_series=time_series) \
+        dFCM_dict = {}
+        dFC_corr_mat_dict = {}
+        for session in time_series_dict:
+            time_series = time_series_dict[session]
+            # dFCM_lst = self.estimate_dFCM(time_series=time_series)
+            if self.n_jobs is None:
+                dFCM_lst = list()
+                for measure in self.MEASURES_fit_lst_[session]:
+                    dFCM_lst.append( \
+                        measure.estimate_dFCM(time_series=time_series) \
                     )
-        else:
-            SB_MEASURES_lst_NEW = Parallel( \
-                n_jobs=self.n_jobs, verbose=self.verbose, backend=self.backend)( \
-                delayed(measure.estimate_FCS)(time_series=time_series) \
-                    for measure in SB_MEASURES_lst)
-        self.MEASURES_lst_ = self.NSB_MEASURES_lst + SB_MEASURES_lst_NEW
+            else:
+                dFCM_lst = Parallel( \
+                    n_jobs=self.n_jobs, verbose=self.verbose, backend=self.backend)( \
+                    delayed(measure.estimate_dFCM)(time_series=time_series) \
+                        for measure in self.MEASURES_fit_lst_[session])
 
-    def estimate_all_dFCM(self, time_series, visualize_dFCM=True):
+            MEASURES_dFCM = {}
+            for dFCM in dFCM_lst:
+                # test if self.MEASURES_lst[m].measure_name=dFCM.measure.measure_name
+                MEASURES_dFCM[dFCM.measure.measure_name] = dFCM
+
+            dFCM_dict[session] = MEASURES_dFCM
+
+        # todo
+        # MEASURES_dFC_var = self.dFCM_var(MEASURES_dFCM)
+
+            # todo add session
+            if visualize_dFCM:
+                self.visualize_dFCMs(dFCM_lst=dFCM_lst, \
+                    TR_idx=self.vis_TR_idx, \
+                    subj_id=time_series.subj_id_array[0], \
+                    )
+
+            dFC_corr_mat_dict[session] = self.dFC_corr_mat(dFCM_lst=dFCM_lst)
+
+        # return MEASURES_dFC_var, dFC_corr_mat_dict
+        return dFC_corr_mat_dict
+
+    def estimate_all_FCS(self, time_series_dict):
+
+        # time_series_dict is a dict of time_series
+
+        for session in time_series_dict:
+
+            time_series = time_series_dict[session]
+            SB_MEASURES_lst = self.SB_MEASURES_lst(self.MEASURES_lst)
+            if self.n_jobs is None:
+                SB_MEASURES_lst_NEW = list()
+                for measure in SB_MEASURES_lst:
+                    SB_MEASURES_lst_NEW.append( \
+                        measure.estimate_FCS(time_series=time_series) \
+                        )
+            else:
+                SB_MEASURES_lst_NEW = Parallel( \
+                    n_jobs=self.n_jobs, verbose=self.verbose, backend=self.backend)( \
+                    delayed(measure.estimate_FCS)(time_series=time_series) \
+                        for measure in SB_MEASURES_lst)
+            self.MEASURES_fit_lst_[session] = self.DD_MEASURES_lst(self.MEASURES_lst) + SB_MEASURES_lst_NEW
+
+    def estimate_all_dFCM(self, time_series_dict, visualize_dFCM=True):
+
+        # time_series_dict is a dict of time_series
         
-        SUBJECTs = list(set(time_series.subj_id_array))
+        SUBJECTs = common_subj_lst(time_series_dict) 
 
         if self.n_jobs is None:
             OUT = list()
             for subject in SUBJECTs:
                 OUT.append( \
                     self.subj_lvl_analysis( \
-                    time_series=time_series.get_subj_ts(subj_id=subject), \
+                    time_series_dict=get_subj_ts_dict(time_series_dict, subj_id=subject), \
                     visualize_dFCM=visualize_dFCM \
                     ))
         else:
@@ -405,19 +498,20 @@ class DFC_ANALYZER:
                         verbose=self.verbose, \
                         backend=self.backend)( \
                     delayed(self.subj_lvl_analysis)( \
-                        time_series=time_series.get_subj_ts(subj_id=subject), \
+                        time_series_dict=get_subj_ts_dict(time_series_dict, subj_id=subject), \
                         visualize_dFCM=visualize_dFCM \
                         ) \
                         for subject in SUBJECTs)
             
         # out[0] are MEASURES_dFC_var of different SUBJECTs
         SUBJs_dFC_var = {}
-        for s, out in enumerate(OUT):
-            MEASURES_dFC_var = out[0]
-            # MEASURES_dFC_var contains dFC_var of different measures of a subject
-            SUBJs_dFC_var[SUBJECTs[s]] = MEASURES_dFC_var
+        # todo add session
+        # for s, out in enumerate(OUT):
+        #     MEASURES_dFC_var = out[0]
+        #     # MEASURES_dFC_var contains dFC_var of different measures of a subject
+        #     SUBJs_dFC_var[SUBJECTs[s]] = MEASURES_dFC_var
                 
-        self.methods_corr_lst_ = [out[1] for out in OUT]
+        # self.methods_corr_lst_ = [out[1] for out in OUT]
 
         return SUBJs_dFC_var
 
