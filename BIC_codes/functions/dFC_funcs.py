@@ -247,15 +247,26 @@ class DFC_ANALYZER:
             self.dyn_conn_det_params['verbose'] = self.verbose
             self.dyn_conn_det_params['backend'] = params['dyn_conn_det_params']['backend']
 
-        self.methods_corr_lst_ = list()
+        self.methods_corr_dict_lst_ = list()
 
     @property
     def methods_corr(self):
-        return np.mean(self.methods_corr_lst, axis=0)
+        # it assumes all subjects have all sessions
+        
+        methods_corr_dict = {}
+        for session in self.methods_corr_dict_lst[0]:
+            methods_corr = list()
+            for methods_corr_subj_dict in self.methods_corr_dict_lst:
+                methods_corr.append(methods_corr_subj_dict[session])
+            
+            methods_corr = np.array(methods_corr)
+            methods_corr_dict[session] = np.mean(methods_corr, axis=0)
+
+        return methods_corr_dict
 
     @property
-    def methods_corr_lst(self):
-        return np.array(self.methods_corr_lst_)
+    def methods_corr_dict_lst(self):
+        return self.methods_corr_dict_lst_
 
     @property
     def MEASURES_lst(self):
@@ -512,6 +523,7 @@ class DFC_ANALYZER:
         #     SUBJs_dFC_var[SUBJECTs[s]] = MEASURES_dFC_var
                 
         # self.methods_corr_lst_ = [out[1] for out in OUT]
+        self.methods_corr_dict_lst_ = OUT
 
         return SUBJs_dFC_var
 
@@ -569,21 +581,23 @@ class DFC_ANALYZER:
         measure_list = list()
         for measure in self.MEASURES_lst:
             measure_list.append(measure.measure_name)
-        fig, ax = plt.subplots(figsize=(10, 10))
-        im = ax.imshow(self.methods_corr, interpolation='nearest', aspect='equal', cmap='jet')
-        ax.set_xticks(np.arange(len(measure_list)))
-        ax.set_yticks(np.arange(len(measure_list)))
-        ax.set_xticklabels(measure_list, rotation=90)
-        ax.set_yticklabels(measure_list)
-        cb=fig.colorbar(im, shrink=0.8)
-        plt.suptitle('Correlation of measured dFC')
-        if self.save_image:
-            output_root = self.output_root+'dFC/'
-            fig_name = output_root + 'avg_dFC_corr'
-            plt.savefig(fig_name + '.png', dpi=fig_dpi)  
-            plt.close()
-        else:
-            plt.show()
+
+        for session in self.methods_corr:
+            fig, ax = plt.subplots(figsize=(10, 10))
+            im = ax.imshow(self.methods_corr[session], interpolation='nearest', aspect='equal', cmap='jet')
+            ax.set_xticks(np.arange(len(measure_list)))
+            ax.set_yticks(np.arange(len(measure_list)))
+            ax.set_xticklabels(measure_list, rotation=90)
+            ax.set_yticklabels(measure_list)
+            cb=fig.colorbar(im, shrink=0.8)
+            plt.suptitle('Correlation of measured dFC '+session)
+            if self.save_image:
+                output_root = self.output_root+'dFC/'
+                fig_name = output_root + 'avg_dFC_corr'
+                plt.savefig(fig_name + '.png', dpi=fig_dpi)  
+                plt.close()
+            else:
+                plt.show()
 
     def visualize_dFCMs(self, dFCM_lst=None, TR_idx=None, normalize=True, threshold=0.0, \
                             fix_lim=True, subj_id=''):
