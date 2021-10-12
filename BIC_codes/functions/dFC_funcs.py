@@ -293,40 +293,39 @@ class DFC_ANALYZER:
     def FC_mat_corr(self, A, B):
         return np.corrcoef(A.flatten(), B.flatten())[0,1]
 
-    def similarity(self, D_A, D_B, normalize=False, visual=False):
-        # searchs D_B FC_mats in D_A
+    def similarity(self, D_A, D_B, normalize=False, return_matched=False):
+        # searchs D_A FC_mats in D_B
         similarity_dict = {}
-        for key_b in D_B:
-            similarity_vec = np.zeros((len(D_A)))
-            a_keys = [key for key in D_A]
-            for a, key_a in enumerate(D_A):
+        for key_a in D_A:
+            similarity_vec = np.zeros((len(D_B)))
+            b_keys = [key for key in D_B]
+            for b, key_b in enumerate(D_B):
                 if normalize:
-                    similarity_vec[a] = self.FC_mat_corr( \
-                        dFC_mat_normalize(C_t=D_A[key_a], \
-                            global_normalization=False), \
+                    similarity_vec[b] = self.FC_mat_corr( \
                         dFC_mat_normalize(C_t=D_B[key_b], \
+                            global_normalization=False), \
+                        dFC_mat_normalize(C_t=D_A[key_a], \
                             global_normalization=False) \
                     ) 
                 else:
-                    similarity_vec[a] = self.FC_mat_corr( \
-                        D_A[key_a], \
-                        D_B[key_b]\
+                    similarity_vec[b] = self.FC_mat_corr( \
+                        D_B[key_b], \
+                        D_A[key_a]\
                     ) 
-            similarity_dict[key_b] = {}
-            similarity_dict[key_b]['match'] = a_keys[np.argmax(similarity_vec)]
-            similarity_dict[key_b]['score'] = np.max(similarity_vec)
-        similarity_score = np.mean([similarity_dict[key_b]['score'] for key_b in similarity_dict])
+            similarity_dict[key_a] = {}
+            similarity_dict[key_a]['match'] = b_keys[np.argmax(similarity_vec)]
+            similarity_dict[key_a]['score'] = np.max(similarity_vec)
+        similarity_score = np.mean([similarity_dict[key_a]['score'] for key_a in similarity_dict])
 
-        D_A_sorted = {}
-        for key_b in similarity_dict:
-            D_A_sorted[key_b] = D_A[similarity_dict[key_b]['match']]
+        if return_matched:
+            D_B_matched = {}
+            for key_a in similarity_dict:
+                D_B_matched[key_a] = D_B[similarity_dict[key_a]['match']]
 
-        if visual:
-            visualize_conn_mat(D_B)
-            visualize_conn_mat(D_A_sorted)
+            return similarity_score, D_B_matched
+        else:
+            return similarity_score
 
-        # np.argmax(similarity_mat, axis=1)
-        return similarity_score
 
     def time_analyze(self, time_series=None):
 
@@ -383,7 +382,7 @@ class DFC_ANALYZER:
         ### estimate dFCM ###
 
         print("dFCM estimation started...")
-        SUBJs_dFC_var = self.estimate_all_dFCM(time_series_dict=time_series_dict)
+        SUBJs_dFC_session_sim_dict = self.estimate_all_dFCM(time_series_dict=time_series_dict)
         print("dFCM estimation done.")
 
         #### Methods dFC Corr MAT ###
@@ -410,6 +409,8 @@ class DFC_ANALYZER:
 
         #     return SUBJs_dyn_conn
 
+        return SUBJs_dFC_session_sim_dict
+
     def dFCM_var(self, MEASURES_dFCM):
 
         MEASURES_dFC_var = {}
@@ -419,10 +420,88 @@ class DFC_ANALYZER:
             MEASURES_dFC_var[measure] = V
         return MEASURES_dFC_var
 
-    def FCS_similarity(self):
-        pass
+    def FCS_session_similarity(self):
+        
+        FCS_session_sim_dict = {}
+        SESSIONs = [session for session in self.MEASURES_fit_lst]
+        for m in range(len(self.MEASURES_fit_lst[SESSIONs[0]])):
+            # if the measure is DD -> continue to the next loop
+            if not self.MEASURES_fit_lst[SESSIONs[0]][m].is_state_based:
+                continue
+            # this measure is a name/string
+            measure=self.MEASURES_fit_lst[SESSIONs[0]][m].measure_name
+            FCS_session_sim_dict[measure] = {}
+            FCS_session_sim_dict[measure]['session_lst'] = SESSIONs
+            FCS_session_sim_dict[measure]['sim_mat'] = np.zeros((len(SESSIONs),len(SESSIONs)))
+            for i, session_i in enumerate(SESSIONs):
+                for j, session_j in enumerate(SESSIONs):
 
-    def dFC_similarity(self):
+                    assert self.MEASURES_fit_lst[session_i][m].measure_name==self.MEASURES_fit_lst[session_j][m].measure_name, \
+                        'measures mismatch!'
+                    
+                    C_A = self.MEASURES_fit_lst[session_i][m].FCS
+                    C_B = self.MEASURES_fit_lst[session_j][m].FCS
+                    D_A = {}
+                    for k in range(C_A.shape[0]):
+                        D_A[i] = C_A[k,:,:]
+                    D_B = {}
+                    for k in range(C_B.shape[0]):
+                        D_B[i] = C_B[k,:,:]
+                    # self.similarity(dFC_dict_normalize(D_A), dFC_dict_normalize(D_B), return_matched=False, normalize=True)
+                    FCS_session_sim_dict[measure]['sim_mat'][i, j] = self.similarity(D_A, D_B, return_matched=False, normalize=False) # normalize ??
+        return FCS_session_sim_dict
+
+    def FCS_measure_similarity(self):
+        
+        FCS_measure_sim_dict = {}
+        for session in self.MEASURES_fit_lst:
+            # we only keep SB measures:
+            sb_measures_lst = self.SB_MEASURES_lst(self.MEASURES_fit_lst[session])
+            FCS_measure_sim_dict[session] = {}
+            FCS_measure_sim_dict[session]['measure_lst'] = [measure.measure_name for measure in sb_measures_lst]
+            FCS_measure_sim_dict[session]['sim_mat'] = np.zeros((len(sb_measures_lst),len(sb_measures_lst)))
+            for i, measure_i in enumerate(sb_measures_lst):
+                for j, measure_j in enumerate(sb_measures_lst):
+                    C_A = measure_i.FCS
+                    C_B = measure_j.FCS
+                    D_A = {}
+                    for k in range(C_A.shape[0]):
+                        D_A[k] = C_A[k,:,:]
+                    D_B = {}
+                    for k in range(C_B.shape[0]):
+                        D_B[k] = C_B[k,:,:]
+                    # self.similarity(dFC_dict_normalize(D_A), dFC_dict_normalize(D_B), return_matched=False, normalize=True)
+                    FCS_measure_sim_dict[session]['sim_mat'][i, j] = self.similarity(D_A, D_B, return_matched=False, normalize=False) # normalize ??
+        return FCS_measure_sim_dict
+
+    def dFC_session_similarity(self, dFCM_dict):
+
+        dFC_session_sim_dict = {}
+        SESSIONs = [session for session in dFCM_dict]
+        for measure in dFCM_dict[SESSIONs[0]]:
+            dFC_session_sim_dict[measure] = {}
+            dFC_session_sim_dict[measure]['session_lst'] = SESSIONs
+            dFC_session_sim_dict[measure]['sim_mat'] = np.zeros((len(SESSIONs),len(SESSIONs)))
+            for i, session_i in enumerate(SESSIONs):
+                for j, session_j in enumerate(SESSIONs):
+
+                    # dFCM_dict[session_i][measure] is a dFCM object
+                    TRs_A = dFCM_dict[session_i][measure].TR_array
+                    C_A = dFCM_dict[session_i][measure].get_dFC_mat(TRs=TRs_A)
+                    TRs_B = dFCM_dict[session_j][measure].TR_array
+                    C_B = dFCM_dict[session_j][measure].get_dFC_mat(TRs=TRs_B)
+                    D_A = {}
+                    for k, TR in enumerate(TRs_A):
+                        D_A['TR'+str(TR)] = C_A[k, :, :]
+                    D_B = {}
+                    for k, TR in enumerate(TRs_B):
+                        D_B['TR'+str(TR)] = C_B[k, :, :]
+                    # self.similarity(dFC_dict_normalize(D_A), dFC_dict_normalize(D_B), return_matched=False, normalize=True)
+                    dFC_session_sim_dict[measure]['sim_mat'][i, j] = self.similarity(D_A, D_B, return_matched=False, normalize=False) # normalize ??
+        return dFC_session_sim_dict
+
+    def dFC_measure_similarity(self, dFCM_dict):
+        # this is not useful, instead we are using dFC_corr
         pass
     
     def subj_lvl_analysis(self, time_series_dict, visualize_dFCM=True):
@@ -465,8 +544,10 @@ class DFC_ANALYZER:
 
             dFC_corr_mat_dict[session] = self.dFC_corr_mat(dFCM_lst=dFCM_lst)
 
+        dFC_session_sim_dict = self.dFC_session_similarity(dFCM_dict)
+
         # return MEASURES_dFC_var, dFC_corr_mat_dict
-        return dFC_corr_mat_dict
+        return dFC_corr_mat_dict, dFC_session_sim_dict
 
     def estimate_all_FCS(self, time_series_dict):
 
@@ -514,18 +595,24 @@ class DFC_ANALYZER:
                         ) \
                         for subject in SUBJECTs)
             
-        # out[0] are MEASURES_dFC_var of different SUBJECTs
-        SUBJs_dFC_var = {}
+        # out[0] are dFC_corr_mat_dict of different SUBJECTs
+        # out[1] are dFC_session_sim_dict of different SUBJECTs
+        SUBJs_dFC_session_sim_dict = {}
+        for s, out in enumerate(OUT):
+            dFC_session_sim_dict = out[1]
+            # dFC_session_sim_dict contains similarity of different session in different measures in each subject
+            SUBJs_dFC_session_sim_dict[SUBJECTs[s]] = dFC_session_sim_dict
+
+        # SUBJs_dFC_var = {}
         # todo add session
         # for s, out in enumerate(OUT):
         #     MEASURES_dFC_var = out[0]
         #     # MEASURES_dFC_var contains dFC_var of different measures of a subject
         #     SUBJs_dFC_var[SUBJECTs[s]] = MEASURES_dFC_var
-                
-        # self.methods_corr_lst_ = [out[1] for out in OUT]
-        self.methods_corr_dict_lst_ = OUT
+                        
+        self.methods_corr_dict_lst_ = [out[0] for out in OUT]
 
-        return SUBJs_dFC_var
+        return SUBJs_dFC_session_sim_dict
 
 
     def dFC_corr(self, dFCM_i, dFCM_j):
@@ -1664,7 +1751,7 @@ todo:
 
 class TIME_SERIES():
     def __init__(self, data=None, subj_id=None, Fs=None, time_array=None, \
-                locs=None, nodes_info=None, TS_name=''):
+                locs=None, nodes_info=None, TS_name='', session_name=''):
         
         '''
         subj_id is an id to identify the subjects
@@ -1677,6 +1764,7 @@ class TIME_SERIES():
         self.subj_id_array_ = [subj_id] * data.shape[1] 
         self.Fs_ = Fs
         self.TS_name_ = TS_name
+        self.session_name_ = session_name
         self.n_regions_ = self.data_.shape[0]
         self.n_time_ = self.data_.shape[1]
 
@@ -1852,7 +1940,7 @@ class TIME_SERIES():
         plt.figure(figsize=(15, 5))
         plt.plot(self.time[interval], self.data[nodes_lst, interval].T)
         plt.xlabel('time (sec)')
-        plt.title(self.TS_name_)
+        plt.title(self.TS_name_ + ' ' + self.session_name_ )
         if save_image:
             plt.savefig(fig_name + '.png', dpi=fig_dpi)  
             plt.close()
