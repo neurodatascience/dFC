@@ -52,6 +52,13 @@ def TR_intersection(dFCM_lst): # input is a list of dFCM objs
         print('No TR intersection.')
     return TRs_lst_old
 
+def dFC_dict_slice(data, idx_lst):
+    data_sliced = {}
+    for i, k in enumerate(data):
+        if i in idx_lst:
+            data_sliced[k] = data[k]
+    return data_sliced
+
 def visualize_conn_mat(data, title='', \
     save_image=False, output_root=None, \
         fix_lim=True \
