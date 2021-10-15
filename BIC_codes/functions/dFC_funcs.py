@@ -60,13 +60,21 @@ def dFC_dict_slice(data, idx_lst):
     return data_sliced
 
 def visualize_conn_mat(data, title='', \
+    name_lst_key=None, mat_key=None, \
+    cmap='viridis',\
     save_image=False, output_root=None, \
         fix_lim=True \
     ):
 
     # data must be a dict of correlation/connectivity matrices
 
-    fig, axs = plt.subplots(1, len(data), figsize=(25*(len(data)/10), 10), \
+    if name_lst_key is None:
+        fig_width = 25*(len(data)/10)
+    else:
+        fig_width = 30*(len(data)/10) + 2
+    fig_height = 10
+
+    fig, axs = plt.subplots(1, len(data), figsize=(fig_width, fig_height), \
         facecolor='w', edgecolor='k')
 
     fig.suptitle(title) #, fontsize=20, size=20
@@ -75,7 +83,14 @@ def visualize_conn_mat(data, title='', \
 
     for i, key in enumerate(data):
 
-        C = data[key]
+        name_lst = None
+        if not name_lst_key is None:
+            name_lst = data[key][name_lst_key]
+
+        if mat_key is None:
+            C = data[key]
+        else:
+            C = data[key][mat_key]
 
         C = np.abs(C) # ?????? should we do this?
 
@@ -90,9 +105,17 @@ def visualize_conn_mat(data, title='', \
             V_MAX = np.max(C)
             V_MIN = np.min(C)
 
-        axs[i].set_axis_off()
-        im = axs[i].imshow(C, interpolation='nearest', aspect='equal', cmap='jet',    # 'viridis'
+        if name_lst is None:
+            axs[i].set_axis_off()
+
+        im = axs[i].imshow(C, interpolation='nearest', aspect='equal', cmap=cmap,    # 'viridis' or 'jet'
             vmin=V_MIN, vmax=V_MAX)
+        
+        if not name_lst is None:
+            axs[i].set_xticks(np.arange(len(name_lst)))
+            axs[i].set_yticks(np.arange(len(name_lst)))
+            axs[i].set_xticklabels(name_lst, rotation=90, fontsize=9)
+            axs[i].set_yticklabels(name_lst, fontsize=9)
         axs[i].set_title(key)
 
     fig.subplots_adjust(
@@ -103,8 +126,17 @@ def visualize_conn_mat(data, title='', \
         # wspace=0.02, \
         # hspace=0.02\
     )
+
+    if not name_lst is None:
+        fig.subplots_adjust(
+            wspace=0.35, \
+            # hspace=0.02\
+        )
         
-    cb_ax = fig.add_axes([0.91, 0.75, 0.007, 0.1])
+    if name_lst is None:
+        cb_ax = fig.add_axes([0.91, 0.75, 0.007, 0.1])
+    else:
+        cb_ax = fig.add_axes([0.91, 0.75, 0.02, 0.1])
     cbar = fig.colorbar(im, cax=cb_ax, shrink=0.8) # shrink=0.8??
 
     # # set the colorbar ticks and tick labels
