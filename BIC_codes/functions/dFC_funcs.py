@@ -236,6 +236,24 @@ def dFC_mat_normalize(C_t, global_normalization=False, threshold=0.0):
 
     return C_t_z
 
+def print_mat(mat, s=0):
+    for i in mat:
+        print('\t'*s,  end=" ")
+        for j in i:
+            print("{:.2f}".format(j), end=" ")
+        print()
+
+def print_dict(t, s=0):
+    if not isinstance(t,dict) and not isinstance(t,list):
+        if isinstance(t,np.ndarray):
+            print_mat(t, s)
+        else:
+            print('\t'*s+str(t))
+    else:
+        for key in t:
+            print('\t'*s+str(key))
+            if not isinstance(t,list):
+                print_dict(t[key],s+1)
 ############################# dFC Analyzer class ################################
 
 """
@@ -290,16 +308,17 @@ class DFC_ANALYZER:
 
     @property
     def methods_corr(self):
-        # it assumes all subjects have all sessions
+        # it assumes all subjects have all sessions and the order of their measures is the same ?
         
         methods_corr_dict = {}
         for session in self.methods_corr_dict_lst[0]:
             methods_corr = list()
             for methods_corr_subj_dict in self.methods_corr_dict_lst:
-                methods_corr.append(methods_corr_subj_dict[session])
+                methods_corr.append(methods_corr_subj_dict[session]['corr_mat'])
             
             methods_corr = np.array(methods_corr)
-            methods_corr_dict[session] = np.mean(methods_corr, axis=0)
+            methods_corr_dict[session]['corr_mat'] = np.mean(methods_corr, axis=0)
+            methods_corr_dict[session]['measure_lst'] = methods_corr_subj_dict[session]['measure_lst']
 
         return methods_corr_dict
 
@@ -581,6 +600,7 @@ class DFC_ANALYZER:
                     subj_id=time_series.subj_id_array[0], \
                     )
 
+            # self.dFC_corr_mat returns a dict with 'corr_mat' and 'measure_lst' keys
             dFC_corr_mat_dict[session] = self.dFC_corr_mat(dFCM_lst=dFCM_lst)
 
         dFC_session_sim_dict = self.dFC_session_similarity(dFCM_dict)
@@ -669,24 +689,33 @@ class DFC_ANALYZER:
 
     def dFC_corr_mat(self, dFCM_lst):
 
-        # returns averaged correlation of dFC measures 
+        # returns averaged correlation of dFC measures in a dict format
+        # with 'corr_mat' and 'measure_lst' keys
 
         a = 0.1 # portion of the dFCs to ignore from the beginning and the end
-        methods_corr = np.zeros((len(dFCM_lst), len(dFCM_lst)))
+
+        measure_lst = list()
+        for dFCM in dFCM_lst:
+            measure_lst.append(dFCM.measure.measure_name)
+
+        methods_corr = {}
+        corr_mat = np.zeros((len(dFCM_lst), len(dFCM_lst)))
         for i in range(len(dFCM_lst)):
             for j in range(i+1, len(dFCM_lst)):
 
-                assert dFCM_lst[i].measure.measure_name==self.MEASURES_lst[i].measure_name and \
-                    dFCM_lst[j].measure.measure_name==self.MEASURES_lst[j].measure_name, \
-                    'mismatch in MEASURES_lst order'
+                # assert dFCM_lst[i].measure.measure_name==self.MEASURES_lst[i].measure_name and \
+                #     dFCM_lst[j].measure.measure_name==self.MEASURES_lst[j].measure_name, \
+                #     'mismatch in MEASURES_lst order'
 
                 corr_ij = self.dFC_corr( \
                     dFCM_lst[i], dFCM_lst[j] \
                         )
-                methods_corr[i,j] = np.mean(corr_ij[ \
+                corr_mat[i,j] = np.mean(corr_ij[ \
                     int(len(corr_ij)*a) : int(len(corr_ij)*(1-a)) \
                         ])
-                methods_corr[j,i] = methods_corr[i,j] 
+                corr_mat[j,i] = corr_mat[i,j] 
+        methods_corr['corr_mat'] = corr_mat
+        methods_corr['measure_lst'] = measure_lst
         return methods_corr
 
     def visualize_dyn_conns(self, SUBJs_dyn_conn):
@@ -701,29 +730,22 @@ class DFC_ANALYZER:
             )
 
     def visualize_dFC_corr(self):
-
         # visualize avergaed dFC corr mat
 
-        measure_list = list()
-        for measure in self.MEASURES_lst:
-            measure_list.append(measure.measure_name)
-
         for session in self.methods_corr:
-            fig, ax = plt.subplots(figsize=(10, 10))
-            im = ax.imshow(self.methods_corr[session], interpolation='nearest', aspect='equal', cmap='jet')
-            ax.set_xticks(np.arange(len(measure_list)))
-            ax.set_yticks(np.arange(len(measure_list)))
-            ax.set_xticklabels(measure_list, rotation=90)
-            ax.set_yticklabels(measure_list)
-            cb=fig.colorbar(im, shrink=0.8)
-            plt.suptitle('Correlation of measured dFC '+session)
+
+            fig_name = None
             if self.save_image:
                 output_root = self.output_root+'dFC/'
-                fig_name = output_root + 'avg_dFC_corr'
-                plt.savefig(fig_name + '.png', dpi=fig_dpi)  
-                plt.close()
-            else:
-                plt.show()
+                fig_name = output_root + 'avg_dFC_corr.png' 
+
+            visualize_conn_mat(self.methods_corr, \
+                title='Correlation of measured dFC', \
+                name_lst_key='measure_lst', mat_key='corr_mat', \
+                cmap='viridis',\
+                save_image=self.save_image, output_root=fig_name, \
+                    fix_lim=True \
+            )
 
     def visualize_dFCMs(self, dFCM_lst=None, TR_idx=None, normalize=True, threshold=0.0, \
                             fix_lim=True, subj_id=''):
