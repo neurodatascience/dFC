@@ -62,6 +62,7 @@ def dFC_dict_slice(data, idx_lst):
 def visualize_conn_mat(data, title='', \
     name_lst_key=None, mat_key=None, \
     cmap='viridis',\
+    disp_diag=True,\
     save_image=False, output_root=None, \
         fix_lim=True \
     ):
@@ -93,6 +94,10 @@ def visualize_conn_mat(data, title='', \
             C = data[key][mat_key]
 
         C = np.abs(C) # ?????? should we do this?
+
+        if not disp_diag:
+            C = np.multiply(C, 1-np.eye(len(C)))
+            C = C + np.mean(C.flatten()) * np.eye(len(C))
 
         if np.any(C<0): # ?????? should we do this?
             V_MIN = -1
@@ -293,16 +298,31 @@ class DFC_ANALYZER:
             self.verbose = params['verbose'] 
         if 'backend' in params:
             self.backend = params['backend']
+
+            
         
-        self.dyn_conn_det_params = {}
-        if 'dyn_conn_det_params' in params:
-            self.dyn_conn_det_params['run_analysis'] = params['dyn_conn_det_params']['run_analysis']
-            self.dyn_conn_det_params['N'] = params['dyn_conn_det_params']['N']
-            self.dyn_conn_det_params['L'] = params['dyn_conn_det_params']['L']
-            self.dyn_conn_det_params['p'] = params['dyn_conn_det_params']['p']
-            self.dyn_conn_det_params['n_jobs'] = params['dyn_conn_det_params']['n_jobs']
-            self.dyn_conn_det_params['verbose'] = self.verbose
-            self.dyn_conn_det_params['backend'] = params['dyn_conn_det_params']['backend']
+        self.sim_assess_params = {}
+        if 'sim_assess_params' in params:
+
+            self.sim_assess_params = params['sim_assess_params']
+
+            # self.sim_assess_params['run_analysis'] = params['dyn_conn_det_params']['run_analysis']
+            # self.sim_assess_params['N'] = params['dyn_conn_det_params']['N']
+            # self.sim_assess_params['L'] = params['dyn_conn_det_params']['L']
+            # self.sim_assess_params['p'] = params['dyn_conn_det_params']['p']
+            # self.sim_assess_params['n_jobs'] = params['dyn_conn_det_params']['n_jobs']
+            # self.sim_assess_params['verbose'] = self.verbose
+            # self.sim_assess_params['backend'] = params['dyn_conn_det_params']['backend']
+
+        # self.dyn_conn_det_params = {}
+        # if 'dyn_conn_det_params' in params:
+        #     self.dyn_conn_det_params['run_analysis'] = params['dyn_conn_det_params']['run_analysis']
+        #     self.dyn_conn_det_params['N'] = params['dyn_conn_det_params']['N']
+        #     self.dyn_conn_det_params['L'] = params['dyn_conn_det_params']['L']
+        #     self.dyn_conn_det_params['p'] = params['dyn_conn_det_params']['p']
+        #     self.dyn_conn_det_params['n_jobs'] = params['dyn_conn_det_params']['n_jobs']
+        #     self.dyn_conn_det_params['verbose'] = self.verbose
+        #     self.dyn_conn_det_params['backend'] = params['dyn_conn_det_params']['backend']
 
         self.methods_corr_dict_lst_ = list()
 
@@ -349,6 +369,9 @@ class DFC_ANALYZER:
         return DD_MEASURES
 
     def FC_mat_corr(self, A, B):
+        # it excludes diagonal values
+        A = np.multiply(A, 1-np.eye(len(A)))
+        B = np.multiply(B, 1-np.eye(len(B)))
         return np.corrcoef(A.flatten(), B.flatten())[0,1]
 
     def similarity(self, D_A, D_B, normalize=False, return_matched=False):
@@ -544,16 +567,11 @@ class DFC_ANALYZER:
                 for j, session_j in enumerate(SESSIONs):
 
                     # dFCM_dict[session_i][measure] is a dFCM object
-                    TRs_A = dFCM_dict[session_i][measure].TR_array
-                    C_A = dFCM_dict[session_i][measure].get_dFC_mat(TRs=TRs_A)
-                    TRs_B = dFCM_dict[session_j][measure].TR_array
-                    C_B = dFCM_dict[session_j][measure].get_dFC_mat(TRs=TRs_B)
-                    D_A = {}
-                    for k, TR in enumerate(TRs_A):
-                        D_A['TR'+str(TR)] = C_A[k, :, :]
-                    D_B = {}
-                    for k, TR in enumerate(TRs_B):
-                        D_B['TR'+str(TR)] = C_B[k, :, :]
+                    # it only considers num_samples number of samples for measuring similarity (uniformly picked)
+
+                    D_A = dFCM_dict[session_i][measure].dFC2dict(num_samples=self.sim_assess_params['num_samples'])
+                    D_B = dFCM_dict[session_j][measure].dFC2dict(num_samples=self.sim_assess_params['num_samples'])
+
                     # self.similarity(dFC_dict_normalize(D_A), dFC_dict_normalize(D_B), return_matched=False, normalize=True)
                     dFC_session_sim_dict[measure]['sim_mat'][i, j] = self.similarity(D_A, D_B, return_matched=False, normalize=False) # normalize ??
         return dFC_session_sim_dict
@@ -2082,22 +2100,42 @@ class DFCM():
     def subj_id_array(self):
         return self.subj_id_array_
 
+    # test
+    def dFC2dict(self, num_samples=None):
+        # return dFC samples as a dictionary
+        TRs = self.TR_array
+        dFC_mat, TRs_new = self.get_dFC_mat(TRs=TRs, num_samples=num_samples)
+        dFC_dict = {}
+        for k, TR in enumerate(TRs_new):
+            dFC_dict['TR'+str(TR)] = dFC_mat[k, :, :]
+        return dFC_dict
+
     # test this
-    def get_dFC_mat(self, TRs=None):
+    def get_dFC_mat(self, TRs=None, num_samples=None):
         # get dFC matrices corresponding to 
         # the specified TRs 
         # TRs should be list not necessarily in order ?
+        # if num_samples specified, it will downsample 
+        # TRs to reach that number of samples
+        # if num_samples > len(TRs) -> picks all TRs
 
         if type(TRs) is np.int32 or type(TRs) is np.int64 or type(TRs) is int:
             TRs = [TRs]
-        
+
+        if not num_samples is None:
+            if num_samples < len(TRs):
+                TRs = TRs[np.linspace(0, len(TRs), num_samples, endpoint=False, dtype=int)]
+
         dFC_mat = list()
         for TR in TRs:
             dFC_mat.append(self.FCSs[self.FCS_idx['TR'+str(TR)]])
 
         dFC_mat = np.array(dFC_mat)
 
-        return dFC_mat
+        if num_samples is None:
+            return dFC_mat
+        else:
+            return dFC_mat, TRs
 
     # def concat(self, dFCM):
 
