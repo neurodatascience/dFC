@@ -72,7 +72,7 @@ def visualize_conn_mat(data, title='', \
     if name_lst_key is None:
         fig_width = 25*(len(data)/10)
     else:
-        fig_width = 30*(len(data)/10) + 2
+        fig_width = 35*(len(data)/10) + 4
     fig_height = 10
 
     fig, axs = plt.subplots(1, len(data), figsize=(fig_width, fig_height), \
@@ -134,8 +134,7 @@ def visualize_conn_mat(data, title='', \
 
     if not name_lst is None:
         fig.subplots_adjust(
-            wspace=0.35, \
-            # hspace=0.02\
+            wspace=0.85 
         )
         
     if name_lst is None:
