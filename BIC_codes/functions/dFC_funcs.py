@@ -399,11 +399,11 @@ class DFC_ANALYZER:
         similarity_score = np.mean([similarity_dict[key_a]['score'] for key_a in similarity_dict])
 
         if return_matched:
-            D_B_matched = {}
-            for key_a in similarity_dict:
-                D_B_matched[key_a] = D_B[similarity_dict[key_a]['match']]
+        #     D_B_matched = {}
+        #     for key_a in similarity_dict:
+        #         D_B_matched[key_a] = D_B[similarity_dict[key_a]['match']]
 
-            return similarity_score, D_B_matched
+            return similarity_score, similarity_dict
         else:
             return similarity_score
 
@@ -524,10 +524,10 @@ class DFC_ANALYZER:
                     C_B = self.MEASURES_fit_lst[session_j][m].FCS
                     D_A = {}
                     for k in range(C_A.shape[0]):
-                        D_A[i] = C_A[k,:,:]
+                        D_A['FCS'+str(i+1)] = C_A[k,:,:]
                     D_B = {}
                     for k in range(C_B.shape[0]):
-                        D_B[i] = C_B[k,:,:]
+                        D_B['FCS'+str(i+1)] = C_B[k,:,:]
                     # self.similarity(dFC_dict_normalize(D_A), dFC_dict_normalize(D_B), return_matched=False, normalize=True)
                     FCS_session_sim_dict[measure]['sim_mat'][i, j] = self.similarity(D_A, D_B, return_matched=False, normalize=False) # normalize ??
         return FCS_session_sim_dict
@@ -547,14 +547,25 @@ class DFC_ANALYZER:
                     C_B = measure_j.FCS
                     D_A = {}
                     for k in range(C_A.shape[0]):
-                        D_A[k] = C_A[k,:,:]
+                        D_A['FCS'+str(k+1)] = C_A[k,:,:]
                     D_B = {}
                     for k in range(C_B.shape[0]):
-                        D_B[k] = C_B[k,:,:]
+                        D_B['FCS'+str(k+1)] = C_B[k,:,:]
                     # self.similarity(dFC_dict_normalize(D_A), dFC_dict_normalize(D_B), return_matched=False, normalize=True)
                     FCS_measure_sim_dict[session]['sim_mat'][i, j] = self.similarity(D_A, D_B, return_matched=False, normalize=False) # normalize ??
+
         return FCS_measure_sim_dict
 
+    def state_trans_similarity():
+
+
+        # D_B_matched = {}
+        # for key_a in similarity_dict:
+        #     D_B_matched[key_a] = D_B[similarity_dict[key_a]['match']]
+
+
+        pass
+    
     def dFC_session_similarity(self, dFCM_dict):
 
         dFC_session_sim_dict = {}
@@ -2186,6 +2197,7 @@ class DFCM():
         assert np.sum(np.abs(np.sort(TR_array)-TR_array))==0.0, \
             'TRs not sorted !'
 
+        # the input FCS_idx is ranged from 0 to len(FCS)-1 but we shift it to 1 to len(FCS)
         if self.FCSs_ is None:
             self.FCSs_ = {}
             for i, FCS in enumerate(FCSs):
@@ -2204,17 +2216,19 @@ class DFCM():
             assert self.n_regions == FCSs.shape[1], \
                 "FCS region numbers mismatch."
 
+            FCS_idx_offset = len(self.FCSs_)+1 # test FCS_idx_offset
+
             for i, FCS in enumerate(FCSs):
-                assert not 'FCS'+str(i+1+len(self.FCSs_)) in self.FCSs_, \
+                assert not 'FCS'+str(i+FCS_idx_offset) in self.FCSs_, \
                     'key already exists in self.FCSs_ !' 
-                self.FCSs_['FCS'+str(i+1+len(self.FCSs_))] = FCS
+                self.FCSs_['FCS'+str(i+FCS_idx_offset)] = FCS
 
             for i, idx in enumerate(FCS_idx):
                 assert not 'TR'+str(TR_array[i]) in self.FCS_idx_, \
                     'key already exists in self.FCS_idx_ !' 
                 assert TR_array[i] > self.TR_array_[-1], \
                     'TR overlap !' 
-                self.FCS_idx_['TR'+str(TR_array[i])] = 'FCS'+str(idx+1+len(self.FCS_idx_))
+                self.FCS_idx_['TR'+str(TR_array[i])] = 'FCS'+str(idx+FCS_idx_offset) 
 
             self.subj_id_array_ = self.subj_id_array_ + subj_id_array
             self.n_time_ = len(self.FCS_idx_) 
