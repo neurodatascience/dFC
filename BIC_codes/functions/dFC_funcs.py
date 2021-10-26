@@ -252,7 +252,10 @@ def print_dict(t, s=0):
         if isinstance(t,np.ndarray):
             print_mat(t, s)
         else:
-            print('\t'*s+str(t))
+            if isinstance(t,float):
+                print('\t'*s+"{:.2f}".format(t))
+            else:
+                print('\t'*s+str(t))
     else:
         for key in t:
             print('\t'*s+str(key))
@@ -333,12 +336,23 @@ class DFC_ANALYZER:
         for session in self.methods_corr_dict_lst[0]:
             methods_corr_dict[session] = {}
             methods_corr = list()
+            
+            # dFC corr
             for methods_corr_subj_dict in self.methods_corr_dict_lst:
                 methods_corr.append(methods_corr_subj_dict[session]['corr_mat'])
             
             methods_corr = np.array(methods_corr)
             methods_corr_dict[session]['corr_mat'] = np.mean(methods_corr, axis=0)
             methods_corr_dict[session]['measure_lst'] = methods_corr_subj_dict[session]['measure_lst']
+            
+            # state transition corr
+            state_trans_corr = list()
+            for methods_corr_subj_dict in self.methods_corr_dict_lst:
+                state_trans_corr.append(methods_corr_subj_dict[session]['state_trans_corr_mat'])
+
+            state_trans_corr = np.array(state_trans_corr)
+            methods_corr_dict[session]['state_trans_corr_mat'] = np.mean(state_trans_corr, axis=0)
+            methods_corr_dict[session]['sb_measure_lst'] = methods_corr_subj_dict[session]['sb_measure_lst']
 
         return methods_corr_dict
 
@@ -408,6 +422,118 @@ class DFC_ANALYZER:
             return similarity_score
 
 
+    def state_transition_analyze(self, dFCM_i, dFCM_j):
+    
+        save_image = self.save_image
+        fig_name = '?'
+
+        TRs = TR_intersection([dFCM_i, dFCM_j])
+
+        ############ state transition without matching ############
+
+        state_TC_i = list()
+        for key in dFCM_i.FCS_idx:
+            state_TC_i.append(int(dFCM_i.FCS_idx[key][dFCM_i.FCS_idx[key].find('FCS')+3:]))
+        state_TC_i = np.array(state_TC_i)
+
+        state_TC_j = list()
+        for key in dFCM_j.FCS_idx:
+            state_TC_j.append(int(dFCM_j.FCS_idx[key][dFCM_j.FCS_idx[key].find('FCS')+3:]))
+        state_TC_j = np.array(state_TC_j)
+
+        plt.figure(figsize=(25, 5))
+        plt.plot(TRs, state_TC_i)
+        plt.plot(TRs, state_TC_j)
+        plt.xlabel('TR')
+        plt.title('state transition without matching')
+        if save_image:
+            plt.savefig(fig_name + '.png', dpi=fig_dpi)  
+            plt.close()
+        else:
+            plt.show()
+
+        ############ state matching ############
+
+            
+        D_A = dFCM_i.FCSs
+        D_B = dFCM_j.FCSs
+
+        score, similarity_dict = self.similarity(D_A, D_B, return_matched=True, normalize=False) # normalize ??
+
+        print_dict(similarity_dict)
+
+        D_B_matched = {}
+        for key_a in similarity_dict:
+            D_B_matched[similarity_dict[key_a]['match']] = D_B[similarity_dict[key_a]['match']]
+
+        visualize_conn_mat(dFC_dict_slice(dFC_dict_normalize(D_A), list(range(0, 10, 1))), disp_diag=False, cmap='viridis')
+        visualize_conn_mat(dFC_dict_slice(dFC_dict_normalize(D_B_matched), list(range(0, 10, 1))), disp_diag=False, cmap='viridis')
+
+        ############ state transition after matching ############
+
+        state_TC_i = list()
+        for key in dFCM_i.FCS_idx:
+            FCS_key = similarity_dict[dFCM_i.FCS_idx[key]]['match']
+            state_TC_i.append(int(FCS_key[FCS_key.find('FCS')+3:]))
+        state_TC_i = np.array(state_TC_i)
+
+        state_TC_j = list()
+        for key in dFCM_j.FCS_idx:
+            state_TC_j.append(int(dFCM_j.FCS_idx[key][dFCM_j.FCS_idx[key].find('FCS')+3:]))
+        state_TC_j = np.array(state_TC_j)
+
+        plt.figure(figsize=(25, 5))
+        plt.plot(TRs, state_TC_i)
+        plt.plot(TRs, state_TC_j)
+        plt.xlabel('TR')
+        plt.title('state transition after matching')
+        if save_image:
+            plt.savefig(fig_name + '.png', dpi=fig_dpi)  
+            plt.close()
+        else:
+            plt.show()
+
+        print("{:.2f}".format(np.corrcoef(state_TC_i, state_TC_j)[0,1]))
+        print("{:.2f}".format(np.sum(state_TC_i == state_TC_j)/len(state_TC_i)))
+
+
+        ############ state transition after matching for a pair ############
+
+        key_a = 'FCS2'
+        key_b = similarity_dict[key_a]['match']
+
+        state_TC_i = list()
+        for key in dFCM_i.FCS_idx:
+            if dFCM_i.FCS_idx[key]==key_a:
+                state_TC_i.append(int(1))
+            else: 
+                state_TC_i.append(int(0))
+        state_TC_i = np.array(state_TC_i)
+
+        state_TC_j = list()
+        for key in dFCM_j.FCS_idx:
+            if dFCM_j.FCS_idx[key]==key_b:
+                state_TC_j.append(int(1))
+            else: 
+                state_TC_j.append(int(0))
+        state_TC_j = np.array(state_TC_j)
+
+
+        plt.figure(figsize=(25, 5))
+        plt.plot(TRs, state_TC_i)
+        plt.plot(TRs, state_TC_j)
+        plt.xlabel('TR')
+        plt.title('state transition of ' + key_a + ' and ' + key_b)
+        if save_image:
+            plt.savefig(fig_name + '.png', dpi=fig_dpi)  
+            plt.close()
+        else:
+            plt.show()
+
+
+        print("{:.2f}".format(np.corrcoef(state_TC_i, state_TC_j)[0,1]))
+        print("{:.2f}".format(np.sum(state_TC_i == state_TC_j)/len(state_TC_i)))
+
     def time_analyze(self, time_series=None):
 
         print('Total Time = estimate_FCS Time + estimate_dFCM Time')
@@ -468,7 +594,33 @@ class DFC_ANALYZER:
 
         #### Methods dFC Corr MAT ###
 
-        self.visualize_dFC_corr()
+        fig_name = None
+        if self.save_image:
+            output_root = self.output_root+'dFC/'
+            fig_name = output_root + 'avg_dFC_corr.png' 
+
+        visualize_conn_mat(self.methods_corr, \
+            title='Correlation of measured dFC', \
+            name_lst_key='measure_lst', mat_key='corr_mat', \
+            cmap='viridis',\
+            save_image=self.save_image, output_root=fig_name, \
+                fix_lim=True \
+        )
+
+        #### State Transitions in Measured dFC ###
+
+        fig_name = None
+        if self.save_image:
+            output_root = self.output_root+'dFC/'
+            fig_name = output_root + 'avg_state_trans_corr.png' 
+
+        visualize_conn_mat(self.methods_corr, \
+            title='Correlation of state transitions in measured dFC', \
+            name_lst_key='sb_measure_lst', mat_key='state_trans_corr_mat', \
+            cmap='viridis',\
+            save_image=self.save_image, output_root=fig_name, \
+                fix_lim=True \
+        )
 
         ### DYNAMIC CONN DETEC ###
 
@@ -727,10 +879,18 @@ class DFC_ANALYZER:
         for dFCM in dFCM_lst:
             measure_lst.append(dFCM.measure.measure_name)
 
+        sb_dFCM_lst = list()
+        sb_measure_lst = list()
+        for dFCM in dFCM_lst:
+            if dFCM.measure.is_state_based:
+                sb_measure_lst.append(dFCM.measure.measure_name)
+                sb_dFCM_lst.append(dFCM)
+
+
         methods_corr = {}
-        corr_mat = np.zeros((len(dFCM_lst), len(dFCM_lst)))
-        for i in range(len(dFCM_lst)):
-            for j in range(i+1, len(dFCM_lst)):
+        corr_mat = np.zeros((len(measure_lst), len(measure_lst)))
+        for i in range(len(measure_lst)):
+            for j in range(i+1, len(measure_lst)):
 
                 # assert dFCM_lst[i].measure.measure_name==self.MEASURES_lst[i].measure_name and \
                 #     dFCM_lst[j].measure.measure_name==self.MEASURES_lst[j].measure_name, \
@@ -743,8 +903,39 @@ class DFC_ANALYZER:
                     int(len(corr_ij)*a) : int(len(corr_ij)*(1-a)) \
                         ])
                 corr_mat[j,i] = corr_mat[i,j] 
+
+                # state transition corr
+
+        state_trans_corr_mat = np.zeros((len(sb_measure_lst), len(sb_measure_lst)))
+        for i in range(len(sb_measure_lst)):
+            for j in range(i+1, len(sb_measure_lst)):
+
+                D_A = sb_dFCM_lst[i].FCSs
+                D_B = sb_dFCM_lst[j].FCSs
+
+                score, similarity_dict = self.similarity(D_A, D_B, return_matched=True, normalize=False) # normalize ??
+
+                state_TC_i = list()
+                for key in sb_dFCM_lst[i].FCS_idx:
+                    FCS_key = similarity_dict[sb_dFCM_lst[i].FCS_idx[key]]['match']
+                    state_TC_i.append(int(FCS_key[FCS_key.find('FCS')+3:]))
+                state_TC_i = np.array(state_TC_i)
+
+                state_TC_j = list()
+                for key in sb_dFCM_lst[j].FCS_idx:
+                    state_TC_j.append(int(sb_dFCM_lst[j].FCS_idx[key][sb_dFCM_lst[j].FCS_idx[key].find('FCS')+3:]))
+                state_TC_j = np.array(state_TC_j)
+
+                state_trans_corr_mat[i, j] = np.sum(state_TC_i == state_TC_j)/len(state_TC_i)
+                # state_trans_corr_mat[i, j] = np.corrcoef(state_TC_i, state_TC_j)[0,1]
+                state_trans_corr_mat[j, i] = state_trans_corr_mat[i, j]
+                
+
+
         methods_corr['corr_mat'] = corr_mat
         methods_corr['measure_lst'] = measure_lst
+        methods_corr['state_trans_corr_mat'] = state_trans_corr_mat
+        methods_corr['sb_measure_lst'] = sb_measure_lst
         return methods_corr
 
     def visualize_dyn_conns(self, SUBJs_dyn_conn):
@@ -757,22 +948,6 @@ class DFC_ANALYZER:
                 output_root=self.output_root+'DYN_CONN/'+'subject'+subject+'_dyn_conn', \
                 fix_lim=True \
             )
-
-    def visualize_dFC_corr(self):
-        # visualize avergaed dFC corr mat
-
-        fig_name = None
-        if self.save_image:
-            output_root = self.output_root+'dFC/'
-            fig_name = output_root + 'avg_dFC_corr.png' 
-
-        visualize_conn_mat(self.methods_corr, \
-            title='Correlation of measured dFC', \
-            name_lst_key='measure_lst', mat_key='corr_mat', \
-            cmap='viridis',\
-            save_image=self.save_image, output_root=fig_name, \
-                fix_lim=True \
-        )
 
     def visualize_dFCMs(self, dFCM_lst=None, TR_idx=None, normalize=True, threshold=0.0, \
                             fix_lim=True, subj_id=''):
@@ -2110,9 +2285,13 @@ class DFCM():
         return self.subj_id_array_
 
     # test
-    def dFC2dict(self, num_samples=None):
+    def dFC2dict(self, TRs=None, num_samples=None):
         # return dFC samples as a dictionary
-        TRs = self.TR_array
+        if TRs is None:
+            TRs = self.TR_array
+        if type(TRs) is list:
+            TRs = np.array(TRs)
+        TRs = TRs.astype(int)
         dFC_mat, TRs_new = self.get_dFC_mat(TRs=TRs, num_samples=num_samples)
         dFC_dict = {}
         for k, TR in enumerate(TRs_new):
