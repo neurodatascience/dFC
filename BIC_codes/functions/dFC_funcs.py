@@ -422,29 +422,95 @@ class DFC_ANALYZER:
             return similarity_score
 
 
-    def state_transition_analyze(self, dFCM_i, dFCM_j):
+    # todo: add save image
+    def similarity_analyze(self, SUBJs_dFC_session_sim_dict, verb=False, show_all_subj=False):
+
+        ############ state transition without matching ############
+        
+        avg_dFC_session_sim_dict = {}
+        SUBJECTs = [subject for subject in SUBJs_dFC_session_sim_dict]
+        for measure in SUBJs_dFC_session_sim_dict[SUBJECTs[0]]:
+            avg_dFC_session_sim_dict[measure] = {}
+            avg_dFC_session_sim_dict[measure]['sim_mat'] = 0
+            for subject in SUBJECTs:
+                avg_dFC_session_sim_dict[measure]['sim_mat'] += np.divide(SUBJs_dFC_session_sim_dict[subject][measure]['sim_mat'], len(SUBJECTs))
+                avg_dFC_session_sim_dict[measure]['session_lst'] = SUBJs_dFC_session_sim_dict[subject][measure]['session_lst']
+            
+        visualize_conn_mat(avg_dFC_session_sim_dict, title='avg similarity matrix ', name_lst_key='session_lst', mat_key='sim_mat')
+
+        avg_measure_repro = {}
+        for measure in avg_dFC_session_sim_dict:
+            avg_measure_repro[measure] = np.mean(avg_dFC_session_sim_dict[measure]['sim_mat'])
+
+        print_dict(avg_measure_repro)
+
+        ############ state transition without matching ############
+
+        if show_all_subj:
+            if verb:
+                print_dict(SUBJs_dFC_session_sim_dict)
+
+            for subject in SUBJs_dFC_session_sim_dict:
+                visualize_conn_mat(SUBJs_dFC_session_sim_dict[subject], title='similarity matrix subj '+subject, name_lst_key='session_lst', mat_key='sim_mat')
+
+        ############ state transition without matching ############
+
+        FCS_session_sim_dict = self.FCS_session_similarity()
+        if verb:
+            print_dict(FCS_session_sim_dict)
+
+        visualize_conn_mat(FCS_session_sim_dict, title='sessions FCS similarity matrix', name_lst_key='session_lst', mat_key='sim_mat')
+
+        avg_measure_repro = {}
+        for measure in FCS_session_sim_dict:
+            avg_measure_repro[measure] = np.mean(FCS_session_sim_dict[measure]['sim_mat'])
+
+        print_dict(avg_measure_repro)
+
+        ############ state transition without matching ############
+
+        FCS_measure_sim_dict = self.FCS_measure_similarity()
+        if verb:
+            print_dict(FCS_measure_sim_dict)
+        visualize_conn_mat(FCS_measure_sim_dict, title='measures FCS similarity matrix', name_lst_key='measure_lst', mat_key='sim_mat')
+
+        return
+
+    def state_transition_analyze(self, dFCM_i, dFCM_j, verb=False):
     
         save_image = self.save_image
         fig_name = '?'
 
         TRs = TR_intersection([dFCM_i, dFCM_j])
+        TRs_lst = list()
+        for TR in TRs:
+            TRs_lst.append('TR'+str(TR))
+
+        num_FCS = max(len(dFCM_i.FCSs), len(dFCM_j.FCSs))
+        FCS_lst = ['FCS'+str(i+1) for i in range(num_FCS)]
 
         ############ state transition without matching ############
 
         state_TC_i = list()
         for key in dFCM_i.FCS_idx:
-            state_TC_i.append(int(dFCM_i.FCS_idx[key][dFCM_i.FCS_idx[key].find('FCS')+3:]))
+            if key in TRs_lst:
+                state = dFCM_i.FCS_idx[key]
+                state_TC_i.append(int(state[state.find('FCS')+3:]))
         state_TC_i = np.array(state_TC_i)
 
         state_TC_j = list()
         for key in dFCM_j.FCS_idx:
-            state_TC_j.append(int(dFCM_j.FCS_idx[key][dFCM_j.FCS_idx[key].find('FCS')+3:]))
+            if key in TRs_lst:
+                state = dFCM_j.FCS_idx[key]
+                state_TC_j.append(int(state[state.find('FCS')+3:]))
         state_TC_j = np.array(state_TC_j)
 
         plt.figure(figsize=(25, 5))
         plt.plot(TRs, state_TC_i)
         plt.plot(TRs, state_TC_j)
         plt.xlabel('TR')
+        plt.yticks(ticks=range(1, num_FCS+1), labels=FCS_lst)
+
         plt.title('state transition without matching')
         if save_image:
             plt.savefig(fig_name + '.png', dpi=fig_dpi)  
@@ -460,11 +526,12 @@ class DFC_ANALYZER:
 
         score, similarity_dict = self.similarity(D_A, D_B, return_matched=True, normalize=False) # normalize ??
 
-        print_dict(similarity_dict)
+        if verb:
+            print_dict(similarity_dict)
 
         D_B_matched = {}
         for key_a in similarity_dict:
-            D_B_matched[similarity_dict[key_a]['match']] = D_B[similarity_dict[key_a]['match']]
+            D_B_matched[key_a + '->' + similarity_dict[key_a]['match']] = D_B[similarity_dict[key_a]['match']]
 
         visualize_conn_mat(dFC_dict_slice(dFC_dict_normalize(D_A), list(range(0, 10, 1))), disp_diag=False, cmap='viridis')
         visualize_conn_mat(dFC_dict_slice(dFC_dict_normalize(D_B_matched), list(range(0, 10, 1))), disp_diag=False, cmap='viridis')
@@ -473,19 +540,24 @@ class DFC_ANALYZER:
 
         state_TC_i = list()
         for key in dFCM_i.FCS_idx:
-            FCS_key = similarity_dict[dFCM_i.FCS_idx[key]]['match']
-            state_TC_i.append(int(FCS_key[FCS_key.find('FCS')+3:]))
+            if key in TRs_lst:
+                state = dFCM_i.FCS_idx[key]
+                state_match = similarity_dict[state]['match']
+                state_TC_i.append(int(state_match[state_match.find('FCS')+3:]))
         state_TC_i = np.array(state_TC_i)
 
         state_TC_j = list()
         for key in dFCM_j.FCS_idx:
-            state_TC_j.append(int(dFCM_j.FCS_idx[key][dFCM_j.FCS_idx[key].find('FCS')+3:]))
+            if key in TRs_lst:
+                state = dFCM_j.FCS_idx[key]
+                state_TC_j.append(int(state[state.find('FCS')+3:]))
         state_TC_j = np.array(state_TC_j)
 
         plt.figure(figsize=(25, 5))
         plt.plot(TRs, state_TC_i)
         plt.plot(TRs, state_TC_j)
         plt.xlabel('TR')
+        plt.yticks(ticks=range(1, num_FCS+1), labels=FCS_lst)
         plt.title('state transition after matching')
         if save_image:
             plt.savefig(fig_name + '.png', dpi=fig_dpi)  
@@ -493,8 +565,9 @@ class DFC_ANALYZER:
         else:
             plt.show()
 
-        print("{:.2f}".format(np.corrcoef(state_TC_i, state_TC_j)[0,1]))
-        print("{:.2f}".format(np.sum(state_TC_i == state_TC_j)/len(state_TC_i)))
+        if verb:
+            print("{:.2f}".format(np.corrcoef(state_TC_i, state_TC_j)[0,1]))
+            print("{:.2f}".format(np.sum(state_TC_i == state_TC_j)/len(state_TC_i)))
 
 
         ############ state transition after matching for a pair ############
@@ -504,18 +577,20 @@ class DFC_ANALYZER:
 
         state_TC_i = list()
         for key in dFCM_i.FCS_idx:
-            if dFCM_i.FCS_idx[key]==key_a:
-                state_TC_i.append(int(1))
-            else: 
-                state_TC_i.append(int(0))
+            if key in TRs_lst:
+                if dFCM_i.FCS_idx[key]==key_a:
+                    state_TC_i.append(int(1))
+                else: 
+                    state_TC_i.append(int(0))
         state_TC_i = np.array(state_TC_i)
 
         state_TC_j = list()
         for key in dFCM_j.FCS_idx:
-            if dFCM_j.FCS_idx[key]==key_b:
-                state_TC_j.append(int(1))
-            else: 
-                state_TC_j.append(int(0))
+            if key in TRs_lst:
+                if dFCM_j.FCS_idx[key]==key_b:
+                    state_TC_j.append(int(1))
+                else: 
+                    state_TC_j.append(int(0))
         state_TC_j = np.array(state_TC_j)
 
 
@@ -523,6 +598,7 @@ class DFC_ANALYZER:
         plt.plot(TRs, state_TC_i)
         plt.plot(TRs, state_TC_j)
         plt.xlabel('TR')
+        plt.yticks(ticks=range(2), labels=['off', 'on'])
         plt.title('state transition of ' + key_a + ' and ' + key_b)
         if save_image:
             plt.savefig(fig_name + '.png', dpi=fig_dpi)  
@@ -530,9 +606,11 @@ class DFC_ANALYZER:
         else:
             plt.show()
 
+        if verb:
+            print("{:.2f}".format(np.corrcoef(state_TC_i, state_TC_j)[0,1]))
+            print("{:.2f}".format(np.sum(state_TC_i == state_TC_j)/len(state_TC_i)))
 
-        print("{:.2f}".format(np.corrcoef(state_TC_i, state_TC_j)[0,1]))
-        print("{:.2f}".format(np.sum(state_TC_i == state_TC_j)/len(state_TC_i)))
+        return
 
     def time_analyze(self, time_series=None):
 
@@ -707,16 +785,6 @@ class DFC_ANALYZER:
                     FCS_measure_sim_dict[session]['sim_mat'][i, j] = self.similarity(D_A, D_B, return_matched=False, normalize=False) # normalize ??
 
         return FCS_measure_sim_dict
-
-    def state_trans_similarity():
-
-
-        # D_B_matched = {}
-        # for key_a in similarity_dict:
-        #     D_B_matched[key_a] = D_B[similarity_dict[key_a]['match']]
-
-
-        pass
     
     def dFC_session_similarity(self, dFCM_dict):
 
@@ -855,11 +923,12 @@ class DFC_ANALYZER:
         return SUBJs_dFC_session_sim_dict
 
 
-    def dFC_corr(self, dFCM_i, dFCM_j):
+    def dFC_corr(self, dFCM_i, dFCM_j, TRs=None):
 
         # returns correlation of dFC measures over time
 
-        TRs = TR_intersection([dFCM_i, dFCM_j])
+        if TRs is None:
+            TRs = TR_intersection([dFCM_i, dFCM_j])
         dFC_mat_i = dFCM_i.get_dFC_mat(TRs=TRs)
         dFC_mat_j = dFCM_j.get_dFC_mat(TRs=TRs)
         corr = list()
@@ -876,8 +945,13 @@ class DFC_ANALYZER:
         a = 0.1 # portion of the dFCs to ignore from the beginning and the end
 
         measure_lst = list()
+        common_TRs = dFCM_lst[0].TR_array
         for dFCM in dFCM_lst:
             measure_lst.append(dFCM.measure.measure_name)
+            common_TRs = intersection(common_TRs, dFCM.TR_array)
+        common_TRs.sort()
+        if len(common_TRs)==0:
+            print('No TR intersection.')
 
         sb_dFCM_lst = list()
         sb_measure_lst = list()
@@ -885,7 +959,6 @@ class DFC_ANALYZER:
             if dFCM.measure.is_state_based:
                 sb_measure_lst.append(dFCM.measure.measure_name)
                 sb_dFCM_lst.append(dFCM)
-
 
         methods_corr = {}
         corr_mat = np.zeros((len(measure_lst), len(measure_lst)))
@@ -897,18 +970,26 @@ class DFC_ANALYZER:
                 #     'mismatch in MEASURES_lst order'
 
                 corr_ij = self.dFC_corr( \
-                    dFCM_lst[i], dFCM_lst[j] \
+                    dFCM_lst[i], dFCM_lst[j], \
+                    TRs=common_TRs \
                         )
                 corr_mat[i,j] = np.mean(corr_ij[ \
                     int(len(corr_ij)*a) : int(len(corr_ij)*(1-a)) \
                         ])
                 corr_mat[j,i] = corr_mat[i,j] 
 
-                # state transition corr
+        ########## state transition corr ##########
 
         state_trans_corr_mat = np.zeros((len(sb_measure_lst), len(sb_measure_lst)))
         for i in range(len(sb_measure_lst)):
-            for j in range(i+1, len(sb_measure_lst)):
+            for j in range(len(sb_measure_lst)):
+
+                if i==j:
+                    continue
+
+                TRs = TR_intersection([sb_dFCM_lst[i], sb_dFCM_lst[j]])
+                for t, TR in enumerate(TRs):
+                    TRs[t] = 'TR'+str(TR)
 
                 D_A = sb_dFCM_lst[i].FCSs
                 D_B = sb_dFCM_lst[j].FCSs
@@ -917,21 +998,20 @@ class DFC_ANALYZER:
 
                 state_TC_i = list()
                 for key in sb_dFCM_lst[i].FCS_idx:
-                    FCS_key = similarity_dict[sb_dFCM_lst[i].FCS_idx[key]]['match']
-                    state_TC_i.append(int(FCS_key[FCS_key.find('FCS')+3:]))
+                    if key in TRs:
+                        FCS_key = similarity_dict[sb_dFCM_lst[i].FCS_idx[key]]['match']
+                        state_TC_i.append(int(FCS_key[FCS_key.find('FCS')+3:]))
                 state_TC_i = np.array(state_TC_i)
 
                 state_TC_j = list()
                 for key in sb_dFCM_lst[j].FCS_idx:
-                    state_TC_j.append(int(sb_dFCM_lst[j].FCS_idx[key][sb_dFCM_lst[j].FCS_idx[key].find('FCS')+3:]))
+                    if key in TRs:
+                        state_TC_j.append(int(sb_dFCM_lst[j].FCS_idx[key][sb_dFCM_lst[j].FCS_idx[key].find('FCS')+3:]))
                 state_TC_j = np.array(state_TC_j)
 
                 state_trans_corr_mat[i, j] = np.sum(state_TC_i == state_TC_j)/len(state_TC_i)
                 # state_trans_corr_mat[i, j] = np.corrcoef(state_TC_i, state_TC_j)[0,1]
-                state_trans_corr_mat[j, i] = state_trans_corr_mat[i, j]
                 
-
-
         methods_corr['corr_mat'] = corr_mat
         methods_corr['measure_lst'] = measure_lst
         methods_corr['state_trans_corr_mat'] = state_trans_corr_mat
