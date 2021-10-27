@@ -78,6 +78,9 @@ def visualize_conn_mat(data, title='', \
     fig, axs = plt.subplots(1, len(data), figsize=(fig_width, fig_height), \
         facecolor='w', edgecolor='k')
 
+    if not type(axs) is np.ndarray:
+        axs = np.array([axs])
+
     fig.suptitle(title) #, fontsize=20, size=20
 
     axs = axs.ravel()
@@ -950,15 +953,8 @@ class DFC_ANALYZER:
             measure_lst.append(dFCM.measure.measure_name)
             common_TRs = intersection(common_TRs, dFCM.TR_array)
         common_TRs.sort()
-        if len(common_TRs)==0:
-            print('No TR intersection.')
-
-        sb_dFCM_lst = list()
-        sb_measure_lst = list()
-        for dFCM in dFCM_lst:
-            if dFCM.measure.is_state_based:
-                sb_measure_lst.append(dFCM.measure.measure_name)
-                sb_dFCM_lst.append(dFCM)
+        assert len(common_TRs)!=0, \
+            'No TR intersection.'
 
         methods_corr = {}
         corr_mat = np.zeros((len(measure_lst), len(measure_lst)))
@@ -980,6 +976,21 @@ class DFC_ANALYZER:
 
         ########## state transition corr ##########
 
+        sb_dFCM_lst = list()
+        sb_measure_lst = list()
+        for dFCM in dFCM_lst:
+            if dFCM.measure.is_state_based:
+                sb_measure_lst.append(dFCM.measure.measure_name)
+                sb_dFCM_lst.append(dFCM)
+
+        ## using the same common_TRs as dFC corr
+        # common_TRs = sb_dFCM_lst[0].TR_array
+        # for dFCM in sb_dFCM_lst:
+        #     common_TRs = intersection(common_TRs, dFCM.TR_array)
+        # common_TRs.sort()
+        # assert len(common_TRs)!=0, \
+        #     'No TR intersection.'
+
         state_trans_corr_mat = np.zeros((len(sb_measure_lst), len(sb_measure_lst)))
         for i in range(len(sb_measure_lst)):
             for j in range(len(sb_measure_lst)):
@@ -987,9 +998,10 @@ class DFC_ANALYZER:
                 if i==j:
                     continue
 
-                TRs = TR_intersection([sb_dFCM_lst[i], sb_dFCM_lst[j]])
-                for t, TR in enumerate(TRs):
-                    TRs[t] = 'TR'+str(TR)
+                # TRs = TR_intersection([sb_dFCM_lst[i], sb_dFCM_lst[j]])
+                TRs = list()
+                for TR in common_TRs:
+                    TRs.append('TR'+str(TR))
 
                 D_A = sb_dFCM_lst[i].FCSs
                 D_B = sb_dFCM_lst[j].FCSs
