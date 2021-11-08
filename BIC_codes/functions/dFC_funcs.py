@@ -634,6 +634,8 @@ class DFC_ANALYZER:
         FCS_j_lst = [FCS for FCS in FCS_dict_j['state_TC']]
         for FCS_i in trans_sim_dict:
 
+            # trans_sim_dict[FCS_i]['trans_sim_vec'] is list of trans_sim_vec of all subjects
+
             score = list()
             for trans_sim_vec in trans_sim_dict[FCS_i]['trans_sim_vec']:
                 score.append(np.multiply(FCS_sim[FCS_i], trans_sim_vec))
@@ -641,14 +643,14 @@ class DFC_ANALYZER:
             trans_sim = np.array(trans_sim_dict[FCS_i]['trans_sim_vec'])
             score = np.array(score)
 
-            trans_sim_avg = np.mean(trans_sim, axis=0)
-            score_avg = np.mean(score, axis=0)
+            trans_sim_avg = np.nanmean(trans_sim, axis=0)
+            score_avg = np.nanmean(score, axis=0)
 
             # choose match based on score/FCS/transition 
             if matching_method=='score':
-                FCS_j_max = np.argmax(score_avg)
+                FCS_j_max = np.nanargmax(score_avg)
             if matching_method=='transition':
-                FCS_j_max = np.argmax(trans_sim_avg)
+                FCS_j_max = np.nanargmax(trans_sim_avg)
             if matching_method=='FCS':
                 FCS_j_max = np.argmax(FCS_sim[FCS_i])
 
@@ -663,8 +665,8 @@ class DFC_ANALYZER:
 
         # avg over all FCSs of measure_i
         FCS_match_dict = state_match_dict['FCS_match']
-        state_match_dict['avg_score'] = np.mean([FCS_match_dict[FCS_i]['score'] for FCS_i in FCS_match_dict])
-        state_match_dict['avg_trans_corr'] = np.mean([FCS_match_dict[FCS_i]['trans_corr'] for FCS_i in FCS_match_dict])
+        state_match_dict['avg_score'] = np.nanmean([FCS_match_dict[FCS_i]['score'] for FCS_i in FCS_match_dict])
+        state_match_dict['avg_trans_corr'] = np.nanmean([FCS_match_dict[FCS_i]['trans_corr'] for FCS_i in FCS_match_dict])
         state_match_dict['avg_FCS_corr'] = np.mean([FCS_match_dict[FCS_i]['FCS_corr'] for FCS_i in FCS_match_dict])
 
         return state_match_dict
@@ -725,7 +727,7 @@ class DFC_ANALYZER:
         return state_match
 
 
-    def state_transition_analyze(self, dFCM_i, dFCM_j, matching_method='score', verb=False):
+    def state_transition_analyze(self, dFCM_i, dFCM_j, state_match_dict=None, matching_method='score', verb=False):
     
         save_image = self.save_image
         fig_name = '?'
@@ -765,44 +767,46 @@ class DFC_ANALYZER:
         # here the FCSs are matched using state_match function which can be 
         # by FCS similarity, transition similarity, or combination of both
 
-        #trans_sim[FCS_i]['trans_sim_vec'] = transition_similarity_vec
-        trans_sim = self.dFCM_trans_sim( \
-            dFCM_i=dFCM_i, \
-            dFCM_j=dFCM_j, \
-            common_TRs=None \
-        )
+        if state_match_dict is None:
 
-        trans_sim_dict = {}
-        for FCS_i in trans_sim:
-            trans_sim_dict[FCS_i] = {}
-            trans_sim_vec = trans_sim[FCS_i]['trans_sim_vec']
-            trans_sim_dict[FCS_i]['trans_sim_vec'] = [trans_sim_vec]
+            #trans_sim[FCS_i]['trans_sim_vec'] = transition_similarity_vec
+            trans_sim = self.dFCM_trans_sim( \
+                dFCM_i=dFCM_i, \
+                dFCM_j=dFCM_j, \
+                common_TRs=None \
+            )
 
-        FCS_dict_i = {}
-        FCS_dict_i['state_TC'] = {}
-        for FCS in dFCM_i.FCSs:
-            FCS_dict_i['state_TC'][FCS] = {}
-            FCS_dict_i['state_TC'][FCS]['FCS'] = dFCM_i.FCSs[FCS]
+            trans_sim_dict = {}
+            for FCS_i in trans_sim:
+                trans_sim_dict[FCS_i] = {}
+                trans_sim_vec = trans_sim[FCS_i]['trans_sim_vec']
+                trans_sim_dict[FCS_i]['trans_sim_vec'] = [trans_sim_vec]
 
-        FCS_dict_j = {}
-        FCS_dict_j['state_TC'] = {}
-        for FCS in dFCM_j.FCSs:
-            FCS_dict_j['state_TC'][FCS] = {}
-            FCS_dict_j['state_TC'][FCS]['FCS'] = dFCM_j.FCSs[FCS]
+            FCS_dict_i = {}
+            FCS_dict_i['state_TC'] = {}
+            for FCS in dFCM_i.FCSs:
+                FCS_dict_i['state_TC'][FCS] = {}
+                FCS_dict_i['state_TC'][FCS]['FCS'] = dFCM_i.FCSs[FCS]
 
-        FCS_sim = self.FCS_sim_calc( \
-            FCS_dict_i=FCS_dict_i, \
-            FCS_dict_j=FCS_dict_j, \
-            normalize=False \
-        )
-        # FCS_sim_dict[FCS_i] = FCS_similarity_vec
-        state_match_dict = self.dFCM_state_match( \
-            trans_sim_dict=trans_sim_dict, \
-            FCS_dict_i=FCS_dict_i, \
-            FCS_dict_j=FCS_dict_j, \
-            FCS_sim=FCS_sim, \
-            matching_method=matching_method \
-        )
+            FCS_dict_j = {}
+            FCS_dict_j['state_TC'] = {}
+            for FCS in dFCM_j.FCSs:
+                FCS_dict_j['state_TC'][FCS] = {}
+                FCS_dict_j['state_TC'][FCS]['FCS'] = dFCM_j.FCSs[FCS]
+
+            FCS_sim = self.FCS_sim_calc( \
+                FCS_dict_i=FCS_dict_i, \
+                FCS_dict_j=FCS_dict_j, \
+                normalize=False \
+            )
+            # FCS_sim_dict[FCS_i] = FCS_similarity_vec
+            state_match_dict = self.dFCM_state_match( \
+                trans_sim_dict=trans_sim_dict, \
+                FCS_dict_i=FCS_dict_i, \
+                FCS_dict_j=FCS_dict_j, \
+                FCS_sim=FCS_sim, \
+                matching_method=matching_method \
+            )
 
         # visualization
         D_A = state_match_dict['orig_FCSs']
@@ -815,7 +819,9 @@ class DFC_ANALYZER:
             visualize_conn_mat(dFC_dict_slice(D_A, list(range(0, 10, 1))), disp_diag=False, cmap='viridis')
             visualize_conn_mat(dFC_dict_slice(D_B, list(range(0, 10, 1))), disp_diag=False, cmap='viridis')
 
-        print_dict([state_match_dict['FCS_match'][FCS_i]['trans_corr'] for FCS_i in  state_match_dict['FCS_match']])
+        print('state TC corr', [state_match_dict['FCS_match'][FCS_i]['trans_corr'] for FCS_i in  state_match_dict['FCS_match']])
+        print('FCS corr', [state_match_dict['FCS_match'][FCS_i]['FCS_corr'] for FCS_i in  state_match_dict['FCS_match']])
+        print('score', [state_match_dict['FCS_match'][FCS_i]['score'] for FCS_i in  state_match_dict['FCS_match']])
 
         ##### print matched scores #####
 
@@ -863,7 +869,7 @@ class DFC_ANALYZER:
             )
 
             if verb:
-                print("state Time Course Equality: {:.2f}".format(np.sum(state_TC_i == state_TC_j)/len(state_TC_i)))
+                print("state Time Course Equality: {:.2f}".format(state_match_dict['FCS_match'][key_a]['trans_corr']))
 
         return state_match_dict
 
@@ -1127,9 +1133,17 @@ class DFC_ANALYZER:
             transition_similarity_vec = np.ones((len(state_act_dict_j['state_TC'])))
             for j, FCS_j in enumerate(state_act_dict_j['state_TC']):
 
-                transition_similarity_vec[j] = np.mean( \
-                    state_act_dict_i['state_TC'][FCS_i]['act_TC']== \
-                    state_act_dict_j['state_TC'][FCS_j]['act_TC'] \
+                # transition_similarity_vec[j] = np.mean( \
+                #     state_act_dict_i['state_TC'][FCS_i]['act_TC']== \
+                #     state_act_dict_j['state_TC'][FCS_j]['act_TC'] \
+                # )
+
+                # how many times out of all the times i has been on, j has been on too
+                transition_similarity_vec[j] = np.divide( \
+                    np.sum(np.multiply( \
+                        state_act_dict_i['state_TC'][FCS_i]['act_TC'], \
+                        state_act_dict_j['state_TC'][FCS_j]['act_TC'] )), \
+                    np.sum(state_act_dict_i['state_TC'][FCS_i]['act_TC']) \
                 )
 
             trans_sim_dict[FCS_i]['trans_sim_vec'] = transition_similarity_vec
@@ -2571,7 +2585,7 @@ class DFCM():
         if TRs is None:
             TRs = self.TR_array
 
-        if not 'TR' in TRs[0]:
+        if not type(TRs[0]) is str:
             TRs_lst = list()
             for TR in TRs:
                 TRs_lst.append('TR'+str(TR))
