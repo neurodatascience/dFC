@@ -97,7 +97,29 @@ def visualize_conn_mat(data, title='', \
         fix_lim=True \
     ):
 
-    # data must be a dict of correlation/connectivity matrices
+    '''
+    - name_lst_key can be a list of names or the key to list of names
+    - data must be a dict of correlation/connectivity matrices
+    sample:
+    Suptitle1
+        corr_mat
+            0.00 0.31 0.76 
+            0.31 0.00 0.43 
+            0.76 0.43 0.00 
+        measure_lst
+            ContinuousHMM
+            Windowless
+            Clustering_pear_corr
+    Suptitle1
+        corr_mat
+            0.00 0.32 0.76 
+            0.32 0.00 0.45 
+            0.76 0.45 0.00 
+        measure_lst
+            ContinuousHMM
+            Windowless
+            Clustering_pear_corr
+    '''
 
     if name_lst_key is None:
         fig_width = 25*(len(data)/10)
@@ -119,7 +141,10 @@ def visualize_conn_mat(data, title='', \
 
         name_lst = None
         if not name_lst_key is None:
-            name_lst = data[key][name_lst_key]
+            if type(name_lst_key) is str:
+                name_lst = data[key][name_lst_key]
+            if type(name_lst_key) is list:
+                name_lst = name_lst_key
 
         if mat_key is None:
             C = data[key]
@@ -589,7 +614,7 @@ class DFC_ANALYZER:
     # todo: add save image
     def similarity_analyze(self, SUBJs_dFC_session_sim_dict, verb=False, show_all_subj=False):
 
-        ############ state transition without matching ############
+        ############ inter session dFC similarity averaged ############
         
         # dFC_session_sim_dict contains similarity between different sessions 
         # and in different measures in each subject
@@ -610,7 +635,7 @@ class DFC_ANALYZER:
 
         print_dict(avg_measure_repro)
 
-        ############ state transition without matching ############
+        ############ inter session dFC similarity for all subjects ############
 
         if show_all_subj:
             if verb:
@@ -619,7 +644,7 @@ class DFC_ANALYZER:
             for subject in SUBJs_dFC_session_sim_dict:
                 visualize_conn_mat(SUBJs_dFC_session_sim_dict[subject], title='similarity matrix subj '+subject, name_lst_key='session_lst', mat_key='sim_mat')
 
-        ############ state transition without matching ############
+        ############ inter session measures FCS similarity ############
 
         FCS_session_sim_dict = self.FCS_session_similarity()
         if verb:
@@ -633,12 +658,12 @@ class DFC_ANALYZER:
 
         print_dict(avg_measure_repro)
 
-        ############ state transition without matching ############
+        ############ intra session measures FCS similarity ############
 
-        FCS_measure_sim_dict = self.FCS_measure_similarity()
-        if verb:
-            print_dict(FCS_measure_sim_dict)
-        visualize_conn_mat(FCS_measure_sim_dict, title='measures FCS similarity matrix', name_lst_key='measure_lst', mat_key='sim_mat')
+        # FCS_measure_sim_dict = self.FCS_measure_similarity()
+        # if verb:
+        #     print_dict(FCS_measure_sim_dict)
+        # visualize_conn_mat(FCS_measure_sim_dict, title='measures FCS similarity matrix', name_lst_key='measure_lst', mat_key='sim_mat')
 
         return
 
@@ -725,9 +750,12 @@ class DFC_ANALYZER:
             state_match_dict = {}
             state_match_dict['final'] = {}
             state_match_dict['method_pairs'] = {}
-            state_match_dict['final']['score'] = np.zeros((len(score_dict), len(score_dict)))
-            state_match_dict['final']['trans_corr'] = np.zeros((len(score_dict), len(score_dict)))
-            state_match_dict['final']['FCS_corr'] = np.zeros((len(score_dict), len(score_dict)))
+            state_match_dict['final']['score'] = {}
+            state_match_dict['final']['trans_corr'] = {}
+            state_match_dict['final']['FCS_corr'] = {}
+            state_match_dict['final']['score']['corr_mat'] = np.zeros((len(score_dict), len(score_dict)))
+            state_match_dict['final']['trans_corr']['corr_mat'] = np.zeros((len(score_dict), len(score_dict)))
+            state_match_dict['final']['FCS_corr']['corr_mat'] = np.zeros((len(score_dict), len(score_dict)))
             for measure_i_iter, measure_i in enumerate(score_dict):
                 state_match_dict['method_pairs'][measure_i] = {}
                 for measure_j_iter, measure_j in enumerate(score_dict):
@@ -742,9 +770,9 @@ class DFC_ANALYZER:
                     )
                         
                     # avg over all FCSs of measure_i as a matrix
-                    state_match_dict['final']['score'][measure_i_iter, measure_j_iter] = state_match_dict['method_pairs'][measure_i][measure_j]['avg_score']
-                    state_match_dict['final']['trans_corr'][measure_i_iter, measure_j_iter] = state_match_dict['method_pairs'][measure_i][measure_j]['avg_trans_corr']
-                    state_match_dict['final']['FCS_corr'][measure_i_iter, measure_j_iter] = state_match_dict['method_pairs'][measure_i][measure_j]['avg_FCS_corr']
+                    state_match_dict['final']['score']['corr_mat'][measure_i_iter, measure_j_iter] = state_match_dict['method_pairs'][measure_i][measure_j]['avg_score']
+                    state_match_dict['final']['trans_corr']['corr_mat'][measure_i_iter, measure_j_iter] = state_match_dict['method_pairs'][measure_i][measure_j]['avg_trans_corr']
+                    state_match_dict['final']['FCS_corr']['corr_mat'][measure_i_iter, measure_j_iter] = state_match_dict['method_pairs'][measure_i][measure_j]['avg_FCS_corr']
 
             state_match[session] = state_match_dict
         
@@ -1946,6 +1974,8 @@ class SLIDING_WINDOW(dFC):
         return C
 
     def dFC(self, time_series, subj_id, W=None, n_overlap=None, tapered_window=False):
+        # W is in time samples
+        
         L = time_series.shape[1]
         step = int((1-n_overlap)*W)
         if step == 0:
@@ -1990,9 +2020,10 @@ class SLIDING_WINDOW(dFC):
         # self.n_regions = time_series.n_regions
         # self.n_time = time_series.n_time
 
+        # W is converted from sec to samples
         dFCM = self.dFC(time_series=time_series.data, \
             subj_id=time_series.subj_id_array[:1], \
-            W=self.W, \
+            W=int(self.W * time_series.Fs) , \
             n_overlap=self.n_overlap, \
             tapered_window=self.tapered_window \
             )

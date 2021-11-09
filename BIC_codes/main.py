@@ -61,7 +61,7 @@ dyn_conn_det_params = { \
 
 params_dFC_analyzer = { \
     # VISUALIZATION
-    'vis_TR_idx': list(range(10, 20, 1)),'save_image': True, 'output_root': output_root, \
+    'vis_TR_idx': list(range(10, 20, 1)),'save_image': False, 'output_root': output_root, \
     # Parallelization Parameters
     'n_jobs': 8, 'verbose': 1, 'backend': 'loky', \
     # Similarity Assessment Parameters
@@ -244,7 +244,7 @@ if DATA_type=='simulated':
 
 for session in BOLD:
     BOLD[session].visualize(start_time=0, end_time=50, nodes_lst=list(range(10)), \
-        save_image=True, fig_name=output_root+'BOLD_signal '+session)
+        save_image=False, fig_name=output_root+'BOLD_signal '+session)
 
 ################################# Measure dFC #################################
 
@@ -308,12 +308,24 @@ print('Measurement required %0.3f seconds.' % (time.time() - tic, ))
 
 ################################# SIMILARITY ASSESSMENT #################################
 
-print_dict(dFC_analyzer.methods_corr)
+# print_dict(dFC_analyzer.methods_corr)
 dFC_analyzer.similarity_analyze(SUBJs_dFC_session_sim_dict)
 
 ################################# STATE MATCH #################################
 
 state_match = dFC_analyzer.state_match()
+# Save
+np.save('./state_match.npy', state_match) 
+
+for session in state_match:
+    visualize_conn_mat(state_match[session]['final'], \
+        title='state match results ('+session+')', \
+        name_lst_key=[measure for measure in state_match['Rest1_LR']['method_pairs']], \
+            mat_key='corr_mat', \
+        cmap='viridis',\
+        save_image=False, output_root='', \
+            fix_lim=True \
+    )
 
 ################################# SAMPLE CHECK #################################
 
