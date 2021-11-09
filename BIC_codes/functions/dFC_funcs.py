@@ -373,9 +373,31 @@ class DFC_ANALYZER:
     def MEASURES_lst(self):
         return self.MEASURES_lst_
 
+    # test
+    @property
+    def MEASURES_dict(self):
+        dict = {}
+        for measure in self.MEASURES_lst:
+            assert not measure.measure_name in dict, \
+                'duplicate measure name.'
+            dict[measure.measure_name] = measure
+        return dict
+
     @property
     def MEASURES_fit_lst(self):
         return self.MEASURES_fit_lst_
+
+    # test
+    @property
+    def MEASURES_fit_dict(self):
+        dict = {}
+        for session in self.MEASURES_fit_lst:
+            dict[session] = {}
+            for measure in self.MEASURES_fit_lst[session]:
+                assert not measure.measure_name in dict[session], \
+                    'duplicate measure name.'
+                dict[session][measure.measure_name] = measure
+        return dict
 
     @property
     def FCS_dict(self):
@@ -701,15 +723,17 @@ class DFC_ANALYZER:
 
             # averaging collected similarity scores
             state_match_dict = {}
-            state_match_dict['score'] = np.zeros((len(score_dict), len(score_dict)))
-            state_match_dict['trans_corr'] = np.zeros((len(score_dict), len(score_dict)))
-            state_match_dict['FCS_corr'] = np.zeros((len(score_dict), len(score_dict)))
+            state_match_dict['final'] = {}
+            state_match_dict['method_pairs'] = {}
+            state_match_dict['final']['score'] = np.zeros((len(score_dict), len(score_dict)))
+            state_match_dict['final']['trans_corr'] = np.zeros((len(score_dict), len(score_dict)))
+            state_match_dict['final']['FCS_corr'] = np.zeros((len(score_dict), len(score_dict)))
             for measure_i_iter, measure_i in enumerate(score_dict):
-                state_match_dict[measure_i] = {}
+                state_match_dict['method_pairs'][measure_i] = {}
                 for measure_j_iter, measure_j in enumerate(score_dict):
 
                     trans_sim_dict = score_dict[measure_i][measure_j]
-                    state_match_dict[measure_i][measure_j] = self.dFCM_state_match( \
+                    state_match_dict['method_pairs'][measure_i][measure_j] = self.dFCM_state_match( \
                         trans_sim_dict=trans_sim_dict, \
                         FCS_dict_i=FCS_dict[measure_i], \
                         FCS_dict_j=FCS_dict[measure_j], \
@@ -718,9 +742,9 @@ class DFC_ANALYZER:
                     )
                         
                     # avg over all FCSs of measure_i as a matrix
-                    state_match_dict['score'][measure_i_iter, measure_j_iter] = state_match_dict[measure_i][measure_j]['avg_score']
-                    state_match_dict['trans_corr'][measure_i_iter, measure_j_iter] = state_match_dict[measure_i][measure_j]['avg_trans_corr']
-                    state_match_dict['FCS_corr'][measure_i_iter, measure_j_iter] = state_match_dict[measure_i][measure_j]['avg_FCS_corr']
+                    state_match_dict['final']['score'][measure_i_iter, measure_j_iter] = state_match_dict['method_pairs'][measure_i][measure_j]['avg_score']
+                    state_match_dict['final']['trans_corr'][measure_i_iter, measure_j_iter] = state_match_dict['method_pairs'][measure_i][measure_j]['avg_trans_corr']
+                    state_match_dict['final']['FCS_corr'][measure_i_iter, measure_j_iter] = state_match_dict['method_pairs'][measure_i][measure_j]['avg_FCS_corr']
 
             state_match[session] = state_match_dict
         

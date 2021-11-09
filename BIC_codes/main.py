@@ -28,17 +28,47 @@ rand_node_slct = False
 num_select_nodes = 50
 
 ###### MEASUREMENT PARAMETERS ######
-n_states = 6 #12
-n_subj_clstrs = 20
-n_hid_states = 4
-n_overlap = 0.5
-W_sw = 44 # in seconds, 44, choose even Ws!?
 
-###### PARALLELIZATION PARAMETERS ######
-n_jobs = 8
-n_jobs_methods = None
-verbose=0
+# W is in sec
 
+params_methods = { \
+    # Sliding Parameters
+    'W': 44, 'n_overlap': 0.5, \
+    # State Parameters
+    'n_states': 6, 'n_subj_clstrs': 20, 'n_hid_states': 4, \
+    # Parallelization Parameters
+    'n_jobs': 2, 'verbose': 0, 'backend': 'loky' \
+}
+
+###### SIMILARITY PARAMETERS ######
+
+sim_assess_params= { \
+    'run_analysis': True, \
+    'num_samples': 100, \
+    'matching_method': 'score', \
+    'n_jobs': 8, 'backend': 'loky' \
+}
+
+###### SIMILARITY PARAMETERS ######
+
+dyn_conn_det_params = { \
+    'run_analysis': False, \
+    'N': 30, 'L': 1200, 'p': 100, \
+    'n_jobs': 8, 'backend': 'loky' \
+}
+
+###### dFC ANALYZER PARAMETERS ######
+
+params_dFC_analyzer = { \
+    # VISUALIZATION
+    'vis_TR_idx': list(range(10, 20, 1)),'save_image': True, 'output_root': output_root, \
+    # Parallelization Parameters
+    'n_jobs': 8, 'verbose': 1, 'backend': 'loky', \
+    # Similarity Assessment Parameters
+    'sim_assess_params': sim_assess_params, \
+    # Dynamic Connection Detector Parameters
+    'dyn_conn_det_params': dyn_conn_det_params \
+}
 
 
 ################################# FINDING SUBJECTs LIST #################################
@@ -218,35 +248,25 @@ for session in BOLD:
 
 ################################# Measure dFC #################################
 
-# todo get Fs of ts_dict
-params = { \
-    # Sliding Parameters
-    'W': int(W_sw*BOLD_Fs), 'n_overlap': n_overlap, \
-    # State Parameters
-    'n_states': n_states, 'n_subj_clstrs': n_subj_clstrs, 'n_hid_states': n_hid_states, \
-    # Parallelization Parameters
-    'n_jobs': n_jobs_methods, 'verbose': 0, 'backend': 'loky' \
-}
-
 ###### CONTINUOUS HMM ######
-hmm_cont = HMM_CONT(**params)
+hmm_cont = HMM_CONT(**params_methods)
 
 ###### WINDOW_LESS ######
-windowless = WINDOWLESS(**params)
+windowless = WINDOWLESS(**params_methods)
 
 ###### SLIDING WINDOW ######
-sw_pc = SLIDING_WINDOW(sw_method='pear_corr', **params)
-sw_mi = SLIDING_WINDOW(sw_method='MI', **params)
+sw_pc = SLIDING_WINDOW(sw_method='pear_corr', **params_methods)
+sw_mi = SLIDING_WINDOW(sw_method='MI', **params_methods)
 
 ###### TIME FREQUENCY ######
-time_freq_cwt = TIME_FREQ(method='CWT_mag', **params)
-time_freq_wtc = TIME_FREQ(method='WTC', **params)
+time_freq_cwt = TIME_FREQ(method='CWT_mag', **params_methods)
+time_freq_wtc = TIME_FREQ(method='WTC', **params_methods)
 
 ###### SLIDING WINDOW + CLUSTERING ######
-swc_pc = SLIDING_WINDOW_CLUSTR(base_method='pear_corr', **params)
+swc_pc = SLIDING_WINDOW_CLUSTR(base_method='pear_corr', **params_methods)
 
 ###### DISCRETE HMM ######
-hmm_disc_pc = HMM_DISC(base_method='pear_corr', **params)
+hmm_disc_pc = HMM_DISC(base_method='pear_corr', **params_methods)
 
 
 MEASURES = [
@@ -271,32 +291,9 @@ MEASURES = [
 
 ]
 
-
-sim_assess_params= { \
-    'run_analysis': True, \
-    'num_samples': 100, \
-    'matching_method': 'score', \
-    'n_jobs': n_jobs, 'backend': 'loky' \
-}
-dyn_conn_det_params = { \
-    'run_analysis': False, \
-    'N': 30, 'L': 1200, 'p': 100, \
-    'n_jobs': n_jobs, 'backend': 'loky' \
-}
-params = { \
-    # VISUALIZATION
-    'vis_TR_idx': list(range(10, 20, 1)),'save_image': True, 'output_root': output_root, \
-    # Parallelization Parameters
-    'n_jobs': n_jobs, 'verbose': 1, 'backend': 'loky', \
-    # Similarity Assessment Parameters
-    'sim_assess_params': sim_assess_params, \
-    # Dynamic Connection Detector Parameters
-    'dyn_conn_det_params': dyn_conn_det_params \
-}
-
 dFC_analyzer = DFC_ANALYZER(MEASURES_lst=MEASURES, \
     analysis_name='reproducibility assessment', \
-    **params \
+    **params_dFC_analyzer \
 )
 
 
@@ -317,5 +314,30 @@ dFC_analyzer.similarity_analyze(SUBJs_dFC_session_sim_dict)
 ################################# STATE MATCH #################################
 
 state_match = dFC_analyzer.state_match()
+
+################################# SAMPLE CHECK #################################
+
+session = 'Rest1_LR'
+
+measure_1 = dFC_analyzer.MEASURES_fit_dict[session]['ContinuousHMM']
+measure_2 = dFC_analyzer.MEASURES_fit_dict[session]['Clustering_pear_corr']
+
+subj_id = np.unique(BOLD[session].subj_id_array)[1]
+
+# re-run estimate_dFCM for a sample subject
+
+print("dFCM estimation started...")
+dFCM_i = measure_1.estimate_dFCM(time_series=get_subj_ts_dict(BOLD, subj_id=subj_id)[session])
+print("dFCM estimation done.")
+
+print("dFCM estimation started...")
+dFCM_j = measure_2.estimate_dFCM(time_series=get_subj_ts_dict(BOLD, subj_id=subj_id)[session])
+print("dFCM estimation done.")
+
+# state match visualization on the sample subject with the state matching result from all subjects
+dFC_analyzer.state_transition_analyze(dFCM_i=dFCM_i, dFCM_j=dFCM_j,  \
+    state_match_dict=state_match[session][measure_1.measure_name][measure_2.measure_name], \
+    matching_method='score', verb=True \
+) # score FCS transition
 
 #########################################################################################
