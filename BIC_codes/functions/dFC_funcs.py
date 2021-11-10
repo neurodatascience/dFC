@@ -1191,12 +1191,15 @@ class DFC_ANALYZER:
                 # )
 
                 # how many times out of all the times i has been on, j has been on too
-                transition_similarity_vec[j] = np.divide( \
-                    np.sum(np.multiply( \
-                        state_act_dict_i['state_TC'][FCS_i]['act_TC'], \
-                        state_act_dict_j['state_TC'][FCS_j]['act_TC'] )), \
-                    np.sum(state_act_dict_i['state_TC'][FCS_i]['act_TC']) \
-                )
+                if np.sum(state_act_dict_i['state_TC'][FCS_i]['act_TC'])==0:
+                    transition_similarity_vec[j] = float("NaN")
+                else:
+                    transition_similarity_vec[j] = np.divide( \
+                        np.sum(np.multiply( \
+                            state_act_dict_i['state_TC'][FCS_i]['act_TC'], \
+                            state_act_dict_j['state_TC'][FCS_j]['act_TC'] )), \
+                        np.sum(state_act_dict_i['state_TC'][FCS_i]['act_TC']) \
+                    )
 
             trans_sim_dict[FCS_i]['trans_sim_vec'] = transition_similarity_vec
 

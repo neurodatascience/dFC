@@ -22,7 +22,7 @@ data_root_sample = './sampleDATA/'
 data_root_gordon = './../../../../DATA/HCP/HCP_Gordon/'
 data_root_ica = './../../../../DATA/HCP/HCP_PTN1200/node_timeseries/3T_HCP1200_MSMAll_d50_ts2/'
 
-num_subj = 100
+num_subj = 2
 select_nodes = True
 rand_node_slct = False
 num_select_nodes = 50
@@ -275,18 +275,18 @@ MEASURES = [
 
     windowless, \
 
-    sw_pc, \
+    # sw_pc, \
     # sw_mi, \
     # sw_gLasso, \
 
-    time_freq_cwt, \
+    # time_freq_cwt, \
     # time_freq_cwt_r, \
-    time_freq_wtc, \
+    # time_freq_wtc, \
 
-    swc_pc, \
+    # swc_pc, \
     # swc_gLasso, \
 
-    hmm_disc_pc,\
+    # hmm_disc_pc,\
     # hmm_disc_gLasso, \
 
 ]
