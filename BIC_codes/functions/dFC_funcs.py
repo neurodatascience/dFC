@@ -11,6 +11,7 @@ from scipy import signal
 from copy import deepcopy
 import matplotlib.pyplot as plt
 from joblib import Parallel, delayed
+import os
 # import warnings
 
 # warnings.simplefilter('ignore')
@@ -18,6 +19,8 @@ from joblib import Parallel, delayed
 ################################# Parameters ####################################
 
 fig_dpi = 120
+fig_bbox_inches = 'tight'
+fig_pad = 0.1
 
 ################################# Other Functions ####################################
 
@@ -82,7 +85,12 @@ def visualize_state_TC(TC_lst, \
     plt.legend(TC_name_lst)
     plt.title(title)
     if save_image:
-        plt.savefig(output_root + '.png', dpi=fig_dpi)  
+        folder = output_root[:output_root.rfind('/')]
+        if not os.path.exists(folder):
+            os.makedirs(folder)
+        plt.savefig(output_root+'.png', \
+            dpi=fig_dpi, bbox_inches=fig_bbox_inches, pad_inches=fig_pad \
+        ) 
         plt.close()
     else:
         plt.show()
@@ -206,7 +214,12 @@ def visualize_conn_mat(data, title='', \
     # cbar.set_ticklabels(['0', '0.5', '1'])
 
     if save_image:
-        plt.savefig(output_root + '.png', dpi=fig_dpi)  
+        folder = output_root[:output_root.rfind('/')]
+        if not os.path.exists(folder):
+            os.makedirs(folder)
+        plt.savefig(output_root+'.png', \
+            dpi=fig_dpi, bbox_inches=fig_bbox_inches, pad_inches=fig_pad \
+        ) 
         plt.close()
     else:
         plt.show()
@@ -805,6 +818,7 @@ class DFC_ANALYZER:
     def state_transition_analyze(self, dFCM_i, dFCM_j, \
         state_match_dict=None, \
         matching_method='score', \
+        TRs=None, \
         subject='', \
         session='', \
         verb=False \
@@ -815,9 +829,13 @@ class DFC_ANALYZER:
         output_root = self.params['output_root']+'post_analysis/'+ \
             subject+'/state_match_'+ \
             dFCM_i.measure.measure_name+'_'+dFCM_j.measure.measure_name+ \
-            '_'+session
+            '_'+session+'_'
 
-        TRs = TR_intersection([dFCM_i, dFCM_j])
+        if verb:
+            print('***** Subject '+subject+' Session '+session+' *****')
+
+        if TRs is None:
+            TRs = TR_intersection([dFCM_i, dFCM_j])
         TRs_lst = list()
         for TR in TRs:
             TRs_lst.append('TR'+str(TR))
@@ -915,15 +933,18 @@ class DFC_ANALYZER:
                 save_image=self.params['save_image'], output_root=output_root+'matched_FCSs' \
             )
 
-        print('state TC corr', [state_match_dict['FCS_match'][FCS_i]['trans_corr'] for FCS_i in  state_match_dict['FCS_match']])
-        print('FCS corr', [state_match_dict['FCS_match'][FCS_i]['FCS_corr'] for FCS_i in  state_match_dict['FCS_match']])
-        print('score', [state_match_dict['FCS_match'][FCS_i]['score'] for FCS_i in  state_match_dict['FCS_match']])
+        print('state TC corr of different pairs of states: ')
+        print(np.array([state_match_dict['FCS_match'][FCS_i]['trans_corr'] for FCS_i in  state_match_dict['FCS_match']]))
+        print('FCS corr of different pairs of states: ')
+        print(np.array([state_match_dict['FCS_match'][FCS_i]['FCS_corr'] for FCS_i in  state_match_dict['FCS_match']]))
+        print('score of different pairs of states: ')
+        print(np.array([state_match_dict['FCS_match'][FCS_i]['score'] for FCS_i in  state_match_dict['FCS_match']]))
 
         ##### print matched scores #####
 
-        print('average state TC corr: ' + str(state_match_dict['avg_trans_corr']))
-        print('average FCS corr: ' + str(state_match_dict['avg_FCS_corr']))
-        print('average score: ' + str(state_match_dict['avg_score']))
+        print('average state TC corr: {:.2f}'.format(state_match_dict['avg_trans_corr']))
+        print('average FCS corr: {:.2f}'.format(state_match_dict['avg_FCS_corr']))
+        print('average score: {:.2f}'.format(state_match_dict['avg_score']))
 
         ############ state transition after matching ############
 
@@ -943,7 +964,7 @@ class DFC_ANALYZER:
         )
 
         if verb:
-            print("state Time Course Equality: {:.2f}".format(np.sum(state_TC_i == state_TC_j)/len(state_TC_i)))
+            print("Whole state Time Course Equality: {:.2f}".format(np.sum(state_TC_i == state_TC_j)/len(state_TC_i)))
 
         ##### visualize matched states co transitions #####
 
@@ -965,7 +986,7 @@ class DFC_ANALYZER:
             )
 
             if verb:
-                print("state Time Course Equality: {:.2f}".format(state_match_dict['FCS_match'][key_a]['trans_corr']))
+                print('state Time Course Equality of {s1} and {s2}: '.format(s1=key_a, s2=key_b) + '{:.2f}'.format(state_match_dict['FCS_match'][key_a]['trans_corr']))
 
         return state_match_dict
 
@@ -1231,7 +1252,10 @@ class DFC_ANALYZER:
 
                 # how many times out of all the times i has been on, j has been on too
                 if np.sum(state_act_dict_i['state_TC'][FCS_i]['act_TC'])==0:
-                    transition_similarity_vec[j] = float("NaN")
+                    if np.sum(state_act_dict_j['state_TC'][FCS_j]['act_TC'])==0:
+                        transition_similarity_vec[j] = 1
+                    else:
+                        transition_similarity_vec[j] = 0
                 else:
                     transition_similarity_vec[j] = np.divide( \
                         np.sum(np.multiply( \
@@ -1370,6 +1394,7 @@ class DYN_CONN_DETECTOR:
         self.VAR_model = None
         self.lag_order = None
         self.TH_mask = None
+        self.params = params
 
     # @property
     # def methods_corr(self):
@@ -1604,7 +1629,7 @@ class dFC:
             fix_lim=True \
         )
 
-    def visualize_TPM(self, normalize=True, save_image=False, fig_name=None):
+    def visualize_TPM(self, normalize=True, save_image=False, output_root=None):
         
         if self.TPM == []:
             return
@@ -1619,7 +1644,12 @@ class dFC:
         plt.title(self.measure_name + ' TPM')
         
         if save_image:
-            plt.savefig(fig_name + '.png', dpi=fig_dpi)  
+            folder = output_root[:output_root.rfind('/')]
+            if not os.path.exists(folder):
+                os.makedirs(folder)
+            plt.savefig(output_root+'.png', \
+                dpi=fig_dpi, bbox_inches=fig_bbox_inches, pad_inches=fig_pad \
+            ) 
             plt.close()
         else:
             plt.show()
@@ -1821,6 +1851,7 @@ class TIME_FREQ(dFC):
         self.FCS_ = []
         self.method_ = method
         self.coi_correction_ = coi_correction
+        self.params = params
     
     @property
     def coi_correction(self):
@@ -2116,6 +2147,7 @@ class SLIDING_WINDOW_CLUSTR(dFC):
         self.n_subj_clstrs = params['n_subj_clstrs']
         self.W = params['W']
         self.n_overlap = params['n_overlap']
+        self.params = params
         self.tapered_window = tapered_window
     
     @property
@@ -2317,6 +2349,7 @@ class HMM_DISC(dFC):
         self.n_hid_states = params['n_hid_states']
         self.W = params['W']
         self.n_overlap = params['n_overlap']
+        self.params = params
         self.tapered_window = tapered_window
 
     @property
@@ -2560,7 +2593,7 @@ class TIME_SERIES():
 
     def visualize(self, start_time=None, end_time=None, \
         nodes_lst=None, \
-        save_image=False, fig_name=None):
+        save_image=False, output_root=None):
 
         start = 0
         end = self.n_time
@@ -2583,7 +2616,12 @@ class TIME_SERIES():
         plt.xlabel('time (sec)')
         plt.title(self.TS_name_ + ' ' + self.session_name_ )
         if save_image:
-            plt.savefig(fig_name + '.png', dpi=fig_dpi)  
+            folder = output_root[:output_root.rfind('/')]
+            if not os.path.exists(folder):
+                os.makedirs(folder)
+            plt.savefig(output_root+'.png', \
+                dpi=fig_dpi, bbox_inches=fig_bbox_inches, pad_inches=fig_pad \
+            ) 
             plt.close()
         else:
             plt.show()

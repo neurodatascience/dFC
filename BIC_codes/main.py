@@ -61,9 +61,9 @@ dyn_conn_det_params = { \
 
 params_dFC_analyzer = { \
     # VISUALIZATION
-    'vis_TR_idx': list(range(10, 20, 1)),'save_image': False, 'output_root': output_root, \
+    'vis_TR_idx': list(range(10, 20, 1)),'save_image': True, 'output_root': output_root, \
     # Parallelization Parameters
-    'n_jobs': 8, 'verbose': 1, 'backend': 'loky', \
+    'n_jobs': 8, 'verbose': 0, 'backend': 'loky', \
     # Similarity Assessment Parameters
     'sim_assess_params': sim_assess_params, \
     # Dynamic Connection Detector Parameters
@@ -178,7 +178,7 @@ if DATA_type=='Gordon':
                 BOLD[session].append_ts(new_time_series=time_series, subj_id=subject)
 
         print( '*** Session ' + session + ': ' )
-        print( 'number of regions= '+str(BOLD[session].n_regions) + 'number of TRs= ' + str(BOLD[session].n_time) )
+        print( 'number of regions= '+str(BOLD[session].n_regions) + ', number of TRs= ' + str(BOLD[session].n_time) )
 
 
         # select nodes
@@ -191,7 +191,7 @@ if DATA_type=='Gordon':
                 nodes_idx = np.array(list(range(47, 88)) + list(range(224, 263)))
             BOLD[session].select_nodes(nodes_idx=nodes_idx)
 
-            print( 'number of regions selected= ' + str(BOLD[session].n_regions, BOLD[session].n_time) )
+            print( 'number of regions selected= ' + str(BOLD[session].n_regions) )
 
 ################################# Load Sample BOLD data #################################
 
@@ -245,7 +245,7 @@ if DATA_type=='simulated':
 
 for session in BOLD:
     BOLD[session].visualize(start_time=0, end_time=50, nodes_lst=list(range(10)), \
-        save_image=params_dFC_analyzer['save_image'], fig_name=output_root+'BOLD_signal_'+session)
+        save_image=params_dFC_analyzer['save_image'], output_root=output_root+'BOLD_signal_'+session)
 
 ################################# Measure dFC #################################
 
@@ -276,7 +276,7 @@ MEASURES = [
 
     windowless, \
 
-    # sw_pc, \
+    sw_pc, \
     # sw_mi, \
     # sw_gLasso, \
 
@@ -284,10 +284,10 @@ MEASURES = [
     # time_freq_cwt_r, \
     # time_freq_wtc, \
 
-    # swc_pc, \
+    swc_pc, \
     # swc_gLasso, \
 
-    # hmm_disc_pc,\
+    hmm_disc_pc,\
     # hmm_disc_gLasso, \
 
 ]
@@ -297,12 +297,12 @@ dFC_analyzer = DFC_ANALYZER(MEASURES_lst=MEASURES, \
     **params_dFC_analyzer \
 )
 
-
 tic = time.time()
 print('Measurement Started ...')
 SUBJs_dFC_session_sim_dict = dFC_analyzer.analyze(time_series_dict=BOLD)
 
 # Save
+np.save('./dFC_analyzer.npy', dFC_analyzer) 
 np.save('./dFC_session_sim.npy', SUBJs_dFC_session_sim_dict) 
 
 print('Measurement required %0.3f seconds.' % (time.time() - tic, ))
@@ -318,29 +318,55 @@ state_match = dFC_analyzer.state_match()
 # Save
 np.save('./state_match.npy', state_match) 
 
+################################# POST ANALYSIS #################################
+
+dFC_analyzer.post_analyze()
+
 ################################# SAMPLE CHECK #################################
 
 session = 'Rest1_LR'
 
-measure_1 = dFC_analyzer.MEASURES_fit_dict[session]['ContinuousHMM']
-measure_2 = dFC_analyzer.MEASURES_fit_dict[session]['Windowless']
-
+measure_pairs = [['ContinuousHMM', 'Windowless'], ['ContinuousHMM', 'Clustering_pear_corr'], ['ContinuousHMM', 'DiscreteHMM_pear_corr']]
 subj_id = np.unique(BOLD[session].subj_id_array)[1]
+time_series = get_subj_ts_dict(BOLD, subj_id=subj_id)[session]
 
-# re-run estimate_dFCM for a sample subject
+# if params_dFC_analyzer['n_jobs'] is None:
+#     dFCM_lst = list()
+#     for measure in dFC_analyzer.MEASURES_fit_lst[session]:
+#         dFCM_lst.append( \
+#             measure.estimate_dFCM(time_series=time_series) \
+#         )
+# else:
+#     dFCM_lst = Parallel( \
+#         n_jobs=params_dFC_analyzer['n_jobs'], verbose=params_dFC_analyzer['verbose'], backend=params_dFC_analyzer['backend'])( \
+#         delayed(measure.estimate_dFCM)(time_series=time_series) \
+#             for measure in dFC_analyzer.MEASURES_fit_lst[session])
 
-print("dFCM estimation started...")
-dFCM_i = measure_1.estimate_dFCM(time_series=get_subj_ts_dict(BOLD, subj_id=subj_id)[session])
-print("dFCM estimation done.")
+for measure_pair in measure_pairs:
+    measure_1 = dFC_analyzer.MEASURES_fit_dict[session][measure_pair[0]]
+    measure_2 = dFC_analyzer.MEASURES_fit_dict[session][measure_pair[1]]
 
-print("dFCM estimation started...")
-dFCM_j = measure_2.estimate_dFCM(time_series=get_subj_ts_dict(BOLD, subj_id=subj_id)[session])
-print("dFCM estimation done.")
+    # re-run estimate_dFCM for a sample subject
 
-# state match visualization on the sample subject with the state matching result from all subjects
-dFC_analyzer.state_transition_analyze(dFCM_i=dFCM_i, dFCM_j=dFCM_j,  \
-    state_match_dict=state_match[session][measure_1.measure_name][measure_2.measure_name], \
-    matching_method='score', verb=True \
-) # score FCS transition
+    print("dFCM estimation started...")
+    dFCM_i = measure_1.estimate_dFCM(time_series=time_series)
+    print("dFCM estimation done.")
+
+    print("dFCM estimation started...")
+    dFCM_j = measure_2.estimate_dFCM(time_series=time_series)
+    print("dFCM estimation done.")
+
+    # TRs = TR_intersection(dFCM_lst)
+    TRs = TR_intersection([dFCM_i, dFCM_j])
+
+    # state match visualization on the sample subject with the state matching result from all subjects
+    dFC_analyzer.state_transition_analyze(dFCM_i=dFCM_i, dFCM_j=dFCM_j,  \
+        state_match_dict=state_match[session]['method_pairs'][measure_1.measure_name][measure_2.measure_name], \
+        TRs=TRs, \
+        subject=subj_id, \
+        session=session, \
+        matching_method='score', 
+        verb=True \
+    ) # matching_method = score / FCS / transition
 
 #########################################################################################
