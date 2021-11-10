@@ -177,7 +177,8 @@ if DATA_type=='Gordon':
             else:
                 BOLD[session].append_ts(new_time_series=time_series, subj_id=subject)
 
-        print(BOLD[session].n_regions, BOLD[session].n_time)
+        print( '*** Session ' + session + ': ' )
+        print( 'number of regions= '+str(BOLD[session].n_regions) + 'number of TRs= ' + str(BOLD[session].n_time) )
 
 
         # select nodes
@@ -190,7 +191,7 @@ if DATA_type=='Gordon':
                 nodes_idx = np.array(list(range(47, 88)) + list(range(224, 263)))
             BOLD[session].select_nodes(nodes_idx=nodes_idx)
 
-        print(BOLD[session].n_regions, BOLD[session].n_time)
+            print( 'number of regions selected= ' + str(BOLD[session].n_regions, BOLD[session].n_time) )
 
 ################################# Load Sample BOLD data #################################
 
@@ -244,7 +245,7 @@ if DATA_type=='simulated':
 
 for session in BOLD:
     BOLD[session].visualize(start_time=0, end_time=50, nodes_lst=list(range(10)), \
-        save_image=False, fig_name=output_root+'BOLD_signal '+session)
+        save_image=params_dFC_analyzer['save_image'], fig_name=output_root+'BOLD_signal_'+session)
 
 ################################# Measure dFC #################################
 
@@ -317,22 +318,12 @@ state_match = dFC_analyzer.state_match()
 # Save
 np.save('./state_match.npy', state_match) 
 
-for session in state_match:
-    visualize_conn_mat(state_match[session]['final'], \
-        title='state match results ('+session+')', \
-        name_lst_key=[measure for measure in state_match['Rest1_LR']['method_pairs']], \
-            mat_key='corr_mat', \
-        cmap='viridis',\
-        save_image=False, output_root='', \
-            fix_lim=True \
-    )
-
 ################################# SAMPLE CHECK #################################
 
 session = 'Rest1_LR'
 
 measure_1 = dFC_analyzer.MEASURES_fit_dict[session]['ContinuousHMM']
-measure_2 = dFC_analyzer.MEASURES_fit_dict[session]['Clustering_pear_corr']
+measure_2 = dFC_analyzer.MEASURES_fit_dict[session]['Windowless']
 
 subj_id = np.unique(BOLD[session].subj_id_array)[1]
 

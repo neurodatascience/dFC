@@ -64,7 +64,7 @@ def visualize_state_TC(TC_lst, \
     state_lst, \
     TC_name_lst, \
     title='', \
-    save_image=None, fig_name=None\
+    save_image=None, output_root=None\
     ):
 
     color_lst = ['k', 'b', 'g', 'r']
@@ -82,7 +82,7 @@ def visualize_state_TC(TC_lst, \
     plt.legend(TC_name_lst)
     plt.title(title)
     if save_image:
-        plt.savefig(fig_name + '.png', dpi=fig_dpi)  
+        plt.savefig(output_root + '.png', dpi=fig_dpi)  
         plt.close()
     else:
         plt.show()
@@ -335,32 +335,26 @@ class DFC_ANALYZER:
     # if self.n_jobs is None => no parallelization
 
     def __init__(self, MEASURES_lst, analysis_name='', **params):
-    
-        self.vis_TR_idx=None
-        self.save_image=False
-        self.output_root=None, 
-        self.n_jobs=-1
-        self.verbose=1
-        self.backend='loky'
 
         self.analysis_name = analysis_name
         # self.MEASURES_lst_ = MEASURES_lst
         self.MEASURES_lst_ = self.DD_MEASURES_lst(MEASURES_lst) + self.SB_MEASURES_lst(MEASURES_lst)
         self.MEASURES_fit_lst_ = {}
-    
-        if 'vis_TR_idx' in params:
-            self.vis_TR_idx = params['vis_TR_idx'] # to visualize
-        if 'save_image' in params:
-            self.save_image = params['save_image']
-        if 'output_root' in params:
-            self.output_root = params['output_root']
-        if 'n_jobs' in params:
-            self.n_jobs = params['n_jobs']
-        if 'verbose' in params:
-            self.verbose = params['verbose'] 
-        if 'backend' in params:
-            self.backend = params['backend']
         
+        self.params = params
+        if not 'vis_TR_idx' in self.params:
+            self.params['vis_TR_idx'] = None
+        if not 'save_image' in self.params:
+            self.params['save_image'] = False
+        if not 'output_root' in self.params:
+            self.params['output_root'] = None
+        if not 'n_jobs' in self.params:
+            self.params['n_jobs'] = -1
+        if not 'verbose' in self.params:
+            self.params['verbose'] = 1
+        if not 'backend' in self.params:
+            self.params['backend'] = 'loky'
+
         self.sim_assess_params = {}
         if 'sim_assess_params' in params:
             self.sim_assess_params = params['sim_assess_params']
@@ -627,22 +621,33 @@ class DFC_ANALYZER:
                 avg_dFC_session_sim_dict[measure]['sim_mat'] += np.divide(SUBJs_dFC_session_sim_dict[subject][measure]['sim_mat'], len(SUBJECTs))
                 avg_dFC_session_sim_dict[measure]['session_lst'] = SUBJs_dFC_session_sim_dict[subject][measure]['session_lst']
             
-        visualize_conn_mat(avg_dFC_session_sim_dict, title='avg similarity matrix ', name_lst_key='session_lst', mat_key='sim_mat')
+        visualize_conn_mat(avg_dFC_session_sim_dict, \
+            title='avg inter session dFC similarity', \
+            name_lst_key='session_lst', mat_key='sim_mat', \
+            save_image=self.params['save_image'], output_root=self.params['output_root']+'similarity/inter_session_dFC' \
+        )
 
         avg_measure_repro = {}
         for measure in avg_dFC_session_sim_dict:
             avg_measure_repro[measure] = np.mean(avg_dFC_session_sim_dict[measure]['sim_mat'])
 
-        print_dict(avg_measure_repro)
+        if verb:
+            print('average inter session dFC similarity:')
+            print_dict(avg_measure_repro)
 
         ############ inter session dFC similarity for all subjects ############
 
         if show_all_subj:
             if verb:
+                print('inter session dFC similarity dict:')
                 print_dict(SUBJs_dFC_session_sim_dict)
 
             for subject in SUBJs_dFC_session_sim_dict:
-                visualize_conn_mat(SUBJs_dFC_session_sim_dict[subject], title='similarity matrix subj '+subject, name_lst_key='session_lst', mat_key='sim_mat')
+                visualize_conn_mat(SUBJs_dFC_session_sim_dict[subject], \
+                    title='inter session dFC similarity subj '+subject, \
+                    name_lst_key='session_lst', mat_key='sim_mat', \
+                    save_image=self.params['save_image'], output_root=self.params['output_root']+'similarity/inter_session_dFC'+subject \
+                    )
 
         ############ inter session measures FCS similarity ############
 
@@ -650,13 +655,19 @@ class DFC_ANALYZER:
         if verb:
             print_dict(FCS_session_sim_dict)
 
-        visualize_conn_mat(FCS_session_sim_dict, title='sessions FCS similarity matrix', name_lst_key='session_lst', mat_key='sim_mat')
+        visualize_conn_mat(FCS_session_sim_dict, \
+            title='inter session measures FCS similarity', \
+            name_lst_key='session_lst', mat_key='sim_mat', \
+            save_image=self.params['save_image'], output_root=self.params['output_root']+'similarity/inter_session_FCS' \
+        )
 
         avg_measure_repro = {}
         for measure in FCS_session_sim_dict:
             avg_measure_repro[measure] = np.mean(FCS_session_sim_dict[measure]['sim_mat'])
 
-        print_dict(avg_measure_repro)
+        if verb:
+            print('average measures FCS reproducibility:')
+            print_dict(avg_measure_repro)
 
         ############ intra session measures FCS similarity ############
 
@@ -775,15 +786,36 @@ class DFC_ANALYZER:
                     state_match_dict['final']['FCS_corr']['corr_mat'][measure_i_iter, measure_j_iter] = state_match_dict['method_pairs'][measure_i][measure_j]['avg_FCS_corr']
 
             state_match[session] = state_match_dict
+
+        ###### results visualization ######
+
+        for session in state_match:
+            visualize_conn_mat(state_match[session]['final'], \
+                title='intra session state match results ('+session+')', \
+                name_lst_key=[measure for measure in state_match['Rest1_LR']['method_pairs']], \
+                mat_key='corr_mat', \
+                cmap='viridis',\
+                save_image=self.params['save_image'], output_root=self.params['output_root']+'state_match/results_'+session, \
+                fix_lim=True \
+            )
         
         return state_match
 
 
-    def state_transition_analyze(self, dFCM_i, dFCM_j, state_match_dict=None, matching_method='score', verb=False):
-    
-        save_image = self.save_image
-        fig_name = '?'
+    def state_transition_analyze(self, dFCM_i, dFCM_j, \
+        state_match_dict=None, \
+        matching_method='score', \
+        subject='', \
+        session='', \
+        verb=False \
+        ):
+
         normalize=False
+
+        output_root = self.params['output_root']+'post_analysis/'+ \
+            subject+'/state_match_'+ \
+            dFCM_i.measure.measure_name+'_'+dFCM_j.measure.measure_name+ \
+            '_'+session
 
         TRs = TR_intersection([dFCM_i, dFCM_j])
         TRs_lst = list()
@@ -811,7 +843,7 @@ class DFC_ANALYZER:
             TRs=TRs, TC_name_lst=TC_name_lst , \
             state_lst=FCS_lst, \
             title='state transition without matching', \
-            save_image=None, fig_name=None\
+            save_image=self.params['save_image'], output_root=output_root+'without_match' \
         )
 
         ############ state matching ############
@@ -865,11 +897,23 @@ class DFC_ANALYZER:
         D_B = state_match_dict['matched_FCSs']
 
         if normalize:
-            visualize_conn_mat(dFC_dict_slice(dFC_dict_normalize(D_A), list(range(0, 10, 1))), disp_diag=False, cmap='viridis')
-            visualize_conn_mat(dFC_dict_slice(dFC_dict_normalize(D_B), list(range(0, 10, 1))), disp_diag=False, cmap='viridis')
+            visualize_conn_mat(dFC_dict_normalize(D_A), \
+                disp_diag=False, cmap='viridis', \
+                save_image=self.params['save_image'], output_root=output_root+'original_FCSs' \
+            )
+            visualize_conn_mat(dFC_dict_normalize(D_B), \
+                disp_diag=False, cmap='viridis', \
+                save_image=self.params['save_image'], output_root=output_root+'matched_FCSs' \
+            )
         else:
-            visualize_conn_mat(dFC_dict_slice(D_A, list(range(0, 10, 1))), disp_diag=False, cmap='viridis')
-            visualize_conn_mat(dFC_dict_slice(D_B, list(range(0, 10, 1))), disp_diag=False, cmap='viridis')
+            visualize_conn_mat(D_A, \
+                disp_diag=False, cmap='viridis', \
+                save_image=self.params['save_image'], output_root=output_root+'original_FCSs' \
+            )
+            visualize_conn_mat(D_B, \
+                disp_diag=False, cmap='viridis', \
+                save_image=self.params['save_image'], output_root=output_root+'matched_FCSs' \
+            )
 
         print('state TC corr', [state_match_dict['FCS_match'][FCS_i]['trans_corr'] for FCS_i in  state_match_dict['FCS_match']])
         print('FCS corr', [state_match_dict['FCS_match'][FCS_i]['FCS_corr'] for FCS_i in  state_match_dict['FCS_match']])
@@ -895,7 +939,7 @@ class DFC_ANALYZER:
             TRs=TRs, TC_name_lst=TC_name_lst, \
             state_lst=FCS_lst, \
             title='state transition after matching', \
-            save_image=None, fig_name=None\
+            save_image=self.params['save_image'], output_root=output_root+'after_match' \
         )
 
         if verb:
@@ -917,7 +961,7 @@ class DFC_ANALYZER:
                 TRs=TRs, TC_name_lst=TC_name_lst, \
                 state_lst=['off', 'on'], \
                 title='state transition of ' + key_a + ' and ' + key_b, \
-                save_image=None, fig_name=None\
+                save_image=self.params['save_image'], output_root=output_root+'trans_'+key_a+'_and_'+key_b \
             )
 
             if verb:
@@ -957,6 +1001,17 @@ class DFC_ANALYZER:
                     str(time_lst[i]) \
                     )
 
+    def post_analyze(self):
+
+        # # todo add session
+        # self.visualize_dFCMs(dFCM_lst=dFCM_lst, \
+        #     TR_idx=self.params['vis_TR_idx'], \
+        #     subj_id=time_series.subj_id_array[0], \
+        #     )
+
+        pass
+
+
     def analyze(self, time_series_dict):
 
         #time_series_dict is a dict of time_series
@@ -972,10 +1027,6 @@ class DFC_ANALYZER:
         self.visualize_FCS(normalize=True, \
                                 threshold=0.0, \
                                 )
-
-        ### FCS similarity ###
-
-        
         
         ### estimate dFCM ###
 
@@ -986,15 +1037,15 @@ class DFC_ANALYZER:
         #### Methods dFC Corr MAT ###
 
         fig_name = None
-        if self.save_image:
-            output_root = self.output_root+'dFC/'
-            fig_name = output_root + 'avg_dFC_corr.png' 
+        if self.params['save_image']:
+            output_root = self.params['output_root']+'dFC/'
+            fig_name = output_root + 'avg_dFC_corr' 
 
         visualize_conn_mat(self.methods_corr, \
-            title='Correlation of measured dFC', \
+            title='intra session dFC correlation', \
             name_lst_key='measure_lst', mat_key='corr_mat', \
             cmap='viridis',\
-            save_image=self.save_image, output_root=fig_name, \
+            save_image=self.params['save_image'], output_root=fig_name, \
                 fix_lim=True \
         )
 
@@ -1041,7 +1092,7 @@ class DFC_ANALYZER:
 
             time_series = time_series_dict[session]
             SB_MEASURES_lst = self.SB_MEASURES_lst(self.MEASURES_lst)
-            if self.n_jobs is None:
+            if self.params['n_jobs'] is None:
                 SB_MEASURES_lst_NEW = list()
                 for measure in SB_MEASURES_lst:
                     SB_MEASURES_lst_NEW.append( \
@@ -1049,33 +1100,31 @@ class DFC_ANALYZER:
                         )
             else:
                 SB_MEASURES_lst_NEW = Parallel( \
-                    n_jobs=self.n_jobs, verbose=self.verbose, backend=self.backend)( \
+                    n_jobs=self.params['n_jobs'], verbose=self.params['verbose'], backend=self.params['backend'])( \
                     delayed(measure.estimate_FCS)(time_series=time_series) \
                         for measure in SB_MEASURES_lst)
             self.MEASURES_fit_lst_[session] = self.DD_MEASURES_lst(self.MEASURES_lst) + SB_MEASURES_lst_NEW
 
-    def estimate_all_dFCM(self, time_series_dict, visualize_dFCM=True):
+    def estimate_all_dFCM(self, time_series_dict):
 
         # time_series_dict is a dict of time_series
         
         SUBJECTs = common_subj_lst(time_series_dict) 
 
-        if self.n_jobs is None:
+        if self.params['n_jobs'] is None:
             OUT = list()
             for subject in SUBJECTs:
                 OUT.append( \
                     self.subj_lvl_analysis( \
                     time_series_dict=get_subj_ts_dict(time_series_dict, subj_id=subject), \
-                    visualize_dFCM=visualize_dFCM \
                     ))
         else:
             OUT = Parallel( \
-                        n_jobs=self.n_jobs, \
-                        verbose=self.verbose, \
-                        backend=self.backend)( \
+                        n_jobs=self.params['n_jobs'], \
+                        verbose=self.params['verbose'], \
+                        backend=self.params['backend'])( \
                     delayed(self.subj_lvl_analysis)( \
                         time_series_dict=get_subj_ts_dict(time_series_dict, subj_id=subject), \
-                        visualize_dFCM=visualize_dFCM \
                         ) \
                         for subject in SUBJECTs)
             
@@ -1098,7 +1147,7 @@ class DFC_ANALYZER:
 
         return SUBJs_dFC_session_sim_dict
 
-    def subj_lvl_analysis(self, time_series_dict, visualize_dFCM=True):
+    def subj_lvl_analysis(self, time_series_dict):
 
         # time_series_dict is a dict of time_series
 
@@ -1107,7 +1156,7 @@ class DFC_ANALYZER:
         for session in time_series_dict:
             time_series = time_series_dict[session]
             # dFCM_lst = self.estimate_dFCM(time_series=time_series)
-            if self.n_jobs is None:
+            if self.params['n_jobs'] is None:
                 dFCM_lst = list()
                 for measure in self.MEASURES_fit_lst_[session]:
                     dFCM_lst.append( \
@@ -1115,7 +1164,7 @@ class DFC_ANALYZER:
                     )
             else:
                 dFCM_lst = Parallel( \
-                    n_jobs=self.n_jobs, verbose=self.verbose, backend=self.backend)( \
+                    n_jobs=self.params['n_jobs'], verbose=self.params['verbose'], backend=self.params['backend'])( \
                     delayed(measure.estimate_dFCM)(time_series=time_series) \
                         for measure in self.MEASURES_fit_lst_[session])
 
@@ -1125,16 +1174,6 @@ class DFC_ANALYZER:
                 MEASURES_dFCM[dFCM.measure.measure_name] = dFCM
 
             dFCM_dict[session] = MEASURES_dFCM
-
-        # todo
-        # MEASURES_dFC_var = self.dFCM_var(MEASURES_dFCM)
-
-            # todo add session
-            if visualize_dFCM:
-                self.visualize_dFCMs(dFCM_lst=dFCM_lst, \
-                    TR_idx=self.vis_TR_idx, \
-                    subj_id=time_series.subj_id_array[0], \
-                    )
 
             # self.dFC_corr_assess returns a dict with 'corr_mat', 
             # 'measure_lst', 'sb_measure_lst', and 'state_match' keys
@@ -1272,8 +1311,8 @@ class DFC_ANALYZER:
 
             visualize_conn_mat(data=SUBJs_dyn_conn[subject], \
                 title='Subject '+subject+' Dynamic Connections', \
-                save_image=self.save_image, \
-                output_root=self.output_root+'DYN_CONN/'+'subject'+subject+'_dyn_conn', \
+                save_image=self.params['save_image'], \
+                output_root=self.params['output_root']+'DYN_CONN/'+'subject'+subject+'_dyn_conn', \
                 fix_lim=True \
             )
 
@@ -1289,26 +1328,27 @@ class DFC_ANALYZER:
             TRs = [TRs[i] for i in TR_idx]
 
         for dFCM in dFCM_lst:
-            if self.save_image:
-                output_root = self.output_root+'dFC/'
+            if self.params['save_image']:
+                output_root = self.params['output_root']+'dFC/'
                 dFCM.visualize_dFC(TRs=TRs, normalize=normalize, threshold=threshold, \
                     fix_lim=fix_lim, \
-                    save_image=self.save_image, \
+                    save_image=self.params['save_image'], \
                     fig_name= output_root+'subject'+subj_id+'_'+dFCM.measure.measure_name+'_dFC')
             else:
                 dFCM.visualize_dFC(TRs=TRs, normalize=normalize, threshold=threshold, fix_lim=fix_lim)
 
     def visualize_FCS(self, normalize=True, threshold=0.0):
 
-        for measure in self.MEASURES_lst:  
-            if self.save_image:
-                output_root = self.output_root + 'FCS/'
-                measure.visualize_FCS(normalize=normalize, threshold=threshold, save_image=True, \
-                    fig_name= output_root + measure.measure_name + '_FCS')
-                # measure.visualize_TPM(normalize=normalize)
-            else:
-                measure.visualize_FCS(normalize=normalize, threshold=threshold) # normalize?
-                # measure.visualize_TPM(normalize=normalize)
+        for session in self.MEASURES_fit_lst:
+            for measure in self.MEASURES_fit_lst[session]:  
+                if self.params['save_image']:
+                    output_root = self.params['output_root'] + 'FCS/'
+                    measure.visualize_FCS(normalize=normalize, threshold=threshold, save_image=True, \
+                        fig_name= output_root + measure.measure_name+'_FCS_'+session)
+                    # measure.visualize_TPM(normalize=normalize)
+                else:
+                    measure.visualize_FCS(normalize=normalize, threshold=threshold) # normalize?
+                    # measure.visualize_TPM(normalize=normalize)
                 
 
 ############################# Dynamic Connection Detector class ################################
@@ -1330,9 +1370,6 @@ class DYN_CONN_DETECTOR:
         self.VAR_model = None
         self.lag_order = None
         self.TH_mask = None
-        self.n_jobs = params['n_jobs']
-        self.verbose = params['verbose'] 
-        self.backend = params['backend']
 
     # @property
     # def methods_corr(self):
@@ -1352,7 +1389,7 @@ class DYN_CONN_DETECTOR:
 
         SURROGATE = self.gen_surrogate( \
             time_series=time_series, \
-            N=N, L=L, verbose=self.verbose \
+            N=N, L=L, verbose=self.params['verbose']  \
         )
         dFCM_var = self.calc_dFC_var(time_series=SURROGATE, MEASURES_lst=MEASURES_lst)
         TH_mask = self.calc_TH_mask(dFCM_var, a=self.a)
@@ -1363,21 +1400,21 @@ class DYN_CONN_DETECTOR:
 
         SUBJECTs = list(set(time_series.subj_id_array))
         
-        if self.n_jobs is None:
+        if self.params['n_jobs'] is None:
             SUBJs_TH_mask_lst = list()
             for subject in SUBJECTs:
                 SURROGATE = self.gen_surrogate( \
                     time_series=time_series.get_subj_ts(subj_id=subject), \
-                    N=N, L=L, verbose=self.verbose \
+                    N=N, L=L, verbose=self.params['verbose']  \
                 )
                 dFCM_var = self.calc_dFC_var(time_series=SURROGATE, MEASURES_lst=MEASURES_lst)
                 TH_mask = self.calc_TH_mask(dFCM_var, a=self.a)
                 SUBJs_TH_mask_lst.append(TH_mask)
         else:
             SUBJs_TH_mask_lst = Parallel( \
-                    n_jobs=self.n_jobs, \
-                    verbose=self.verbose, \
-                    backend=self.backend)( \
+                    n_jobs=self.params['n_jobs'], \
+                    verbose=self.params['verbose'] , \
+                    backend=self.params['backend'])( \
                 delayed(self.subj_lvl_calc_TH_mask)( \
                     time_series=time_series.get_subj_ts(subj_id=subject), \
                     MEASURES_lst=MEASURES_lst, \
@@ -1419,7 +1456,7 @@ class DYN_CONN_DETECTOR:
         # OUTPUT shape = [sample, measure, node, node]
 
         dFC_analyzer = DFC_ANALYZER(MEASURES_lst=MEASURES_lst, \
-            n_jobs=self.n_jobs, verbose=self.verbose, backend=self.backend \
+            n_jobs=self.params['n_jobs'], verbose=self.params['verbose'] , backend=self.params['backend'] \
             )
 
         print("FCS estimation started...")
@@ -1431,7 +1468,7 @@ class DYN_CONN_DETECTOR:
         print("dFCM estimation started...")
         # SUBJs_dFC_var for SURROGATE is dFC_var of different bootstrap SAMPLEs
         SAMPLEs_dFC_var = dFC_analyzer.estimate_all_dFCM( \
-            time_series=time_series, visualize_dFCM=False \
+            time_series=time_series \
             )
         print("dFCM estimation done.")
 
@@ -1784,9 +1821,6 @@ class TIME_FREQ(dFC):
         self.FCS_ = []
         self.method_ = method
         self.coi_correction_ = coi_correction
-        self.n_jobs = params['n_jobs']
-        self.verbose = params['verbose']
-        self.backend = params['backend']
     
     @property
     def coi_correction(self):
@@ -1866,7 +1900,7 @@ class TIME_FREQ(dFC):
             time_series.n_regions, time_series.n_regions))
 
         for i in range(time_series.n_regions):
-            if self.n_jobs is None:
+            if self.params['n_jobs'] is None:
                 Q = list()
                 for j in range(time_series.n_regions):
                     Q.append(self.WT_dFC( \
@@ -1876,7 +1910,7 @@ class TIME_FREQ(dFC):
                         J=J, s0=s0, dj=dj))
             else:
                 Q = Parallel( \
-                    n_jobs=self.n_jobs, verbose=self.verbose, backend=self.backend)( \
+                    n_jobs=self.params['n_jobs'], verbose=self.params['verbose'], backend=self.params['backend'])( \
                     delayed(self.WT_dFC)( \
                                     Y1=time_series.data[i, :], \
                                     Y2=time_series.data[j, :], \
@@ -2082,9 +2116,6 @@ class SLIDING_WINDOW_CLUSTR(dFC):
         self.n_subj_clstrs = params['n_subj_clstrs']
         self.W = params['W']
         self.n_overlap = params['n_overlap']
-        self.n_jobs = params['n_jobs']
-        self.verbose = params['verbose']
-        self.backend = params['backend']
         self.tapered_window = tapered_window
     
     @property
@@ -2159,7 +2190,7 @@ class SLIDING_WINDOW_CLUSTR(dFC):
 
         if self.base_method=='CWT_mag' or self.base_method=='CWT_phase_r' \
             or self.base_method=='CWT_phase_a' or self.base_method=='WTC':
-            params = {'n_jobs': self.n_jobs, 'verbose': self.verbose, 'backend': self.backend}
+            params = {'n_jobs': self.params['n_jobs'], 'verbose': self.params['verbose'], 'backend': self.params['backend']}
             base_dFC = TIME_FREQ(method=self.base_method, **params)
         else:
             params = {'W': self.W, 'n_overlap': self.n_overlap}
@@ -2215,7 +2246,7 @@ class SLIDING_WINDOW_CLUSTR(dFC):
 
         if self.base_method=='CWT_mag' or self.base_method=='CWT_phase_r' \
             or self.base_method=='CWT_phase_a' or self.base_method=='WTC':
-            params = {'n_jobs': self.n_jobs, 'verbose': self.verbose, 'backend': self.backend}
+            params = {'n_jobs': self.params['n_jobs'], 'verbose': self.params['verbose'], 'backend': self.params['backend']}
             base_dFC = TIME_FREQ(method=self.base_method, **params)
         else:
             params = {'W': self.W, 'n_overlap': self.n_overlap}
@@ -2286,9 +2317,6 @@ class HMM_DISC(dFC):
         self.n_hid_states = params['n_hid_states']
         self.W = params['W']
         self.n_overlap = params['n_overlap']
-        self.n_jobs = params['n_jobs']
-        self.verbose = params['verbose']
-        self.backend = params['backend']
         self.tapered_window = tapered_window
 
     @property
@@ -2309,7 +2337,7 @@ class HMM_DISC(dFC):
 
         params = {'W': self.W, 'n_overlap': self.n_overlap, \
             'n_subj_clstrs': self.n_subj_clstrs, 'n_states': self.n_states, \
-            'n_jobs': self.n_jobs, 'verbose': self.verbose, 'backend': self.backend}
+            'n_jobs': self.params['n_jobs'], 'verbose': self.params['verbose'], 'backend': self.params['backend']}
         self.swc = SLIDING_WINDOW_CLUSTR(base_method=self.base_method, \
             tapered_window=self.tapered_window, **params)
         self.swc.estimate_FCS(time_series=time_series)
@@ -2531,7 +2559,8 @@ class TIME_SERIES():
             self.nodes_selection_ = nodes_idx    
 
     def visualize(self, start_time=None, end_time=None, \
-        nodes_lst=None, save_image=False, fig_name=None):
+        nodes_lst=None, \
+        save_image=False, fig_name=None):
 
         start = 0
         end = self.n_time
