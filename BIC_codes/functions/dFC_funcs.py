@@ -805,7 +805,7 @@ class DFC_ANALYZER:
         for session in state_match:
             visualize_conn_mat(state_match[session]['final'], \
                 title='intra session state match results ('+session+')', \
-                name_lst_key=[measure for measure in state_match['Rest1_LR']['method_pairs']], \
+                name_lst_key=[measure for measure in state_match[session]['method_pairs']], \
                 mat_key='corr_mat', \
                 cmap='viridis',\
                 save_image=self.params['save_image'], output_root=self.params['output_root']+'state_match/results_'+session, \
