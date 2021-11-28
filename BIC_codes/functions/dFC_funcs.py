@@ -388,17 +388,30 @@ class DFC_ANALYZER:
             methods_corr = list()
             
             # dFC corr
-            for methods_corr_subj_dict in self.methods_assess_dict_lst:
-                methods_corr.append(methods_corr_subj_dict[session]['corr_mat'])
+            for methods_assess_subj_dict in self.methods_assess_dict_lst:
+                methods_corr.append(methods_assess_subj_dict[session]['corr_mat'])
             
             methods_corr = np.array(methods_corr)
             methods_corr_dict[session]['corr_mat'] = np.mean(methods_corr, axis=0)
-            methods_corr_dict[session]['measure_lst'] = methods_corr_subj_dict[session]['measure_lst']
+            methods_corr_dict[session]['measure_lst'] = methods_assess_subj_dict[session]['measure_lst']
 
         return methods_corr_dict
 
     @property
     def methods_assess_dict_lst(self):
+        # methods_assess_dict_lst:
+        # -> subject (list)
+        #   -> session
+        #       -> methods_corr
+        #       -> measure_lst
+        #       -> state_match
+        #           -> [measure_i][measure_j][FCS_i]['trans_sim_vec'] 
+        #       -> FO
+        #           -> [measure][FCS]
+        #       -> trans_freq
+        #           -> [measure] -> trans_freq
+        #           -> [measure] -> trans_norm
+
         return self.methods_assess_dict_lst_
 
     @property
@@ -483,6 +496,53 @@ class DFC_ANALYZER:
             FCS_sim_dict[FCS_i] = FCS_similarity_vec
 
         return FCS_sim_dict
+
+    def states_FO_vec(self):
+        # it assumes all subjects have all sessions and the order of their measures is the same ?
+        # FO_vec_dict[session][measure][state] is the FO vector; each element is the FO for a subject
+        
+        FO_vec_dict = {}
+        for s, methods_assess_subj_dict in enumerate(self.methods_assess_dict_lst):
+            for session in methods_assess_subj_dict:
+                if s==0:
+                    FO_vec_dict[session] = {}
+                for measure in methods_assess_subj_dict[session]['FO']:
+                    if s==0:
+                        FO_vec_dict[session][measure] = {}
+                    for state in methods_assess_subj_dict[session]['FO'][measure]:
+                        if s==0:
+                            FO_vec_dict[session][measure][state] = np.zeros((len(self.methods_assess_dict_lst),))
+                        FO_vec_dict[session][measure][state][s] = methods_assess_subj_dict[session]['FO'][measure][state]
+
+        return FO_vec_dict
+
+    def methods_avg_trans_freq(self):
+        # it assumes all subjects have all sessions and the order of their measures is the same ?
+        # FO_vec_dict[session][state] is the FO vector; each element is the FO for a subject
+        
+        avg_trans_freq = {}
+        for s, methods_assess_subj_dict in enumerate(self.methods_assess_dict_lst):
+            for session in methods_assess_subj_dict:
+                if s==0:
+                    avg_trans_freq[session] = {}
+                for measure in methods_assess_subj_dict[session]['trans_freq']:
+                    trans_freq = methods_assess_subj_dict[session]['trans_freq'][measure]
+                    if s==0:
+                        avg_trans_freq[session][measure] = {}
+                        avg_trans_freq[session][measure]['trans_freq'] = list()
+                        avg_trans_freq[session][measure]['trans_norm'] = list()   
+                    avg_trans_freq[session][measure]['trans_freq'].append(trans_freq['trans_freq'])
+                    avg_trans_freq[session][measure]['trans_norm'].append(trans_freq['trans_norm'])
+
+        for session in avg_trans_freq:
+            for measure in avg_trans_freq[session]:
+                avg_trans_freq[session][measure]['trans_freq'] = np.array(avg_trans_freq[session][measure]['trans_freq'])
+                avg_trans_freq[session][measure]['trans_freq'] = np.mean(avg_trans_freq[session][measure]['trans_freq'])
+                avg_trans_freq[session][measure]['trans_norm'] = np.array(avg_trans_freq[session][measure]['trans_norm'])
+                avg_trans_freq[session][measure]['trans_norm'] = np.mean(avg_trans_freq[session][measure]['trans_norm'])
+
+        return avg_trans_freq
+
 
     def SB_MEASURES_lst(self, MEASURES_lst): # returns state_based measures
         SB_MEASURES = list()
