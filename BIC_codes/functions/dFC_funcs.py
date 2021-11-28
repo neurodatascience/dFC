@@ -1268,6 +1268,61 @@ class DFC_ANALYZER:
 
         return trans_sim_dict
     
+    def FO_calc(self, dFCM, common_TRs=None):
+
+        # returns, for each state the Fractional Occupancy (FO)
+        # see Visaure et al., 2017
+        # it only considers TRs in common_TRs
+
+        if common_TRs is None:
+            common_TRs = dFCM.TR_array
+
+        state_act_dict = dFCM.state_act_dict(TRs=common_TRs)
+
+        FO = {}
+        for FCS_key in state_act_dict['state_TC']:
+            FO[FCS_key] = np.mean(state_act_dict['state_TC'][FCS_key]['act_TC'])
+
+        return FO
+
+    def transition_freq(self, dFCM, common_TRs=None):
+        # returns the number of total state transition within common_TRs -> trans_freq
+        # and the number of total state transitions regardless of common_TRs
+        # but normalized by total number of TRs -> trans_norm
+
+        if common_TRs is None:
+            common_TRs = dFCM.TR_array
+
+        TRs_lst = list()
+        for TR in common_TRs:
+            TRs_lst.append('TR'+str(TR))
+
+        trans_freq_dict = {}
+
+        trans_freq = 0
+        last_TR = None
+        for TR in dFCM.FCS_idx:
+            if TR in TRs_lst:
+                if not last_TR is None:
+                    if dFCM.FCS_idx[TR]!=dFCM.FCS_idx[last_TR]:
+                        trans_freq += 1
+                last_TR = TR
+
+        trans_freq_dict['trans_freq'] = trans_freq
+
+        trans_norm = 0
+        last_TR = None
+        for TR in dFCM.FCS_idx:
+            if not last_TR is None:
+                if dFCM.FCS_idx[TR]!=dFCM.FCS_idx[last_TR]:
+                    trans_norm += 1
+            last_TR = TR
+        trans_norm = trans_norm / len(dFCM.FCS_idx)
+
+        trans_freq_dict['trans_norm'] = trans_norm
+
+        return trans_freq_dict
+
     def dFC_corr_assess(self, dFCM_lst):
 
         ########## dFCM corr ##########
@@ -1322,10 +1377,32 @@ class DFC_ANALYZER:
                     dFCM_j=sb_dFCM_dict[sb_measure_j], \
                     common_TRs=common_TRs \
                 )
+
+        ########## Fractional Occupancy ##########
+
+        FO = {}
+        for sb_measure in sb_dFCM_dict:
+            FO[sb_measure] = self.FO_calc(
+                dFCM=sb_dFCM_dict[sb_measure], \
+                common_TRs=common_TRs \
+            )
+
+        ########## transition frequency ##########
+
+        trans_freq = {}
+        for sb_measure in sb_dFCM_dict:
+            trans_freq[sb_measure] = self.transition_freq(
+                dFCM=sb_dFCM_dict[sb_measure], \
+                common_TRs=common_TRs \
+            )
                 
+        ##############################################
+
         methods_corr['corr_mat'] = corr_mat
         methods_corr['measure_lst'] = measure_lst
         methods_corr['state_match'] = state_match
+        methods_corr['FO'] = FO
+        methods_corr['trans_freq'] = trans_freq
 
         return methods_corr
 
@@ -2674,6 +2751,13 @@ class DFCM():
         return self.TR_array_.astype(int)
 
     @property
+    def TR_keys(self):
+        TRs_lst = list()
+        for TR in self.TR_array:
+            TRs_lst.append('TR'+str(TR))
+        return TRs_lst
+
+    @property
     def n_regions(self):
         return self.n_regions_
 
@@ -2733,6 +2817,7 @@ class DFCM():
     # test
     def state_act_dict(self, TRs=None):
         # returns a dict including each FCS and its activation times
+        # the TRs arg can be used to set a common set of TRs
 
         if TRs is None:
             TRs = self.TR_array
