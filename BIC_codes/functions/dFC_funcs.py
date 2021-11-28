@@ -376,19 +376,19 @@ class DFC_ANALYZER:
         # if 'dyn_conn_det_params' in params:
             # self.dyn_conn_det_params = params['dyn_conn_det_params']
 
-        self.methods_corr_dict_lst_ = list()
+        self.methods_assess_dict_lst_ = list()
 
     @property
     def methods_corr(self):
         # it assumes all subjects have all sessions and the order of their measures is the same ?
         
         methods_corr_dict = {}
-        for session in self.methods_corr_dict_lst[0]:
+        for session in self.methods_assess_dict_lst[0]:
             methods_corr_dict[session] = {}
             methods_corr = list()
             
             # dFC corr
-            for methods_corr_subj_dict in self.methods_corr_dict_lst:
+            for methods_corr_subj_dict in self.methods_assess_dict_lst:
                 methods_corr.append(methods_corr_subj_dict[session]['corr_mat'])
             
             methods_corr = np.array(methods_corr)
@@ -398,8 +398,8 @@ class DFC_ANALYZER:
         return methods_corr_dict
 
     @property
-    def methods_corr_dict_lst(self):
-        return self.methods_corr_dict_lst_
+    def methods_assess_dict_lst(self):
+        return self.methods_assess_dict_lst_
 
     @property
     def MEASURES_lst(self):
@@ -754,7 +754,7 @@ class DFC_ANALYZER:
 
             # collecting similarity scores across subjects
             score_dict = {}
-            for subj_i, subj_dict in enumerate(self.methods_corr_dict_lst_):
+            for subj_i, subj_dict in enumerate(self.methods_assess_dict_lst_):
                 for measure_i in subj_dict[session]['state_match']:
                     if subj_i==0:
                         score_dict[measure_i] = {}
@@ -1164,7 +1164,7 @@ class DFC_ANALYZER:
         #     # MEASURES_dFC_var contains dFC_var of different measures of a subject
         #     SUBJs_dFC_var[SUBJECTs[s]] = MEASURES_dFC_var
                         
-        self.methods_corr_dict_lst_ = [out[0] for out in OUT]
+        self.methods_assess_dict_lst_ = [out[0] for out in OUT]
 
         return SUBJs_dFC_session_sim_dict
 
@@ -1340,7 +1340,7 @@ class DFC_ANALYZER:
         assert len(common_TRs)!=0, \
             'No TR intersection.'
 
-        methods_corr = {}
+        methods_assess = {}
         corr_mat = np.zeros((len(measure_lst), len(measure_lst)))
         for i in range(len(measure_lst)):
             for j in range(i+1, len(measure_lst)):
@@ -1398,13 +1398,13 @@ class DFC_ANALYZER:
                 
         ##############################################
 
-        methods_corr['corr_mat'] = corr_mat
-        methods_corr['measure_lst'] = measure_lst
-        methods_corr['state_match'] = state_match
-        methods_corr['FO'] = FO
-        methods_corr['trans_freq'] = trans_freq
+        methods_assess['corr_mat'] = corr_mat
+        methods_assess['measure_lst'] = measure_lst
+        methods_assess['state_match'] = state_match
+        methods_assess['FO'] = FO
+        methods_assess['trans_freq'] = trans_freq
 
-        return methods_corr
+        return methods_assess
 
     def visualize_dyn_conns(self, SUBJs_dyn_conn):
         
