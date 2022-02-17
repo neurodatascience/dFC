@@ -10,7 +10,7 @@ os.environ["OMP_NUM_THREADS"] = '64'
 
 ################################# Parameters #################################
 
-subj_id = 1
+subj_id = '100206'
 
 ###### DATA PARAMETERS ######
 
@@ -77,10 +77,11 @@ params_dFC_analyzer = { \
 
 ################################# LOAD DATA #################################
 
-data_loader = DATA_LOADER(**params_data_load)
-BOLD = data_loader.load(subj_id2load=subj_id)
+dFC_analyzer = np.load('./dFC_analyzer.npy',allow_pickle='TRUE').item()
+data_loader = np.load('./data_loader.npy',allow_pickle='TRUE').item()
+SUBJ_output = np.load('./dFC_assessed/SUBJ_'+str(subj_id)+'_output.npy',allow_pickle='TRUE').item()
 
-dFC_analyzer = np.load('./dFC_analyzer.npy',allow_pickle='TRUE')
+BOLD = data_loader.load(subj_id2load=subj_id)
 
 ################################# POST ANALYSIS #################################
 

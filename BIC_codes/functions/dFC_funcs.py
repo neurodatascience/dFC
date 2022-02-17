@@ -1190,6 +1190,8 @@ class DFC_ANALYZER:
             MEASURES_dFC_var[measure] = V
         return MEASURES_dFC_var
 
+    
+
     def estimate_all_FCS(self, time_series_dict):
 
         # time_series_dict is a dict of time_series
@@ -1214,6 +1216,8 @@ class DFC_ANALYZER:
     def estimate_all_dFCM(self, time_series_dict):
 
         # time_series_dict is a dict of time_series
+
+        SUBJ_output = {}
         
         SUBJECTs = common_subj_lst(time_series_dict) 
 
@@ -1233,12 +1237,10 @@ class DFC_ANALYZER:
                         time_series_dict=get_subj_ts_dict(time_series_dict, subj_id=subject), \
                         ) \
                         for subject in SUBJECTs)
-            
-        # out[0] are dFC_corr_assess_dict of different SUBJECTs
-        # out[1] are dFC_session_sim_dict of different SUBJECTs
+        
         SUBJs_dFC_session_sim_dict = {}
         for s, out in enumerate(OUT):
-            dFC_session_sim_dict = out[1]
+            dFC_session_sim_dict = out['dFC_session_sim_dict']
             # dFC_session_sim_dict contains similarity between different sessions and in different measures in each subject
             SUBJs_dFC_session_sim_dict[SUBJECTs[s]] = dFC_session_sim_dict
 
@@ -1249,13 +1251,17 @@ class DFC_ANALYZER:
         #     # MEASURES_dFC_var contains dFC_var of different measures of a subject
         #     SUBJs_dFC_var[SUBJECTs[s]] = MEASURES_dFC_var
                         
-        self.methods_assess_dict_lst_ = [out[0] for out in OUT]
+        # self.methods_assess_dict_lst_ = [out['dFC_corr_assess_dict'] for out in OUT]
+        SUBJ_output['dFC_sim'] = SUBJs_dFC_session_sim_dict
+        SUBJ_output['dFC_assess'] = [out['dFC_corr_assess_dict'] for out in OUT]
 
-        return SUBJs_dFC_session_sim_dict
+        return SUBJ_output
 
     def subj_lvl_analysis(self, time_series_dict):
 
         # time_series_dict is a dict of time_series
+
+        OUT = {}
 
         dFCM_dict = {}
         dFC_corr_assess_dict = {}
@@ -1287,8 +1293,10 @@ class DFC_ANALYZER:
 
         dFC_session_sim_dict = self.dFC_session_similarity(dFCM_dict)
 
-        # return MEASURES_dFC_var, dFC_corr_assess_dict
-        return dFC_corr_assess_dict, dFC_session_sim_dict
+        OUT['dFC_session_sim_dict'] = dFC_session_sim_dict
+        OUT['dFC_corr_assess_dict'] = dFC_corr_assess_dict
+
+        return OUT
 
     def dFC_corr(self, dFCM_i, dFCM_j, TRs=None):
 

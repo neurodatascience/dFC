@@ -120,7 +120,7 @@ MEASURES = [
 
     # time_freq_cwt, \
     # time_freq_cwt_r, \
-    # time_freq_wtc, \
+    time_freq_wtc, \
 
     swc_pc, \
     # swc_gLasso, \
@@ -148,9 +148,9 @@ print('Measurement required %0.3f seconds.' % (time.time() - tic, ))
 
 ### Visualize FCS ###
 
-dFC_analyzer.visualize_FCS(normalize=True, \
-                        threshold=0.0, \
-                        )
+# dFC_analyzer.visualize_FCS(normalize=True, \
+#                         threshold=0.0, \
+#                         )
 
 # Save
 np.save('./dFC_analyzer.npy', dFC_analyzer) 

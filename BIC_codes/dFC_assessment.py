@@ -10,7 +10,7 @@ os.environ["OMP_NUM_THREADS"] = '64'
 
 ################################# Parameters #################################
 
-subj_id = 1
+subj_id = '100206'
 
 ###### DATA PARAMETERS ######
 
@@ -88,42 +88,36 @@ tic = time.time()
 print('Measurement Started ...')
 
 print("dFCM estimation started...")
-SUBJs_dFC_session_sim_dict = dFC_analyzer.estimate_all_dFCM(time_series_dict=BOLD)
+SUBJ_output = dFC_analyzer.estimate_all_dFCM(time_series_dict=BOLD)
 print("dFCM estimation done.")
 
 print('Measurement required %0.3f seconds.' % (time.time() - tic, ))
 
-#### Methods dFC Corr MAT ###
+# #### Methods dFC Corr MAT ###
 
-fig_name = None
-if dFC_analyzer.params['save_image']:
-    output_root = dFC_analyzer.params['output_root']+'dFC/'
-    fig_name = output_root + 'avg_dFC_corr' 
+# fig_name = None
+# if dFC_analyzer.params['save_image']:
+#     output_root = dFC_analyzer.params['output_root']+'dFC/'
+#     fig_name = output_root + 'avg_dFC_corr' 
 
-visualize_conn_mat(dFC_analyzer.methods_corr, \
-    title='intra session dFC correlation', \
-    name_lst_key='measure_lst', mat_key='corr_mat', \
-    cmap='viridis',\
-    save_image=dFC_analyzer.params['save_image'], output_root=fig_name, \
-        fix_lim=True \
-)
+# visualize_conn_mat(dFC_analyzer.methods_corr, \
+#     title='intra session dFC correlation', \
+#     name_lst_key='measure_lst', mat_key='corr_mat', \
+#     cmap='viridis',\
+#     save_image=dFC_analyzer.params['save_image'], output_root=fig_name, \
+#         fix_lim=True \
+# )
 
 # Save
-np.save('./dFC_session_sim.npy', SUBJs_dFC_session_sim_dict) 
+np.save('./dFC_assessed/SUBJ_'+str(subj_id)+'_output.npy', SUBJ_output) 
 
+# ################################# SIMILARITY ASSESSMENT #################################
 
+# # print_dict(dFC_analyzer.methods_corr)
+# dFC_analyzer.similarity_analyze(SUBJs_dFC_session_sim_dict)
 
-################################# SIMILARITY ASSESSMENT #################################
+# ################################# STATE MATCH #################################
 
-# print_dict(dFC_analyzer.methods_corr)
-dFC_analyzer.similarity_analyze(SUBJs_dFC_session_sim_dict)
-
-################################# STATE MATCH #################################
-
-state_match = dFC_analyzer.state_match()
-# Save
-np.save('./state_match.npy', state_match) 
-
-################################# POST ANALYSIS #################################
-
-dFC_analyzer.post_analyze()
+# state_match = dFC_analyzer.state_match()
+# # Save
+# np.save('./state_match.npy', state_match) 
