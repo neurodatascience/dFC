@@ -8,6 +8,8 @@ os.environ["MKL_NUM_THREADS"] = '64'
 os.environ["NUMEXPR_NUM_THREADS"] = '64'
 os.environ["OMP_NUM_THREADS"] = '64'
 
+print('################################# CODE started running ... #################################')
+
 ################################# Parameters #################################
 
 ###### DATA PARAMETERS ######
@@ -19,7 +21,7 @@ output_root = './../../../../../RESULTs/methods_implementation/'
 # DATA_type is either 'sample' or 'Gordon' or 'simulated' or 'ICA'
 params_data_load = { \
     'DATA_type': 'Gordon', \
-    'num_subj': 2, \
+    'num_subj': 10, \
     'select_nodes': True, \
     'rand_node_slct': False, \
     'num_select_nodes': 50, \

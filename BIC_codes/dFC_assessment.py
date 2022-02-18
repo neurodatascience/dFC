@@ -8,6 +8,8 @@ os.environ["MKL_NUM_THREADS"] = '64'
 os.environ["NUMEXPR_NUM_THREADS"] = '64'
 os.environ["OMP_NUM_THREADS"] = '64'
 
+print('################################# subject-level dFC assessment CODE started running ... #################################')
+
 ################################# Parameters #################################
 
 # subj_id = '100206'
@@ -80,9 +82,8 @@ params_dFC_analyzer = { \
 dFC_analyzer = np.load('./dFC_analyzer.npy',allow_pickle='TRUE').item()
 data_loader = np.load('./data_loader.npy',allow_pickle='TRUE').item()
 
-# task_id = int(os.getenv("SGE_TASK_ID"))
-task_id = 1
-subj_id = data_loader.SUBJECTS[task_id]
+task_id = int(os.getenv("SGE_TASK_ID"))
+subj_id = data_loader.SUBJECTS[task_id-1] # SGE_TASK_ID starts from 1 not 0
 
 BOLD = data_loader.load(subj_id2load=subj_id)
 

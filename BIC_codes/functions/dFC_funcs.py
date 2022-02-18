@@ -1238,11 +1238,11 @@ class DFC_ANALYZER:
                         ) \
                         for subject in SUBJECTs)
         
-        SUBJs_dFC_session_sim_dict = {}
-        for s, out in enumerate(OUT):
-            dFC_session_sim_dict = out['dFC_session_sim_dict']
-            # dFC_session_sim_dict contains similarity between different sessions and in different measures in each subject
-            SUBJs_dFC_session_sim_dict[SUBJECTs[s]] = dFC_session_sim_dict
+        # SUBJs_dFC_session_sim_dict = {}
+        # for s, out in enumerate(OUT):
+        #     dFC_session_sim_dict = out['dFC_session_sim_dict']
+        #     # dFC_session_sim_dict contains similarity between different sessions and in different measures in each subject
+        #     SUBJs_dFC_session_sim_dict[SUBJECTs[s]] = dFC_session_sim_dict
 
         # SUBJs_dFC_var = {}
         # todo add session
@@ -1252,7 +1252,7 @@ class DFC_ANALYZER:
         #     SUBJs_dFC_var[SUBJECTs[s]] = MEASURES_dFC_var
                         
         # self.methods_assess_dict_lst_ = [out['dFC_corr_assess_dict'] for out in OUT]
-        SUBJ_s_output['dFC_sim'] = SUBJs_dFC_session_sim_dict
+        # SUBJ_s_output['dFC_sim'] = SUBJs_dFC_session_sim_dict
         SUBJ_s_output['dFC_assess'] = [out['dFC_corr_assess_dict'] for out in OUT]
 
         return SUBJ_s_output
@@ -1291,9 +1291,9 @@ class DFC_ANALYZER:
             # 'measure_lst', 'sb_measure_lst', and 'state_match' keys
             dFC_corr_assess_dict[session] = self.dFC_corr_assess(dFCM_lst=dFCM_lst)
 
-        dFC_session_sim_dict = self.dFC_session_similarity(dFCM_dict)
+        # dFC_session_sim_dict = self.dFC_session_similarity(dFCM_dict)
 
-        SUBJ_output['dFC_session_sim_dict'] = dFC_session_sim_dict
+        # SUBJ_output['dFC_session_sim_dict'] = dFC_session_sim_dict
         SUBJ_output['dFC_corr_assess_dict'] = dFC_corr_assess_dict
 
         return SUBJ_output
