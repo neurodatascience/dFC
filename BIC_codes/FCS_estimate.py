@@ -141,7 +141,7 @@ print('Measurement Started ...')
 ################################# estimate FCS #################################
 
 print("FCS estimation started...")
-dFC_analyzer.estimate_all_FCS(time_series_dict=BOLD)
+dFC_analyzer.estimate_group_FCS(time_series_dict=BOLD)
 print("FCS estimation done.")
 
 print('Measurement required %0.3f seconds.' % (time.time() - tic, ))

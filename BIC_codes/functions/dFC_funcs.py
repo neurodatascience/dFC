@@ -1125,7 +1125,7 @@ class DFC_ANALYZER:
         ### estimate FCS ###
 
         print("FCS estimation started...")
-        self.estimate_all_FCS(time_series_dict=time_series_dict)
+        self.estimate_group_FCS(time_series_dict=time_series_dict)
         print("FCS estimation done.")
 
         ### Visualize FCS ###
@@ -1137,7 +1137,7 @@ class DFC_ANALYZER:
         ### estimate dFCM ###
 
         print("dFCM estimation started...")
-        SUBJs_dFC_session_sim_dict = self.estimate_all_dFCM(time_series_dict=time_series_dict)
+        SUBJs_dFC_session_sim_dict = self.group_dFCM_assess(time_series_dict=time_series_dict)
         print("dFCM estimation done.")
 
         #### Methods dFC Corr MAT ###
@@ -1192,7 +1192,7 @@ class DFC_ANALYZER:
 
     
 
-    def estimate_all_FCS(self, time_series_dict):
+    def estimate_group_FCS(self, time_series_dict):
 
         # time_series_dict is a dict of time_series
 
@@ -1213,11 +1213,11 @@ class DFC_ANALYZER:
                         for measure in SB_MEASURES_lst)
             self.MEASURES_fit_lst_[session] = self.DD_MEASURES_lst(self.MEASURES_lst) + SB_MEASURES_lst_NEW
 
-    def estimate_all_dFCM(self, time_series_dict):
+    def group_dFCM_assess(self, time_series_dict):
 
         # time_series_dict is a dict of time_series
 
-        SUBJ_output = {}
+        SUBJ_s_output = {}
         
         SUBJECTs = common_subj_lst(time_series_dict) 
 
@@ -1225,7 +1225,7 @@ class DFC_ANALYZER:
             OUT = list()
             for subject in SUBJECTs:
                 OUT.append( \
-                    self.subj_lvl_analysis( \
+                    self.subj_lvl_dFC_assess( \
                     time_series_dict=get_subj_ts_dict(time_series_dict, subj_id=subject), \
                     ))
         else:
@@ -1233,7 +1233,7 @@ class DFC_ANALYZER:
                         n_jobs=self.params['n_jobs'], \
                         verbose=self.params['verbose'], \
                         backend=self.params['backend'])( \
-                    delayed(self.subj_lvl_analysis)( \
+                    delayed(self.subj_lvl_dFC_assess)( \
                         time_series_dict=get_subj_ts_dict(time_series_dict, subj_id=subject), \
                         ) \
                         for subject in SUBJECTs)
@@ -1252,16 +1252,16 @@ class DFC_ANALYZER:
         #     SUBJs_dFC_var[SUBJECTs[s]] = MEASURES_dFC_var
                         
         # self.methods_assess_dict_lst_ = [out['dFC_corr_assess_dict'] for out in OUT]
-        SUBJ_output['dFC_sim'] = SUBJs_dFC_session_sim_dict
-        SUBJ_output['dFC_assess'] = [out['dFC_corr_assess_dict'] for out in OUT]
+        SUBJ_s_output['dFC_sim'] = SUBJs_dFC_session_sim_dict
+        SUBJ_s_output['dFC_assess'] = [out['dFC_corr_assess_dict'] for out in OUT]
 
-        return SUBJ_output
+        return SUBJ_s_output
 
-    def subj_lvl_analysis(self, time_series_dict):
+    def subj_lvl_dFC_assess(self, time_series_dict):
 
         # time_series_dict is a dict of time_series
 
-        OUT = {}
+        SUBJ_output = {}
 
         dFCM_dict = {}
         dFC_corr_assess_dict = {}
@@ -1293,10 +1293,10 @@ class DFC_ANALYZER:
 
         dFC_session_sim_dict = self.dFC_session_similarity(dFCM_dict)
 
-        OUT['dFC_session_sim_dict'] = dFC_session_sim_dict
-        OUT['dFC_corr_assess_dict'] = dFC_corr_assess_dict
+        SUBJ_output['dFC_session_sim_dict'] = dFC_session_sim_dict
+        SUBJ_output['dFC_corr_assess_dict'] = dFC_corr_assess_dict
 
-        return OUT
+        return SUBJ_output
 
     def dFC_corr(self, dFCM_i, dFCM_j, TRs=None):
 
@@ -1655,14 +1655,14 @@ class DYN_CONN_DETECTOR:
             )
 
         print("FCS estimation started...")
-        dFC_analyzer.estimate_all_FCS(time_series=time_series)
+        dFC_analyzer.estimate_group_FCS(time_series=time_series)
         print("FCS estimation done.")
 
         ### estimate dFCM ###
 
         print("dFCM estimation started...")
         # SUBJs_dFC_var for SURROGATE is dFC_var of different bootstrap SAMPLEs
-        SAMPLEs_dFC_var = dFC_analyzer.estimate_all_dFCM( \
+        SAMPLEs_dFC_var = dFC_analyzer.group_dFCM_assess( \
             time_series=time_series \
             )
         print("dFCM estimation done.")

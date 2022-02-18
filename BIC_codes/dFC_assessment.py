@@ -10,7 +10,7 @@ os.environ["OMP_NUM_THREADS"] = '64'
 
 ################################# Parameters #################################
 
-subj_id = '100206'
+# subj_id = '100206'
 
 ###### DATA PARAMETERS ######
 
@@ -80,6 +80,10 @@ params_dFC_analyzer = { \
 dFC_analyzer = np.load('./dFC_analyzer.npy',allow_pickle='TRUE').item()
 data_loader = np.load('./data_loader.npy',allow_pickle='TRUE').item()
 
+# task_id = int(os.getenv("SGE_TASK_ID"))
+task_id = 1
+subj_id = data_loader.SUBJECTS[task_id]
+
 BOLD = data_loader.load(subj_id2load=subj_id)
 
 ################################# SIMILARITY ASSESSMENT #################################
@@ -88,7 +92,8 @@ tic = time.time()
 print('Measurement Started ...')
 
 print("dFCM estimation started...")
-SUBJ_output = dFC_analyzer.estimate_all_dFCM(time_series_dict=BOLD)
+SUBJ_output = dFC_analyzer.subj_lvl_dFC_assess(time_series_dict=BOLD)
+# SUBJ_output = dFC_analyzer.group_dFCM_assess(time_series_dict=BOLD)
 print("dFCM estimation done.")
 
 print('Measurement required %0.3f seconds.' % (time.time() - tic, ))
