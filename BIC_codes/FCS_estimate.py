@@ -21,10 +21,14 @@ output_root = './../../../../../RESULTs/methods_implementation/'
 # DATA_type is either 'sample' or 'Gordon' or 'simulated' or 'ICA'
 params_data_load = { \
     'DATA_type': 'Gordon', \
+    'normalization': True, \
     'num_subj': 10, \
     'select_nodes': True, \
     'rand_node_slct': False, \
     'num_select_nodes': 50, \
+    'num_time_point': 1200, \
+    'Fs_ratio': 1.00, \
+    'noise_ratio': 0.00, \
 
     'data_root_simul': './../../../../DATA/TVB data/', \
     'data_root_sample': './sampleDATA/', \

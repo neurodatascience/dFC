@@ -14,6 +14,7 @@ from joblib import Parallel, delayed
 import os
 import hdf5storage
 import scipy.io as sio
+from sklearn.preprocessing import power_transform
 # import warnings
 
 # warnings.simplefilter('ignore')
@@ -32,6 +33,23 @@ def get_subj_ts_dict(time_series_dict, subj_id):
     for session in time_series_dict:
         subj_ts_dict[session] = time_series_dict[session].get_subj_ts(subj_id=subj_id)
     return subj_ts_dict
+
+# test
+def zip_name(name):
+    # zip measure names
+    if 'Clustering' in name:
+        new_name = 'SWC' + name[name.rfind('_'):]
+    if 'ContinuousHMM' in name:
+        new_name = 'CHMM' + name[name.rfind('_'):]
+    if 'Windowless' in name:
+        new_name = 'WL' + name[name.rfind('_'):]
+    if 'DiscreteHMM' in name:
+        new_name = 'DHMM' + name[name.rfind('_'):]
+    if 'Time-Freq' in name:
+        new_name = 'TF' + name[name.rfind('_'):]
+    if 'SlidingWindow' in name:
+        new_name = 'SW' + name[name.rfind('_'):]
+    return new_name
 
 #test
 def dFC_mat2vec(C_t):
@@ -2671,8 +2689,8 @@ class TIME_SERIES():
         self.n_regions_ = self.data_.shape[0]
         self.n_time_ = self.data_.shape[1]
 
-        assert self.n_regions_ < self.n_time_, \
-            "Probably you have to transpose the time_series."
+        # assert self.n_regions_ < self.n_time_, \
+        #     "Probably you have to transpose the time_series."
 
         if time_array is None:
             self.time_array_ = 1/self.Fs_ + np.arange(0, self.data_.shape[1]/self.Fs_, 1/self.Fs_)
@@ -2684,6 +2702,7 @@ class TIME_SERIES():
 
         self.interval_ = list(range(self.n_time_))
         self.nodes_selection_ = list(range(self.n_regions_))
+
     
     @classmethod
     def from_numpy(cls):
@@ -2691,7 +2710,10 @@ class TIME_SERIES():
 
     @property
     def data(self):
-        return self.data_[self.nodes_lst, self.interval]
+        data = self.data_[self.nodes_lst, self.interval]
+        assert data.shape[1] < data.shape[0], \
+            "Probably you have to transpose the time_series."
+        return data
 
     @property
     def subj_id_array(self):
@@ -3170,6 +3192,7 @@ Variables
 
 todo:
 - add SUBJECTS of sample and simulation DATA_type
+- factors are implemented only for gordon data type
 """
 
 class DATA_LOADER():
@@ -3284,13 +3307,32 @@ class DATA_LOADER():
 
                 # time_series = time_series - np.repeat(np.mean(time_series, axis=1)[:,None], time_series.shape[1], axis=1) # ???????????????????????
 
+                # normalization
+                if self.params['normalization']:
+                    for n in range(time_series.shape[0]):
+                        time_series[n, :] = time_series[n, :] - np.mean(time_series[n, :])
+                        time_series[n, :] = np.divide(time_series[n, :], np.std(time_series[n, :]))
+
+                # downsample frequency
+                new_time_series = np.zeros((time_series.shape[0], int(time_series.shape[1]*self.params['Fs_ratio'])))
                 for n in range(time_series.shape[0]):
-                    time_series[n, :] = time_series[n, :] - np.mean(time_series[n, :])
-                    time_series[n, :] = np.divide(time_series[n, :], np.std(time_series[n, :]))
+                    new_time_series[n, :] =  signal.resample(time_series[n, :], int(time_series.shape[1]*self.params['Fs_ratio']))
+                time_series = new_time_series
+
+                # truncate num time points
+                if self.params['num_time_point']<time_series.shape[1]:
+                    time_series = time_series[:, :self.params['num_time_point']]
+
+                # adding noise perturbation 
+                if self.params['noise_ratio'] > 0:
+                    mean_noise = 0
+                    power_signal = np.mean(time_series ** 2)
+                    power_noise = power_signal * self.params['noise_ratio']
+                    time_series += np.random.normal(mean_noise, np.sqrt(power_noise), (time_series.shape[0], time_series.shape[1]))
 
                 if BOLD[session] is None:
                     BOLD[session] = TIME_SERIES(data=time_series, subj_id=subject, \
-                                        Fs=self.BOLD_Fs, \
+                                        Fs=self.BOLD_Fs*self.params['Fs_ratio'], \
                                         locs=locs, nodes_info=atlas_data, \
                                         TS_name='BOLD Real', session_name=session \
                                     )
