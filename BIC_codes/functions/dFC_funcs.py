@@ -1612,168 +1612,168 @@ class DFC_ANALYZER:
 
 ############################# Dynamic Connection Detector class ################################
 
-"""
+# """
 
-todo:
-- 
-"""
+# todo:
+# - 
+# """
 
-from statsmodels.tsa.api import VAR
-from scipy.stats import norm
+# from statsmodels.tsa.api import VAR
+# from scipy.stats import norm
 
-class DYN_CONN_DETECTOR:
+# class DYN_CONN_DETECTOR:
 
-    a = 0.95
+#     a = 0.95
 
-    def __init__(self, **params):
-        self.VAR_model = None
-        self.lag_order = None
-        self.TH_mask = None
-        self.params = params
+#     def __init__(self, **params):
+#         self.VAR_model = None
+#         self.lag_order = None
+#         self.TH_mask = None
+#         self.params = params
 
-    # @property
-    # def methods_corr(self):
-    #     return np.mean(self.methods_corr_lst, axis=0)
+#     # @property
+#     # def methods_corr(self):
+#     #     return np.mean(self.methods_corr_lst, axis=0)
 
-    def train_VAR(self, time_series, p=None):
-        self.VAR_model = VAR(time_series.data.T)
+#     def train_VAR(self, time_series, p=None):
+#         self.VAR_model = VAR(time_series.data.T)
 
-        if p is None:
-            self.VAR_model = self.VAR_model.fit(maxlags=10, ic='aic')
-        else:
-            self.VAR_model = self.VAR_model.fit(p)
+#         if p is None:
+#             self.VAR_model = self.VAR_model.fit(maxlags=10, ic='aic')
+#         else:
+#             self.VAR_model = self.VAR_model.fit(p)
 
-        self.lag_order = self.VAR_model.k_ar
+#         self.lag_order = self.VAR_model.k_ar
 
-    def subj_lvl_calc_TH_mask(self, time_series, MEASURES_lst, N, L):
+#     def subj_lvl_calc_TH_mask(self, time_series, MEASURES_lst, N, L):
 
-        SURROGATE = self.gen_surrogate( \
-            time_series=time_series, \
-            N=N, L=L, verbose=self.params['verbose']  \
-        )
-        dFCM_var = self.calc_dFC_var(time_series=SURROGATE, MEASURES_lst=MEASURES_lst)
-        TH_mask = self.calc_TH_mask(dFCM_var, a=self.a)
-        return TH_mask
+#         SURROGATE = self.gen_surrogate( \
+#             time_series=time_series, \
+#             N=N, L=L, verbose=self.params['verbose']  \
+#         )
+#         dFCM_var = self.calc_dFC_var(time_series=SURROGATE, MEASURES_lst=MEASURES_lst)
+#         TH_mask = self.calc_TH_mask(dFCM_var, a=self.a)
+#         return TH_mask
 
-    def calc_subj_TH_mask(self, time_series, MEASURES_lst, \
-        N, L=None):
+#     def calc_subj_TH_mask(self, time_series, MEASURES_lst, \
+#         N, L=None):
 
-        SUBJECTs = list(set(time_series.subj_id_array))
+#         SUBJECTs = list(set(time_series.subj_id_array))
         
-        if self.params['n_jobs'] is None:
-            SUBJs_TH_mask_lst = list()
-            for subject in SUBJECTs:
-                SURROGATE = self.gen_surrogate( \
-                    time_series=time_series.get_subj_ts(subj_id=subject), \
-                    N=N, L=L, verbose=self.params['verbose']  \
-                )
-                dFCM_var = self.calc_dFC_var(time_series=SURROGATE, MEASURES_lst=MEASURES_lst)
-                TH_mask = self.calc_TH_mask(dFCM_var, a=self.a)
-                SUBJs_TH_mask_lst.append(TH_mask)
-        else:
-            SUBJs_TH_mask_lst = Parallel( \
-                    n_jobs=self.params['n_jobs'], \
-                    verbose=self.params['verbose'] , \
-                    backend=self.params['backend'])( \
-                delayed(self.subj_lvl_calc_TH_mask)( \
-                    time_series=time_series.get_subj_ts(subj_id=subject), \
-                    MEASURES_lst=MEASURES_lst, \
-                    N=N, L=L \
-                    ) \
-                    for subject in SUBJECTs)
+#         if self.params['n_jobs'] is None:
+#             SUBJs_TH_mask_lst = list()
+#             for subject in SUBJECTs:
+#                 SURROGATE = self.gen_surrogate( \
+#                     time_series=time_series.get_subj_ts(subj_id=subject), \
+#                     N=N, L=L, verbose=self.params['verbose']  \
+#                 )
+#                 dFCM_var = self.calc_dFC_var(time_series=SURROGATE, MEASURES_lst=MEASURES_lst)
+#                 TH_mask = self.calc_TH_mask(dFCM_var, a=self.a)
+#                 SUBJs_TH_mask_lst.append(TH_mask)
+#         else:
+#             SUBJs_TH_mask_lst = Parallel( \
+#                     n_jobs=self.params['n_jobs'], \
+#                     verbose=self.params['verbose'] , \
+#                     backend=self.params['backend'])( \
+#                 delayed(self.subj_lvl_calc_TH_mask)( \
+#                     time_series=time_series.get_subj_ts(subj_id=subject), \
+#                     MEASURES_lst=MEASURES_lst, \
+#                     N=N, L=L \
+#                     ) \
+#                     for subject in SUBJECTs)
 
-        SUBJs_TH_mask = {}
-        for i, TH_mask in enumerate(SUBJs_TH_mask_lst):
-            SUBJs_TH_mask[SUBJECTs[i]] = TH_mask
+#         SUBJs_TH_mask = {}
+#         for i, TH_mask in enumerate(SUBJs_TH_mask_lst):
+#             SUBJs_TH_mask[SUBJECTs[i]] = TH_mask
 
-        return SUBJs_TH_mask
+#         return SUBJs_TH_mask
 
-    def gen_surrogate(self, time_series, N, L=None, verbose=0):
-        if L is None:
-            L = time_series.n_time
+#     def gen_surrogate(self, time_series, N, L=None, verbose=0):
+#         if L is None:
+#             L = time_series.n_time
 
-        SURROGATE = None
-        for n in range(N):
+#         SURROGATE = None
+#         for n in range(N):
 
-            t0 = np.random.choice(\
-                range(time_series.n_time-self.lag_order), \
-                size=1, replace=False)[0]
+#             t0 = np.random.choice(\
+#                 range(time_series.n_time-self.lag_order), \
+#                 size=1, replace=False)[0]
 
-            simul = self.VAR_model.forecast(time_series.data.T[t0:t0+self.lag_order, :], L)
+#             simul = self.VAR_model.forecast(time_series.data.T[t0:t0+self.lag_order, :], L)
 
-            if SURROGATE is None:
-                SURROGATE = TIME_SERIES(data=simul.T, subj_id='surrogate'+str(n+1), Fs=1/0.72, TS_name='BOLD Surrogate')
-            else:
-                SURROGATE.append_ts(new_time_series=simul.T, subj_id='surrogate'+str(n+1))
+#             if SURROGATE is None:
+#                 SURROGATE = TIME_SERIES(data=simul.T, subj_id='surrogate'+str(n+1), Fs=1/0.72, TS_name='BOLD Surrogate')
+#             else:
+#                 SURROGATE.append_ts(new_time_series=simul.T, subj_id='surrogate'+str(n+1))
 
-        if verbose==1:
-            print(SURROGATE.n_regions, SURROGATE.n_time)
+#         if verbose==1:
+#             print(SURROGATE.n_regions, SURROGATE.n_time)
 
-        return SURROGATE
+#         return SURROGATE
 
-    def calc_dFC_var(self, time_series, MEASURES_lst):
+#     def calc_dFC_var(self, time_series, MEASURES_lst):
 
-        # OUTPUT shape = [sample, measure, node, node]
+#         # OUTPUT shape = [sample, measure, node, node]
 
-        dFC_analyzer = DFC_ANALYZER(MEASURES_lst=MEASURES_lst, \
-            n_jobs=self.params['n_jobs'], verbose=self.params['verbose'] , backend=self.params['backend'] \
-            )
+#         dFC_analyzer = DFC_ANALYZER(MEASURES_lst=MEASURES_lst, \
+#             n_jobs=self.params['n_jobs'], verbose=self.params['verbose'] , backend=self.params['backend'] \
+#             )
 
-        print("FCS estimation started...")
-        dFC_analyzer.estimate_group_FCS(time_series=time_series)
-        print("FCS estimation done.")
+#         print("FCS estimation started...")
+#         dFC_analyzer.estimate_group_FCS(time_series=time_series)
+#         print("FCS estimation done.")
 
-        ### estimate dFCM ###
+#         ### estimate dFCM ###
 
-        print("dFCM estimation started...")
-        # SUBJs_dFC_var for SURROGATE is dFC_var of different bootstrap SAMPLEs
-        SAMPLEs_dFC_var = dFC_analyzer.group_dFCM_assess( \
-            time_series=time_series \
-            )
-        print("dFCM estimation done.")
+#         print("dFCM estimation started...")
+#         # SUBJs_dFC_var for SURROGATE is dFC_var of different bootstrap SAMPLEs
+#         SAMPLEs_dFC_var = dFC_analyzer.group_dFCM_assess( \
+#             time_series=time_series \
+#             )
+#         print("dFCM estimation done.")
 
-        MEASURES_sample_dFC_var = {}
-        for sample in SAMPLEs_dFC_var:
-            for measure in SAMPLEs_dFC_var[sample]:
-                # SAMPLEs_dFC_var[sample][measure] is a n_region x n_region dFC_var_mat
-                if measure in MEASURES_sample_dFC_var:
-                    MEASURES_sample_dFC_var[measure].append(SAMPLEs_dFC_var[sample][measure])
-                else:
-                    MEASURES_sample_dFC_var[measure] = []
-                    MEASURES_sample_dFC_var[measure].append(SAMPLEs_dFC_var[sample][measure])
+#         MEASURES_sample_dFC_var = {}
+#         for sample in SAMPLEs_dFC_var:
+#             for measure in SAMPLEs_dFC_var[sample]:
+#                 # SAMPLEs_dFC_var[sample][measure] is a n_region x n_region dFC_var_mat
+#                 if measure in MEASURES_sample_dFC_var:
+#                     MEASURES_sample_dFC_var[measure].append(SAMPLEs_dFC_var[sample][measure])
+#                 else:
+#                     MEASURES_sample_dFC_var[measure] = []
+#                     MEASURES_sample_dFC_var[measure].append(SAMPLEs_dFC_var[sample][measure])
 
-        for measure in MEASURES_sample_dFC_var:
-            MEASURES_sample_dFC_var[measure] = np.array(MEASURES_sample_dFC_var[measure])
+#         for measure in MEASURES_sample_dFC_var:
+#             MEASURES_sample_dFC_var[measure] = np.array(MEASURES_sample_dFC_var[measure])
 
-        return MEASURES_sample_dFC_var
+#         return MEASURES_sample_dFC_var
 
-    def calc_TH_mask(self, MEASURES_sample_dFC_var, a=0.95):
+#     def calc_TH_mask(self, MEASURES_sample_dFC_var, a=0.95):
 
-        # returns list of TH_masks for different measures
+#         # returns list of TH_masks for different measures
 
-        TH_mask = {}
-        for measure in MEASURES_sample_dFC_var:
-            n_regions = MEASURES_sample_dFC_var[measure].shape[1]
-            TH_mask_mat = np.zeros((n_regions, n_regions))
-            for i in range(n_regions):
-                for j in range(n_regions):
-                    C = np.squeeze(MEASURES_sample_dFC_var[measure][:, i, j])
-                    mu, sigma = norm.fit(C)
-                    TH_mask_mat[i, j] = norm.ppf(a, mu, sigma)
-            TH_mask[measure] = TH_mask_mat
+#         TH_mask = {}
+#         for measure in MEASURES_sample_dFC_var:
+#             n_regions = MEASURES_sample_dFC_var[measure].shape[1]
+#             TH_mask_mat = np.zeros((n_regions, n_regions))
+#             for i in range(n_regions):
+#                 for j in range(n_regions):
+#                     C = np.squeeze(MEASURES_sample_dFC_var[measure][:, i, j])
+#                     mu, sigma = norm.fit(C)
+#                     TH_mask_mat[i, j] = norm.ppf(a, mu, sigma)
+#             TH_mask[measure] = TH_mask_mat
 
-        return TH_mask
+#         return TH_mask
 
-    def mask_SUBJs_dFC(self, SUBJs_dFC_var, SUBJs_TH_mask):
+#     def mask_SUBJs_dFC(self, SUBJs_dFC_var, SUBJs_TH_mask):
 
-        SUBJs_dyn_conn = {}
-        for subject in SUBJs_dFC_var:
-            dyn_conn = {}
-            for measure in SUBJs_dFC_var[subject]:
-                dyn_conn[measure] = (SUBJs_dFC_var[subject][measure]>=SUBJs_TH_mask[subject][measure])*[1] 
-            SUBJs_dyn_conn[subject] = dyn_conn
+#         SUBJs_dyn_conn = {}
+#         for subject in SUBJs_dFC_var:
+#             dyn_conn = {}
+#             for measure in SUBJs_dFC_var[subject]:
+#                 dyn_conn[measure] = (SUBJs_dFC_var[subject][measure]>=SUBJs_TH_mask[subject][measure])*[1] 
+#             SUBJs_dyn_conn[subject] = dyn_conn
 
-        return SUBJs_dyn_conn
+#         return SUBJs_dyn_conn
 
 
 ################################# dFC class ####################################
