@@ -10,8 +10,6 @@ os.environ["OMP_NUM_THREADS"] = '64'
 
 ################################# Parameters #################################
 
-subj_id = '100206'
-
 ###### DATA PARAMETERS ######
 
 output_root = './../../../../../RESULTs/methods_implementation/'
@@ -79,10 +77,11 @@ params_dFC_analyzer = { \
 
 dFC_analyzer = np.load('./dFC_analyzer.npy',allow_pickle='TRUE').item()
 data_loader = np.load('./data_loader.npy',allow_pickle='TRUE').item()
-SUBJ_output = np.load('./dFC_assessed/SUBJ_'+str(subj_id)+'_output.npy',allow_pickle='TRUE').item()
-
-BOLD = data_loader.load(subj_id2load=subj_id)
 
 ################################# POST ANALYSIS #################################
 
 dFC_analyzer.post_analyze()
+
+for subject in data_loader.SUBJECTs:
+    SUBJ_output = np.load('./dFC_assessed/SUBJ_'+str(subject)+'_output.npy', allow_pickle='True').item()
+    FO = SUBJ_output['dFC_corr_assess_dict']['Rest1_LR']['FO']

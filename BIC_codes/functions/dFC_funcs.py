@@ -33,6 +33,16 @@ def get_subj_ts_dict(time_series_dict, subj_id):
         subj_ts_dict[session] = time_series_dict[session].get_subj_ts(subj_id=subj_id)
     return subj_ts_dict
 
+#test
+def dFC_mat2vec(C_t):
+    F = list()
+    for t in range(C_t.shape[0]):
+        C = C_t[t, : , :]
+        F.append(C[np.triu_indices(C_t.shape[1])])
+
+    F = np.array(F)
+    return F
+
 # test
 def common_subj_lst(time_series_dict):
     SUBJECTs = None
@@ -1267,7 +1277,6 @@ class DFC_ANALYZER:
         dFC_corr_assess_dict = {}
         for session in time_series_dict:
             time_series = time_series_dict[session]
-            # dFCM_lst = self.estimate_dFCM(time_series=time_series)
             if self.params['n_jobs'] is None:
                 dFCM_lst = list()
                 for measure in self.MEASURES_fit_lst_[session]:
@@ -1378,6 +1387,55 @@ class DFC_ANALYZER:
 
         return FO
 
+    def TPM_calc(self, dFCM_lst, common_TRs=None):
+        # returns TP, a dict with:
+        #  TP['Obs_seq']
+        # TP['FCS_name']
+        # TP['TPM']
+
+        # TODO:  DOWNSAMPLING problem and ignoring the between state transitions
+
+        if common_TRs is None:
+            common_TRs = TR_intersection(dFCM_lst)
+
+        TRs_lst = list()
+        for TR in common_TRs:
+            TRs_lst.append('TR'+str(TR))
+
+        # list of FCS names
+        ############## when combining TPMs check if the order of FCS names is the same
+        FCS_name_lst = list()
+        for dFCM in dFCM_lst:
+            if dFCM.measure.is_state_based:
+                for FCS in dFCM.FCSs:
+                    FCS_name_lst.append(dFCM.measure.measure_name+'_'+FCS)
+        # print(FCS_name_lst)
+
+        # building the observation sequence
+        Obs_seq = list()
+        for TR in TRs_lst:
+            Obs_vec = list()
+            for dFCM in dFCM_lst:
+                if dFCM.measure.is_state_based:
+                    Obs_vec.append(dFCM.measure.measure_name + '_' + dFCM.FCS_idx[TR])
+            Obs_seq.append(Obs_vec)
+        # print(Obs_seq)
+
+        # computing TPM
+        flag = 0
+        TP = {}
+        TP['Obs_seq'] = Obs_seq
+        TP['FCS_name'] = FCS_name_lst
+        TP['TPM'] = np.zeros((len(FCS_name_lst), len(FCS_name_lst)))
+        for i, TR in enumerate(TRs_lst):
+            if i>0:
+                for last_FCS in TP['Obs_seq'][i-1]:
+                    for current_FCS in TP['Obs_seq'][i]:
+                        TP['TPM'][TP['FCS_name'].index(last_FCS), TP['FCS_name'].index(current_FCS)] += 1
+
+        return TP
+
+
     def transition_freq(self, dFCM, common_TRs=None):
         # returns the number of total state transition within common_TRs -> trans_freq
         # and the number of total state transitions regardless of common_TRs
@@ -1480,6 +1538,12 @@ class DFC_ANALYZER:
                 common_TRs=common_TRs \
             )
 
+        ########## Transition Probability Matrix ##########
+
+        TP = self.TPM_calc(dFCM_lst, \
+            common_TRs=common_TRs \
+            )
+
         ########## transition frequency ##########
 
         trans_freq = {}
@@ -1495,6 +1559,7 @@ class DFC_ANALYZER:
         methods_assess['measure_lst'] = measure_lst
         methods_assess['state_match'] = state_match
         methods_assess['FO'] = FO
+        methods_assess['TP'] = TP
         methods_assess['trans_freq'] = trans_freq
 
         return methods_assess
@@ -2015,7 +2080,7 @@ class TIME_FREQ(dFC):
         assert method in self.methods_name_lst, \
             "Time-frequency method not recognized."
 
-        self.measure_name_ = 'Time-Freq '
+        self.measure_name_ = 'Time-Freq'
         self.is_state_based = False
         self.TPM = []
         self.FCS_ = []
@@ -2329,13 +2394,7 @@ class SLIDING_WINDOW_CLUSTR(dFC):
         return self.measure_name_ + '_' + self.base_method
 
     def dFC_mat2vec(self, C_t):
-        F = list()
-        for t in range(C_t.shape[0]):
-            C = C_t[t, : , :]
-            F.append(C[np.triu_indices(C_t.shape[1])])
-
-        F = np.array(F)
-        return F
+        return dFC_mat2vec(C_t)
 
     def dFC_vec2mat(self, F, N):
         C = list()
@@ -2417,6 +2476,7 @@ class SLIDING_WINDOW_CLUSTR(dFC):
                 time_series=time_series.get_subj_ts(subj_id=subject) \
                 )
 
+            # test
             if dFCM_raw.n_time<self.n_subj_clstrs:
                 print( \
                     'Number of subject-level clusters cannot be more than SW dFCM samples! n_subj_clstrs was changed to ' \
