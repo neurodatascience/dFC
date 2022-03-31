@@ -15,6 +15,19 @@ import os
 import hdf5storage
 import scipy.io as sio
 from sklearn.preprocessing import power_transform
+
+# ########## bundled brain graph visualizer ##########
+
+# import pandas as pd
+# import panel as pn
+# import datashader as ds
+# import datashader.transfer_functions as tf
+# from datashader.layout import random_layout, circular_layout, forceatlas2_layout
+# from datashader.bundling import connect_edges, hammer_bundle
+# from datashader import utils
+# import holoviews as hv
+# from itertools import chain
+
 # import warnings
 
 # warnings.simplefilter('ignore')
@@ -35,24 +48,53 @@ def get_subj_ts_dict(time_series_dict, subj_id):
     return subj_ts_dict
 
 # test
-def zip_name(name):
+def zip_name(name_lst):
     # zip measure names
-    if 'Clustering' in name:
-        new_name = 'SWC' + name[name.rfind('_'):]
-    if 'ContinuousHMM' in name:
-        new_name = 'CHMM' + name[name.rfind('_'):]
-    if 'Windowless' in name:
-        new_name = 'WL' + name[name.rfind('_'):]
-    if 'DiscreteHMM' in name:
-        new_name = 'DHMM' + name[name.rfind('_'):]
-    if 'Time-Freq' in name:
-        new_name = 'TF' + name[name.rfind('_'):]
-    if 'SlidingWindow' in name:
-        new_name = 'SW' + name[name.rfind('_'):]
+    new_name_lst = list()
+    for name in name_lst:
+        if 'Clustering' in name:
+            new_name = 'SWC' + name[name.rfind('_'):]
+        if 'ContinuousHMM' in name:
+            new_name = 'CHMM' + name[name.rfind('_'):]
+        if 'Windowless' in name:
+            new_name = 'WL' + name[name.rfind('_'):]
+        if 'DiscreteHMM' in name:
+            new_name = 'DHMM' + name[name.rfind('_'):]
+        if 'Time-Freq' in name:
+            new_name = 'TF' + name[name.rfind('_'):]
+        if 'SlidingWindow' in name:
+            new_name = 'SW' + name[name.rfind('_'):]
+        new_name_lst.append(new_name)
+    return new_name_lst
+
+# test
+# pear_corr problem
+def unzip_name(name):
+    # zip measure names
+    flag=False
+    if not '_' in name:
+        name = name + '_'
+        flag=True
+    if 'SWC' in name:
+        new_name = 'Clustering_pear_corr' + name[name.rfind('_'):]
+    if 'CHMM' in name:
+        new_name = 'ContinuousHMM' + name[name.rfind('_'):]
+    if 'WL' in name:
+        new_name = 'Windowless' + name[name.rfind('_'):]
+    if 'DHMM' in name:
+        new_name = 'DiscreteHMM_pear_corr' + name[name.rfind('_'):]
+    if 'TF' in name:
+        new_name = 'Time-Freq' + name[name.rfind('_'):]
+    if 'SW_' in name:
+        new_name = 'SlidingWindow_pear_corr' + name[name.rfind('_'):]
+    if flag:
+        new_name = new_name[:-1]
     return new_name
 
 #test
 def dFC_mat2vec(C_t):
+    if len(C_t.shape)==2:
+        return C_t
     F = list()
     for t in range(C_t.shape[0]):
         C = C_t[t, : , :]
@@ -132,7 +174,7 @@ def visualize_conn_mat(data, title='', \
     cmap='viridis',\
     disp_diag=True,\
     save_image=False, output_root=None, \
-        fix_lim=True \
+        fix_lim=True, lim_val=1.0 \
     ):
 
     '''
@@ -200,7 +242,7 @@ def visualize_conn_mat(data, title='', \
             V_MAX = 1
         else: # ?????? should we do this?
             V_MIN = 0
-            V_MAX = 1
+            V_MAX = lim_val
 
         if not fix_lim:
             V_MAX = np.max(C)
@@ -253,6 +295,147 @@ def visualize_conn_mat(data, title='', \
         plt.close()
     else:
         plt.show()
+
+########## bundled brain graph visualizer ##########
+
+cvsopts = dict(plot_height=400, plot_width=400)
+
+def thresh_G(G, threshold=None):
+    
+    G_copy = deepcopy(G)
+    
+    if threshold==None:
+        sig_edges = find_sig_edges(G_copy, min_num_edge=0)
+        threshold = G.edges()[sig_edges[-1]]['weight']
+    else:
+        if threshold > 1:
+            labels = [d["weight"] for (u, v, d) in G_copy.edges(data=True)]
+            labels.sort()
+            threshold = labels[-1*threshold]
+            # sig_edges = find_sig_edges(G_copy, min_num_edge=threshold)
+            # threshold = G.edges()[sig_edges[-1]]['weight']
+    
+    ebunch = [(u, v) for u, v, d in G_copy.edges(data=True) if np.abs(d['weight']) < threshold]
+    G_copy.remove_edges_from(ebunch)
+        
+    return G_copy
+
+def nodesplot(nodes, name=None, canvas=None, cat=None):
+    canvas = ds.Canvas(**cvsopts) if canvas is None else canvas
+    # aggregator=None if cat is None else ds.count_cat(cat)
+    # agg=canvas.points(nodes,'x','y',aggregator)
+    aggc = canvas.points(nodes, 'x', 'y', ds.count_cat('cat'))   #ds.by('cat', ds.count())
+        
+    color_key = dict(cat_normal='#FF3333', cat_sig='#00FF00')
+    
+    return tf.spread(tf.shade(aggc, color_key=color_key), px=4, name=name)
+
+
+def edgesplot(edges, name=None, canvas=None):
+    canvas = ds.Canvas(**cvsopts) if canvas is None else canvas
+    return tf.shade(canvas.line(edges, 'x','y', agg=ds.count()), name=name)
+    
+def graphplot(nodes, edges, name="", canvas=None, cat=None):
+    
+    if canvas is None:
+        xr = nodes.x.min(), nodes.x.max()
+        yr = nodes.y.min(), nodes.y.max()
+        canvas = ds.Canvas(x_range=xr, y_range=yr, **cvsopts)
+        
+    np = nodesplot(nodes, name + " nodes", canvas, cat)
+    ep = edgesplot(edges, name + " edges", canvas)
+    return tf.stack(ep, np, how="over", name=name)
+
+def ng(graph,name):
+    graph.name = name
+    return graph
+
+def nx_layout(graph, view_degree=0, threshold=0):
+    # layout = nx.circular_layout(graph)
+    
+    # Get node positions
+    pos = nx.get_node_attributes(graph, 'pos')
+    for key in pos:
+        if view_degree==0:    
+            pos[key] = pos[key][:2]
+        if view_degree==1:    
+            pos[key] = pos[key][1:3]
+        if view_degree==2:    
+            pos[key] = pos[key][[0, 2]]
+            
+    # layout = pos
+            
+    cat = list()
+    for key in graph.nodes():
+        cat.append('cat_normal')
+        # if key in find_sig_nodes(graph):   #
+        #     cat.append( 'cat_sig')
+        # else:
+        #     cat.append('cat_normal')
+            
+    data = [[node]+pos[node].tolist()+[cat[i]] for i, node in enumerate(graph.nodes)]
+
+    nodes = pd.DataFrame(data, columns=['id', 'x', 'y','cat'])
+    nodes.set_index('id', inplace=True)
+    nodes["cat"]=nodes["cat"].astype("category")
+
+    graph_copy = thresh_G(graph, threshold=threshold)
+
+    edges = pd.DataFrame(list(graph_copy.edges), columns=['source', 'target'])
+    return nodes, edges
+
+def nx_plot(graph, name="", view_degree=0, threshold=0):
+    # print(graph.name, len(graph.edges))
+    nodes, edges = nx_layout(graph, view_degree=view_degree, threshold=threshold)
+    
+    direct = connect_edges(nodes, edges)
+    bundled_bw005 = hammer_bundle(nodes, edges)
+    bundled_bw030 = hammer_bundle(nodes, edges, initial_bandwidth=0.30)
+    bundled_bw100 = hammer_bundle(nodes, edges, initial_bandwidth=1)
+
+    return [graphplot(nodes, direct,         graph.name, cat=None),
+            graphplot(nodes, bundled_bw005, "Bundled bw=0.05", cat=None),
+            graphplot(nodes, bundled_bw030, "Bundled bw=0.30", cat=None),
+            graphplot(nodes, bundled_bw100, "Bundled bw=1.00", cat=None)]
+
+def batch_Adj2Net(FCS, nodes_info, is_digraph=False):
+  
+    np.fill_diagonal(FCS, 0)
+    if is_digraph:
+        G = nx.from_numpy_matrix(FCS, create_using=nx.DiGraph)
+    else:
+        G = nx.from_numpy_matrix(FCS)
+
+    mapping = {}
+    for i, node_info in enumerate(nodes_info):
+        mapping[i] = node_info[4]
+    G = nx.relabel_nodes(G, mapping)
+
+    return G
+
+def set_locs_G(G, locs):
+    
+    G_copy = deepcopy(G)
+    
+    pos = nx.circular_layout(G_copy) 
+
+    for i, key in enumerate(pos):
+        pos[key] = locs[i][0]
+        
+    nx.set_node_attributes(G_copy, pos, "pos") 
+      
+    
+    return G_copy 
+
+def visulize_brain_graph(FCS, nodes_info, locs, num_edges2show):
+    G = batch_Adj2Net(FCS=FCS, nodes_info=nodes_info, is_digraph=False)
+    G = set_locs_G(G, locs=locs)   
+    plots = [nx_plot(ng(G, name="dFC"), view_degree=0, threshold=num_edges2show) ]
+    
+    return plots[0][0]
+
+
+##############################
 
 def dFC_dict_normalize(D, global_normalization=False, threshold=0.0):
 
@@ -364,6 +547,7 @@ def print_dict(t, s=0):
             print('\t'*s+str(key))
             if not isinstance(t,list):
                 print_dict(t[key],s+1)
+
 ############################# dFC Analyzer class ################################
 
 """
@@ -2711,7 +2895,7 @@ class TIME_SERIES():
     @property
     def data(self):
         data = self.data_[self.nodes_lst, self.interval]
-        assert data.shape[1] < data.shape[0], \
+        assert data.shape[1] > data.shape[0], \
             "Probably you have to transpose the time_series."
         return data
 
