@@ -172,6 +172,7 @@ def visualize_state_TC(TC_lst, \
 def visualize_conn_mat(data, title='', \
     name_lst_key=None, mat_key=None, \
     cmap='viridis',\
+    normalize=False,\
     disp_diag=True,\
     save_image=False, output_root=None, \
         fix_lim=True, lim_val=1.0 \
@@ -232,6 +233,9 @@ def visualize_conn_mat(data, title='', \
             C = data[key][mat_key]
 
         # C = np.abs(C) # ?????? should we do this?
+
+        if normalize:
+            C = dFC_mat_normalize(C[None,:,:], global_normalization=False, threshold=0.0)[0]
 
         if not disp_diag:
             C = np.multiply(C, 1-np.eye(len(C)))
