@@ -296,6 +296,7 @@ def visualize_conn_mat(data, title='', \
     else:
         plt.show()
 
+'''
 ########## bundled brain graph visualizer ##########
 
 cvsopts = dict(plot_height=400, plot_width=400)
@@ -436,6 +437,7 @@ def visulize_brain_graph(FCS, nodes_info, locs, num_edges2show):
 
 
 ##############################
+'''
 
 def dFC_dict_normalize(D, global_normalization=False, threshold=0.0):
 
