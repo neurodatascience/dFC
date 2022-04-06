@@ -93,15 +93,35 @@ def unzip_name(name):
 
 #test
 def dFC_mat2vec(C_t):
+    '''
+    C_t must be an array of matrices or a single matrix
+    '''
     if len(C_t.shape)==2:
-        return C_t
+        assert C_t.shape[0]==C_t.shape[1],\
+            'C is not a square matrix'
+        return C_t[np.triu_indices(C_t.shape[1])]
+
     F = list()
     for t in range(C_t.shape[0]):
         C = C_t[t, : , :]
+        assert C.shape[0]==C.shape[1],\
+            'C is not a square matrix'
         F.append(C[np.triu_indices(C_t.shape[1])])
 
     F = np.array(F)
     return F
+
+#test
+def dFC_vec2mat(F, N):
+    C = list()
+    iu = np.triu_indices(N)
+    for i in range(F.shape[0]):
+        K = np.zeros((N, N))
+        K[iu] = F[i,:]
+        K = K + np.multiply(K.T, 1-np.eye(N))
+        C.append(K)
+    C = np.array(C)
+    return C
 
 # test
 def common_subj_lst(time_series_dict):
@@ -1595,11 +1615,11 @@ class DFC_ANALYZER:
 
         return FO
 
-    def TPM_calc(self, dFCM_lst, common_TRs=None):
-        # returns TP, a dict with:
-        #  TP['Obs_seq']
-        # TP['FCS_name']
-        # TP['TPM']
+    def COM_calc(self, dFCM_lst, common_TRs=None, lag=0):
+        # returns co-occurance (CO) with specified lag, a dict with:
+        # CO['Obs_seq']
+        # CO['FCS_name']
+        # CO['COM']
 
         # TODO:  DOWNSAMPLING problem and ignoring the between state transitions
 
@@ -1611,7 +1631,7 @@ class DFC_ANALYZER:
             TRs_lst.append('TR'+str(TR))
 
         # list of FCS names
-        ############## when combining TPMs check if the order of FCS names is the same
+        ############## when combining COMs check if the order of FCS names is the same
         FCS_name_lst = list()
         for dFCM in dFCM_lst:
             if dFCM.measure.is_state_based:
@@ -1629,19 +1649,19 @@ class DFC_ANALYZER:
             Obs_seq.append(Obs_vec)
         # print(Obs_seq)
 
-        # computing TPM
+        # computing COM
         flag = 0
-        TP = {}
-        TP['Obs_seq'] = Obs_seq
-        TP['FCS_name'] = FCS_name_lst
-        TP['TPM'] = np.zeros((len(FCS_name_lst), len(FCS_name_lst)))
+        CO = {}
+        CO['Obs_seq'] = Obs_seq
+        CO['FCS_name'] = FCS_name_lst
+        CO['COM'] = np.zeros((len(FCS_name_lst), len(FCS_name_lst)))
         for i, TR in enumerate(TRs_lst):
-            if i>0:
-                for last_FCS in TP['Obs_seq'][i-1]:
-                    for current_FCS in TP['Obs_seq'][i]:
-                        TP['TPM'][TP['FCS_name'].index(last_FCS), TP['FCS_name'].index(current_FCS)] += 1
+            if i>=lag:
+                for last_FCS in CO['Obs_seq'][i-lag]:
+                    for current_FCS in CO['Obs_seq'][i]:
+                        CO['COM'][CO['FCS_name'].index(last_FCS), CO['FCS_name'].index(current_FCS)] += 1
 
-        return TP
+        return CO
 
 
     def transition_freq(self, dFCM, common_TRs=None):
@@ -1746,10 +1766,16 @@ class DFC_ANALYZER:
                 common_TRs=common_TRs \
             )
 
-        ########## Transition Probability Matrix ##########
+        ########## Co-Occurance Matrix and Transition Probability Matrix ##########
 
-        TP = self.TPM_calc(dFCM_lst, \
-            common_TRs=common_TRs \
+        CO = self.COM_calc(dFCM_lst, \
+            common_TRs=common_TRs, \
+            lag=0 \
+            )
+
+        TP = self.COM_calc(dFCM_lst, \
+            common_TRs=common_TRs, \
+            lag=1 \
             )
 
         ########## transition frequency ##########
@@ -1767,6 +1793,7 @@ class DFC_ANALYZER:
         methods_assess['measure_lst'] = measure_lst
         methods_assess['state_match'] = state_match
         methods_assess['FO'] = FO
+        methods_assess['CO'] = CO
         methods_assess['TP'] = TP
         methods_assess['trans_freq'] = trans_freq
 
@@ -2605,15 +2632,7 @@ class SLIDING_WINDOW_CLUSTR(dFC):
         return dFC_mat2vec(C_t)
 
     def dFC_vec2mat(self, F, N):
-        C = list()
-        iu = np.triu_indices(N)
-        for i in range(F.shape[0]):
-            K = np.zeros((N, N))
-            K[iu] = F[i,:]
-            K = K + np.multiply(K.T, 1-np.eye(N))
-            C.append(K)
-        C = np.array(C)
-        return C
+        return dFC_vec2mat(F=F, N=N)
 
     def clusters_lst2idx(self, clusters):
         Z = np.zeros((self.F.shape[0],))
