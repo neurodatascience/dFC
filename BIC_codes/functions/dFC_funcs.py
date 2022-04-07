@@ -10,6 +10,8 @@ import numpy as np
 from scipy import signal
 from copy import deepcopy
 import matplotlib.pyplot as plt
+import networkx as nx
+from scipy.spatial import distance
 from joblib import Parallel, delayed
 import os
 import hdf5storage
@@ -46,6 +48,51 @@ def get_subj_ts_dict(time_series_dict, subj_id):
     for session in time_series_dict:
         subj_ts_dict[session] = time_series_dict[session].get_subj_ts(subj_id=subj_id)
     return subj_ts_dict
+
+# test
+def normalizeAdjacency(W):
+    """
+    NormalizeAdjacency: Computes the [0, 1]-normalized adjacency matrix
+
+    Input:
+
+        W (np.array): adjacency matrix
+
+    Output:
+
+        W_norm (np.array): [0, 1] normalized adjacency matrix
+    """
+    W_norm = W - np.min(W)
+    W_norm = np.divide(W_norm, np.max(W_norm))
+    return W_norm 
+
+# test
+def normalized_euc_dist(x, y):
+
+    return 0.5*((np.linalg.norm((x-np.mean(x))-(y-np.mean(y)))**2)/(np.linalg.norm(x-np.mean(x))**2+np.linalg.norm(y-np.mean(y))**2))
+
+def calc_ECM(A):
+    """
+    calc_ECM: Computes Eigenvector Centrality Mapping (ECM) 
+    of adjacency matrix A
+
+    Input:
+
+        A (np.array): adjacency matrix
+
+    Output:
+
+        centrality (np.array): ECM vector
+    """
+    G = nx.from_numpy_matrix(A) 
+    G.remove_edges_from(nx.selfloop_edges(G))
+    # G = G.to_undirected()
+    centrality = nx.eigenvector_centrality(G, weight='weight')
+    # centrality = nx.pagerank(G, alpha=0.85)
+
+    centrality = [centrality[node] for node in centrality]
+
+    return centrality
 
 # test
 def zip_name(name_lst):
@@ -1620,6 +1667,7 @@ class DFC_ANALYZER:
         # CO['Obs_seq']
         # CO['FCS_name']
         # CO['COM']
+        # automatically ignores DD methods
 
         # TODO:  DOWNSAMPLING problem and ignoring the between state transitions
 
@@ -1700,7 +1748,107 @@ class DFC_ANALYZER:
 
         trans_freq_dict['trans_norm'] = trans_norm
 
-        return trans_freq_dict
+        return trans_freq_dict 
+
+    def dFC_distance(self, FC_t_i, FC_t_j, metric, normalize=True):
+        '''
+        FC_t_i and FC_t_j must be an 
+        array of FC matrices = (n_time, n_regions, n_regions)
+        metric options: correlation, euclidean, ECM (Eigenvector Centrality Mapping)
+        normalize option is for ECM and euclidean metrics since correlation is already 
+        normalized.
+        for ECM, the input can be an array of ECM_vecs and of shape (n_time, n_regions) 
+        or array of FC matrices = (n_time, n_regions, n_regions)
+        '''
+        assert len(FC_t_i)==len(FC_t_j),\
+            'the inputs must of the same number of samples'
+
+        distance_out = list()
+        for t in range(FC_t_i.shape[0]):
+
+            if metric=='correlation' or metric=='euclidean':
+                assert FC_t_i[t].shape[0]==FC_t_i[t].shape[1],\
+                    'Matrices are not square'
+                assert FC_t_j[t].shape[0]==FC_t_j[t].shape[1],\
+                    'Matrices are not square'
+
+            if metric=='correlation':
+                FC_vec_i = dFC_mat2vec(FC_t_i[t])
+                FC_vec_j = dFC_mat2vec(FC_t_j[t])
+                distance_out.append(distance.correlation(FC_vec_i, FC_vec_j))
+
+            if metric=='euclidean':
+                FC_vec_i = dFC_mat2vec(FC_t_i[t])
+                FC_vec_j = dFC_mat2vec(FC_t_j[t])
+                if normalize:
+                    distance_out.append(normalized_euc_dist(FC_vec_i, FC_vec_j))
+                else:
+                    distance_out.append(distance.euclidean(FC_vec_i, FC_vec_j))
+
+            if metric=='ECM':
+                if len(FC_t_i[t].shape)==2:
+                    assert FC_t_i[t].shape[0]==FC_t_i[t].shape[1],\
+                        'Matrices are not square'
+                    assert FC_t_j[t].shape[0]==FC_t_j[t].shape[1],\
+                        'Matrices are not square'
+                    ECM_i = calc_ECM(np.abs(FC_t_i[t]))
+                    ECM_j = calc_ECM(np.abs(FC_t_j[t]))
+                else:
+                    ECM_i = FC_t_i[t]
+                    ECM_j = FC_t_j[t]
+                if normalize:
+                    distance_out.append(normalized_euc_dist(ECM_i, ECM_j))
+                else:
+                    distance_out.append(distance.euclidean(ECM_i, ECM_j))
+
+        return np.array(distance_out)
+
+    # #regression
+        # y = dFC_vec_j[t]
+        # xx = FCS_vecs_new_order
+        # reg = LinearRegression().fit(xx.T, y.T)
+        # reg_dist.append(reg.coef_)
+
+    def dFCM_lst_distance(self, dFCM_lst, metric, normalize=True):
+
+        TRs = TR_intersection(dFCM_lst)
+        
+        distance_mat = np.zeros((len(TRs), len(dFCM_lst), len(dFCM_lst)))
+        for i, dFCM_i in enumerate(dFCM_lst):
+            for j, dFCM_j in enumerate(dFCM_lst):
+                dFC_mat_i = dFCM_i.get_dFC_mat(TRs=TRs)
+                dFC_mat_j = dFCM_j.get_dFC_mat(TRs=TRs)
+                distance_mat[:, i, j] = self.dFC_distance(\
+                    FC_t_i=dFC_mat_i, \
+                    FC_t_j=dFC_mat_j, \
+                    metric=metric, \
+                    normalize=normalize\
+                        )
+        return distance_mat
+
+    def dFCM_lst_var(self, dFCM_lst, metric, normalize=True):
+
+        TRs = TR_intersection(dFCM_lst)
+
+        dFC_mat_avg = None
+        for i, dFCM_i in enumerate(dFCM_lst):
+            dFC_mat_i = dFCM_i.get_dFC_mat(TRs=TRs)
+            if dFC_mat_avg is None:
+                dFC_mat_avg = dFC_mat_normalize(C_t=dFC_mat_i, global_normalization=True) 
+            else:
+                dFC_mat_avg += dFC_mat_normalize(C_t=dFC_mat_i, global_normalization=True) 
+        dFC_mat_avg = np.divide(dFC_mat_avg, len(dFCM_lst))
+
+        distance_var_mat = np.zeros((len(TRs), len(dFCM_lst)))
+        for i, dFCM_i in enumerate(dFCM_lst):
+            dFC_mat_i = dFCM_i.get_dFC_mat(TRs=TRs)
+            distance_var_mat[:, i] = self.dFC_distance(\
+                FC_t_i=dFC_mat_i, \
+                FC_t_j=dFC_mat_avg, \
+                metric=metric, \
+                normalize=normalize\
+                    )
+        return distance_var_mat
 
     def dFC_corr_assess(self, dFCM_lst):
 
@@ -1736,6 +1884,44 @@ class DFC_ANALYZER:
                     int(len(corr_ij)*a) : int(len(corr_ij)*(1-a)) \
                         ])
                 corr_mat[j,i] = corr_mat[i,j] 
+
+        ########## distance calc ##########
+
+        dFC_distance = {}
+        dFC_distance['euclidean'] = self.dFCM_lst_distance(\
+            dFCM_lst, \
+            metric='euclidean', \
+            normalize=True \
+            )
+        dFC_distance['correlation'] = self.dFCM_lst_distance(\
+            dFCM_lst, \
+            metric='correlation', \
+            normalize=True \
+            )
+        dFC_distance['ECM'] = self.dFCM_lst_distance(\
+            dFCM_lst, \
+            metric='ECM', \
+            normalize=True \
+            )
+
+        ########## distance var calc ##########
+
+        dFC_distance_var = {}
+        dFC_distance_var['euclidean'] = self.dFCM_lst_var(\
+            dFCM_lst, \
+            metric='euclidean', \
+            normalize=True \
+            )
+        dFC_distance_var['correlation'] = self.dFCM_lst_var(\
+            dFCM_lst, \
+            metric='correlation', \
+            normalize=True \
+            )
+        dFC_distance_var['ECM'] = self.dFCM_lst_var(\
+            dFCM_lst, \
+            metric='ECM', \
+            normalize=True \
+            )
 
         ########## state coactivation corr ##########
 
@@ -1790,6 +1976,8 @@ class DFC_ANALYZER:
         ##############################################
 
         methods_assess['corr_mat'] = corr_mat
+        methods_assess['dFC_distance'] = dFC_distance
+        methods_assess['dFC_distance_var'] = dFC_distance_var
         methods_assess['measure_lst'] = measure_lst
         methods_assess['state_match'] = state_match
         methods_assess['FO'] = FO
