@@ -2349,7 +2349,7 @@ class HMM_CONT(dFC):
         # self.n_time = time_series.n_time
 
         Models, Scores = [], []
-        for i in range(10):
+        for i in range(100):
             model = hmm.GaussianHMM(n_components=self.n_states, covariance_type="full")
             model.fit(time_series.data.T) 
             score = model.score(time_series.data.T)
@@ -3021,12 +3021,25 @@ class HMM_DISC(dFC):
         self.swc.estimate_FCS(time_series=time_series)
         self.FCC_ = self.swc.estimate_dFCM(time_series=time_series)
 
-        self.hmm_model = hmm.MultinomialHMM(n_components=self.n_hid_states)
-        self.hmm_model.fit(self.FCC_.FCS_idx_array.reshape(-1, 1))
-
+        Models, Scores = [], []
+        for i in range(100):
+            model = hmm.MultinomialHMM(n_components=self.n_hid_states)
+            model.fit(self.FCC_.FCS_idx_array.reshape(-1, 1)) 
+            score = model.score(self.FCC_.FCS_idx_array.reshape(-1, 1))
+            Models.append(model)
+            Scores.append(score)
+            
+        self.hmm_model = Models[np.argmax(Scores)]
         self.Z = self.hmm_model.predict(self.FCC_.FCS_idx_array.reshape(-1, 1))
         self.TPM = self.hmm_model.transmat_
         self.EPM = self.hmm_model.emissionprob_ 
+
+        # self.hmm_model = hmm.MultinomialHMM(n_components=self.n_hid_states)
+        # self.hmm_model.fit(self.FCC_.FCS_idx_array.reshape(-1, 1))
+
+        # self.Z = self.hmm_model.predict(self.FCC_.FCS_idx_array.reshape(-1, 1))
+        # self.TPM = self.hmm_model.transmat_
+        # self.EPM = self.hmm_model.emissionprob_ 
 
         self.FCS_ = np.zeros((self.n_hid_states, \
             time_series.n_regions, time_series.n_regions))
