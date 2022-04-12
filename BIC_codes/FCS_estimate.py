@@ -21,14 +21,14 @@ output_root = './../../../../../RESULTs/methods_implementation/'
 # DATA_type is either 'sample' or 'Gordon' or 'simulated' or 'ICA'
 params_data_load = { \
     'DATA_type': 'Gordon', \
-    'normalization': True, \
-    'num_subj': 10, \
-    'select_nodes': True, \
-    'rand_node_slct': False, \
-    'num_select_nodes': 50, \
-    'num_time_point': 1200, \
-    'Fs_ratio': 1.00, \
-    'noise_ratio': 0.00, \
+    # 'normalization': True, \
+    # 'num_subj': 10, \
+    # 'select_nodes': True, \
+    # 'rand_node_slct': False, \
+    # 'num_select_nodes': 50, \
+    # 'num_time_point': 1200, \
+    # 'Fs_ratio': 1.00, \
+    # 'noise_ratio': 0.00, \
 
     'data_root_simul': './../../../../DATA/TVB data/', \
     'data_root_sample': './sampleDATA/', \
@@ -46,8 +46,38 @@ params_methods = { \
     # State Parameters
     'n_states': 6, 'n_subj_clstrs': 20, 'n_hid_states': 4, \
     # Parallelization Parameters
-    'n_jobs': 2, 'verbose': 0, 'backend': 'loky' \
+    'n_jobs': 2, 'verbose': 0, 'backend': 'loky', \
+    # Hyper Parameters
+    'normalization': True, \
+    'num_subj': 10, \
+    'num_select_nodes': 100, \
+    'num_time_point': 1200, \
+    'Fs_ratio': 1.00, \
+    'noise_ratio': 1.00, \
+    'num_realization': 1 \
 }
+
+###### HYPER PARAMETERS ALTERNATIVE ######
+
+MEASURES_name_lst = [ \
+                'SlidingWindow', \
+                'Time-Freq', \
+                'ContinuousHMM', \
+                'Windowless', \
+                'Clustering', \
+                'DiscreteHMM' \
+                ]
+
+alter_hparams = { \
+            'n_states': [6, 12, 16], \
+            'normalization': [True], \
+            'num_subj': [50, 100, 395], \
+            'num_select_nodes': [50, 100, 333], \
+            'num_time_point': [500, 800, 1200], \
+            'Fs_ratio': [0.50, 1.00, 1.50], \
+            'noise_ratio': [0.00, 0.50, 1.00], \
+            'num_realization': [1, 2, 3] \
+            }
 
 ###### SIMILARITY PARAMETERS ######
 
@@ -73,6 +103,11 @@ params_dFC_analyzer = { \
     'vis_TR_idx': list(range(10, 20, 1)),'save_image': True, 'output_root': output_root, \
     # Parallelization Parameters
     'n_jobs': 8, 'verbose': 0, 'backend': 'loky', \
+    # Methods Parameters
+    'params_methods': params_methods, \
+    'methods': MEASURES_name_lst, \
+    # hyper parameters alternative values
+    'alter_hparams': alter_hparams, \
     # Similarity Assessment Parameters
     'sim_assess_params': sim_assess_params, \
     # Dynamic Connection Detector Parameters
@@ -93,50 +128,7 @@ for session in BOLD:
 
 ################################# Measures of dFC #################################
 
-###### CONTINUOUS HMM ######
-hmm_cont = HMM_CONT(**params_methods)
-
-###### WINDOW_LESS ######
-windowless = WINDOWLESS(**params_methods)
-
-###### SLIDING WINDOW ######
-sw_pc = SLIDING_WINDOW(sw_method='pear_corr', **params_methods)
-sw_mi = SLIDING_WINDOW(sw_method='MI', **params_methods)
-
-###### TIME FREQUENCY ######
-time_freq_cwt = TIME_FREQ(method='CWT_mag', **params_methods)
-time_freq_wtc = TIME_FREQ(method='WTC', **params_methods)
-
-###### SLIDING WINDOW + CLUSTERING ######
-swc_pc = SLIDING_WINDOW_CLUSTR(base_method='pear_corr', **params_methods)
-
-###### DISCRETE HMM ######
-hmm_disc_pc = HMM_DISC(base_method='pear_corr', **params_methods)
-
-
-MEASURES = [
-
-    hmm_cont, \
-
-    windowless, \
-
-    sw_pc, \
-    # sw_mi, \
-    # sw_gLasso, \
-
-    # time_freq_cwt, \
-    # time_freq_cwt_r, \
-    time_freq_wtc, \
-
-    swc_pc, \
-    # swc_gLasso, \
-
-    hmm_disc_pc,\
-    # hmm_disc_gLasso, \
-
-]
-
-dFC_analyzer = DFC_ANALYZER(MEASURES_lst=MEASURES, \
+dFC_analyzer = DFC_ANALYZER( \
     analysis_name='reproducibility assessment', \
     **params_dFC_analyzer \
 )
