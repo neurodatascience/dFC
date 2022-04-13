@@ -175,9 +175,9 @@ def common_subj_lst(time_series_dict):
     SUBJECTs = None
     for session in time_series_dict:
         if SUBJECTs is None:
-            SUBJECTs = list(set(time_series_dict[session].subj_id_array))
+            SUBJECTs = time_series_dict[session].subj_id_lst
         else:
-            SUBJECTs = intersection(SUBJECTs, list(set(time_series_dict[session].subj_id_array)))
+            SUBJECTs = intersection(SUBJECTs, time_series_dict[session].subj_id_lst)
     return SUBJECTs
 
 def intersection(lst1, lst2): # input is a list 
@@ -1463,7 +1463,17 @@ class dFC:
             new_time_series = deepcopy(time_series)
             new_time_series = new_time_series.data
 
-        # time_series = time_series - np.repeat(np.mean(time_series, axis=1)[:,None], time_series.shape[1], axis=1) # ???????????????????????
+        # # select nodes
+
+        # if self.params['select_nodes']:
+        #     if self.params['rand_node_slct']:
+        #         nodes_idx = np.random.choice(range(BOLD[session].n_regions), size=self.params['num_select_nodes'], replace=False)
+        #         nodes_idx.sort()
+        #     else:
+        #         nodes_idx = np.array(list(range(47, 88)) + list(range(224, 263)))
+        #     BOLD[session].select_nodes(nodes_idx=nodes_idx)
+
+        #     print( 'number of regions selected= ' + str(BOLD[session].n_regions) )
 
         # normalization
         if self.normalization:
@@ -1669,7 +1679,7 @@ class HMM_CONT(dFC):
 
         Z = self.hmm_model.predict(time_series.data.T)
         dFCM = DFCM(measure=self)
-        dFCM.add_FC(FCSs=self.FCS_, FCS_idx=Z, subj_id_array=time_series.subj_id_array)
+        dFCM.add_FC(FCSs=self.FCS_, FCS_idx=Z, subj_id_array=time_series.subj_id_lst)
 
         return dFCM
 
@@ -1745,7 +1755,7 @@ class WINDOWLESS(dFC):
             Z.append(np.argwhere(gamma[i, :] != 0)[0,0])
             
         dFCM = DFCM(measure=self)
-        dFCM.add_FC(FCSs=self.FCS_, FCS_idx=Z, subj_id_array=time_series.subj_id_array)
+        dFCM.add_FC(FCSs=self.FCS_, FCS_idx=Z, subj_id_array=time_series.subj_id_lst)
         return dFCM
 
 ################################# Time-Frequency #################################
@@ -1924,7 +1934,7 @@ class TIME_FREQ(dFC):
             WT[:, i, :] = np.array(Q).T
 
         dFCM = DFCM(measure=self)
-        dFCM.add_FC(FCSs=WT, subj_id_array=time_series.subj_id_array)
+        dFCM.add_FC(FCSs=WT, subj_id_array=time_series.subj_id_lst)
         return dFCM
 
 ################################# Sliding-Window #################################
@@ -2070,7 +2080,7 @@ class SLIDING_WINDOW(dFC):
 
         # W is converted from sec to samples
         dFCM = self.dFC(time_series=time_series.data, \
-            subj_id=time_series.subj_id_array[:1], \
+            subj_id=time_series.subj_id_lst, \
             W=int(self.W * time_series.Fs) , \
             n_overlap=self.n_overlap, \
             tapered_window=self.tapered_window \
@@ -2213,7 +2223,7 @@ class SLIDING_WINDOW_CLUSTR(dFC):
         # )
 
         # 2-level clustering
-        SUBJECTs = list(set(time_series.subj_id_array))
+        SUBJECTs = time_series.subj_id_lst
         FCS_1st_level = None
         for subject in SUBJECTs:
             
@@ -2424,58 +2434,75 @@ class TIME_SERIES():
         
         '''
         subj_id is an id to identify the subjects
+        all properties are applied to every subject separately
+        for instance interval applies to TS of each subj separately
+
+        time_array of all subjects must be equal
         '''
 
         assert (not data is None) and (not Fs is None) and (not subj_id is None), \
             "data, subj_id, and Fs args must be provided."
 
-        self.data_ = data
-        self.subj_id_array_ = [subj_id] * data.shape[1] 
+        self.data_dict_ = {}
+        self.data_dict_[subj_id] = {}
+        self.data_dict_[subj_id]['data'] = data 
+        self.data_ = None
         self.Fs_ = Fs
+        self.Fs_ratio_ = 1.00
         self.TS_name_ = TS_name
         self.session_name_ = session_name
-        self.n_regions_ = self.data_.shape[0]
-        self.n_time_ = self.data_.shape[1]
+        self.n_regions_ = data.shape[0]
+        self.n_time_ = data.shape[1]
 
         # assert self.n_regions_ < self.n_time_, \
         #     "Probably you have to transpose the time_series."
 
         if time_array is None:
-            self.time_array_ = 1/self.Fs_ + np.arange(0, self.data_.shape[1]/self.Fs_, 1/self.Fs_)
+            self.time_array_ = 1/self.Fs_ + np.arange(0, data.shape[1]/self.Fs_, 1/self.Fs_)
         else:
             self.time_array_ = time_array
 
         self.locs_ = locs
         self.nodes_info_ = nodes_info
 
-        self.interval_ = list(range(self.n_time_))
+        self.interval_ = np.arange(0, self.n_time_)
         self.nodes_selection_ = list(range(self.n_regions_))
 
-    
-    @classmethod
-    def from_numpy(cls):
-        pass
+    @property
+    def data_dict(self):
+        return self.data_dict_
 
     @property
     def data(self):
-        data = self.data_[self.nodes_lst, self.interval]
-        assert data.shape[1] > data.shape[0], \
-            "Probably you have to transpose the time_series."
-        return data
+        if self.data_ is None:
+            self.updatae_data()
+        return self.data_
+
+    def updatae_data(self):
+        # after any change in data_dict, self.data_ is 
+        # set to None and needs an update before being used
+        data = None
+        for subj in self.data_dict:
+            if data is None:
+                data = self.data_dict[subj]['data']
+            else:
+                data = np.concatenate((data, self.data_dict[subj]['data']), axis=1)
+        self.data_ = data
+        return
 
     @property
-    def subj_id_array(self):
-        return [self.subj_id_array_[i] for i in self.interval[0]]
+    def subj_id_lst(self):
+        return [subj_id for subj_id in self.data_dict]
 
     @property
     def nodes_lst(self):
-        # output shape is (n_region, 1) 
-        return np.array(self.nodes_selection_)[:, np.newaxis]
+        # output shape is (n_region,) 
+        return np.array(self.nodes_selection_)
         
     @property
     def interval(self):
-        # output shape is (1, n_time) 
-        return np.array(self.interval_)[np.newaxis, :]
+        # output shape is (n_time,) 
+        return self.interval_
 
     @property
     def locs(self):
@@ -2493,53 +2520,56 @@ class TIME_SERIES():
 
     @property
     def Fs(self):
-        return self.Fs_
+        return self.Fs_ * self.Fs_ratio_
 
     @property
     def n_time(self):
-        return self.data.shape[1]
+        return len(self.time)
 
     @property
     def n_regions(self):
-        return self.data.shape[0]
+        return len(self.nodes_lst)
 
     @property
     def time(self):
-        return self.time_array_[self.interval[0]]
+        return self.time_array_[self.interval]
 
     @property
     def TS_name(self):
         return self.TS_name_
 
-    def resample(self):
-        # change self.Fs_
-        pass
-
-    def get_subj_ts(self, subj_id=None):
+    def get_subj_ts(self, subjs_id=None):
         """
         you can select time samples by their subj_id
         ! be careful about the original properties of TS hidden in new TS
         node selection will be kept.
-        """
-        TS_temp = deepcopy(self)
-        idx = [i for i,j in enumerate(self.subj_id_array) if j==subj_id]
-        TS_temp.truncate(start_point=idx[0], end_point=idx[-1])
 
-        new_TS = TIME_SERIES(data=TS_temp.data, subj_id=subj_id, Fs=self.Fs_, \
-            time_array=TS_temp.time, locs=self.locs, nodes_info=self.nodes_info, \
-            TS_name=self.TS_name+' subject '+subj_id)
-        new_TS.time_array_ = new_TS.time_array_ - (new_TS.time_array_[0] - 1/new_TS.Fs_)
+        subjs_id is one str or a list of str
+        """
+
+        flag = 0
+        if not type(subjs_id) is list:
+            subjs_id = [subjs_id]
+            flag = 1
+
+        new_TS = deepcopy(self)
+
+        SUBJECTS = [subj_id for subj_id in new_TS.data_dict_]
+        for subj in SUBJECTS:
+            if not subj in subjs_id:
+                new_TS.data_dict_.pop(subj, None)
+
+        if flag == 1:
+            new_TS.TS_name_ = self.TS_name+' subject '+subjs_id[0]
 
         return new_TS
 
 
-    def append_ts(self, new_time_series=None, time_array=None, subj_id=None):
+    def append_ts(self, new_time_series, time_array=None, subj_id=None):
         # append new time series to existing ones
-        # truncate will not be considered anymore, while node selection is; 
-        # the whole old time series will be concat to new one
-        # append_ts resets the truncate but not the node selection
-        # the new ts will be appended to the original data and then node_selection is applied again
-        # we assume the new time array starts from about 0 (or 1/Fs)
+        # truncate and node selection , etc will be automatically applied to new TS;
+        # However, at first the new TS must have the same properties as the original properties of 
+        # the existing TSs 
 
         assert self.n_regions_ == new_time_series.shape[0], \
             "Number of nodes mismatch."
@@ -2547,25 +2577,29 @@ class TIME_SERIES():
         assert not subj_id is None, \
             "subj_id must be provided."
 
-        if time_array is None:
-            time_array = 1/self.Fs_ + np.arange(0, new_time_series.shape[1]/self.Fs_, 1/self.Fs_)
-        time_array = self.time_array_[-1] + time_array
+        assert not subj_id in self.data_dict_, \
+            "subj_id already exists."
 
-        self.data_ = np.concatenate((self.data_, new_time_series), axis=1)
-        self.time_array_ = np.concatenate((self.time_array_, time_array), axis=0)
-        self.subj_id_array_ = self.subj_id_array_ + [subj_id] * new_time_series.shape[1]
-        self.n_time_ = self.data_.shape[1]
-        self.interval_ = list(range(self.n_time_))
+        self.data_dict_[subj_id] = {}
+
+        if not time_array is None:
+            assert self.time_array_ == time_array, \
+                'time array mismatch!'
+
+        self.data_dict_[subj_id]['data'] = new_time_series
+
+        self.data_ = None
 
 
     def truncate(self, start_time=None, end_time=None, start_point=None, end_point=None):
 
+        # truncates TS of every subj separately
         # based on either time or samples
         # if all None -> whole time_series
         #check if not out of total interval
 
         start = 0
-        end = self.n_time_
+        end = self.n_time
 
         if not start_point is None:
             start = start_point
@@ -2578,18 +2612,103 @@ class TIME_SERIES():
 
         if not end_time is None:
             end = np.argwhere(self.time_array_<=end_time)[-1,0] + 1
+
+        # make sure the interval is not out of range
+        start = max(start, 0)
+        end = min(end, self.n_time)
+
+        self.interval_ = np.arange(start, end)
         
-        self.interval_ = list(range(start, end))
-                
+        for subj in self.data_dict_:
+            self.data_dict_[subj]['data'] = self.data_dict_[subj]['data'][:, self.interval]
+
+        self.data_ = None
+
+    def normalize(self):
+        # normalization
+        for subj_id in self.data_dict:
+            new_time_series = self.data_dict[subj_id]['data']
+            for n in range(new_time_series.shape[0]):
+                new_time_series[n, :] = new_time_series[n, :] - np.mean(new_time_series[n, :])
+                new_time_series[n, :] = np.divide(new_time_series[n, :], np.std(new_time_series[n, :]))
+            self.data_dict_[subj_id]['data'] = new_time_series
+
+        self.data_ = None
+
+    def spatial_downsample(self, num_select_nodes, rand_node_slct=True):
+        if num_select_nodes < self.n_regions:
+            if rand_node_slct:
+                np.random.seed(0)
+                nodes_idx = np.random.choice(range(self.n_regions), size=num_select_nodes, replace=False)
+                nodes_idx.sort()
+            else:
+                # nodes_idx = np.array(list(range(self.num_select_nodes)))
+                nodes_idx = np.arange(0, self.n_regions, self.n_regions/num_select_nodes, dtype=int)
+            self.select_nodes(nodes_idx=nodes_idx)
+
+            self.data_ = None
+
+    def Fs_resample(self, Fs_ratio=None):
+        # downsample frequency
+        if Fs_ratio != 1:
+            for subj_id in self.data_dict:
+                new_time_series = self.data_dict[subj_id]['data']
+                downsampled_time_series = np.zeros((new_time_series.shape[0], int(new_time_series.shape[1]*Fs_ratio)))
+                for n in range(new_time_series.shape[0]):
+                    downsampled_time_series[n, :] =  signal.resample(new_time_series[n, :], int(new_time_series.shape[1]*Fs_ratio))
+                self.data_dict_[subj_id]['data'] = downsampled_time_series
+            self.Fs_ratio_ = Fs_ratio
+
+            start_time = self.time_array_[self.interval_[0]]
+            end_time = self.time_array_[self.interval_[-1]]
+
+            _, self.time_array_ =  signal.resample(new_time_series[n, :], int(new_time_series.shape[1]*Fs_ratio), t=self.time_array_)
+
+            start = np.argwhere(self.time_array_>=start_time)[0,0]
+            end = np.argwhere(self.time_array_<=end_time)[-1,0] + 1
+            self.interval_ = np.arange(start, end)
+
+            self.data_ = None
+
+    def add_noise(self, noise_ratio, mean_noise=0):
+        # adding noise perturbation 
+        if noise_ratio > 0:
+            for subj_id in self.data_dict:
+                new_time_series = self.data_dict[subj_id]['data']
+                power_signal = np.mean(new_time_series ** 2)
+                power_noise = power_signal * noise_ratio
+                new_time_series += np.random.normal(mean_noise, np.sqrt(power_noise), (new_time_series.shape[0], new_time_series.shape[1]))
+                self.data_dict_[subj_id]['data'] = new_time_series
+
+            self.data_ = None
+
+    def select_subjs(self, num_subj):
+        # selects the first num_subj subjects in self.subj_id_lst
+
+        SUBJECTS = [subj_id for subj_id in self.data_dict_]
+        if num_subj < len(SUBJECTS):
+            for subj_id in SUBJECTS:
+                if not subj_id in SUBJECTS[:num_subj]:
+                    self.data_dict_.pop(subj_id, None)
+
+            self.data_ = None
+
     def select_nodes(self, nodes_idx=None):
         # select the nodes indexed by numbers in nodes_idx. nodes_idx is a numpy 1D array
         # if nodes_idx is None -> all the nodes will be considered (resets node selection)
         # if nodes_idx is not sorted, it can be used to reorder the nodes
 
         if nodes_idx is None:
-            self.nodes_selection_ = list(range(self.n_regions_))
+            self.nodes_selection_ = np.arange(0, self.n_regions_, 1)
         else:
-            self.nodes_selection_ = nodes_idx    
+            self.nodes_selection_ = nodes_idx  
+
+        for subj in self.data_dict_:
+            self.data_dict_[subj]['data'] = self.data_dict_[subj]['data'][self.nodes_lst, :]
+
+        self.data_ = None
+
+        
 
     def visualize(self, start_time=None, end_time=None, \
         nodes_lst=None, \
@@ -3010,9 +3129,11 @@ class DATA_LOADER():
 
         SUBJECTS = intersection(SUBJECTS_gordon, SUBJECTS_ica)
 
-        print( str(len(SUBJECTS)) + ' subjects were found. ' + str(self.params['num_subj']) + ' subjects were selected.')
+        print( str(len(SUBJECTS)) + ' subjects were found. ')
 
-        SUBJECTS = SUBJECTS[0:self.params['num_subj']]
+        # print( str(len(SUBJECTS)) + ' subjects were found. ' + str(self.params['num_subj']) + ' subjects were selected.')
+
+        # SUBJECTS = SUBJECTS[0:self.params['num_subj']]
 
         return SUBJECTS
 
@@ -3053,34 +3174,9 @@ class DATA_LOADER():
 
                 time_series = time_series.T
 
-                # time_series = time_series - np.repeat(np.mean(time_series, axis=1)[:,None], time_series.shape[1], axis=1) # ???????????????????????
-
-                # normalization
-                if self.params['normalization']:
-                    for n in range(time_series.shape[0]):
-                        time_series[n, :] = time_series[n, :] - np.mean(time_series[n, :])
-                        time_series[n, :] = np.divide(time_series[n, :], np.std(time_series[n, :]))
-
-                # downsample frequency
-                new_time_series = np.zeros((time_series.shape[0], int(time_series.shape[1]*self.params['Fs_ratio'])))
-                for n in range(time_series.shape[0]):
-                    new_time_series[n, :] =  signal.resample(time_series[n, :], int(time_series.shape[1]*self.params['Fs_ratio']))
-                time_series = new_time_series
-
-                # truncate num time points
-                if self.params['num_time_point']<time_series.shape[1]:
-                    time_series = time_series[:, :self.params['num_time_point']]
-
-                # adding noise perturbation 
-                if self.params['noise_ratio'] > 0:
-                    mean_noise = 0
-                    power_signal = np.mean(time_series ** 2)
-                    power_noise = power_signal * self.params['noise_ratio']
-                    time_series += np.random.normal(mean_noise, np.sqrt(power_noise), (time_series.shape[0], time_series.shape[1]))
-
                 if BOLD[session] is None:
                     BOLD[session] = TIME_SERIES(data=time_series, subj_id=subject, \
-                                        Fs=self.BOLD_Fs*self.params['Fs_ratio'], \
+                                        Fs=self.BOLD_Fs, \
                                         locs=locs, nodes_info=atlas_data, \
                                         TS_name='BOLD Real', session_name=session \
                                     )
@@ -3089,19 +3185,6 @@ class DATA_LOADER():
 
             print( '*** Session ' + session + ': ' )
             print( 'number of regions= '+str(BOLD[session].n_regions) + ', number of TRs= ' + str(BOLD[session].n_time) )
-
-
-            # select nodes
-
-            if self.params['select_nodes']:
-                if self.params['rand_node_slct']:
-                    nodes_idx = np.random.choice(range(BOLD[session].n_regions), size=self.params['num_select_nodes'], replace=False)
-                    nodes_idx.sort()
-                else:
-                    nodes_idx = np.array(list(range(47, 88)) + list(range(224, 263)))
-                BOLD[session].select_nodes(nodes_idx=nodes_idx)
-
-                print( 'number of regions selected= ' + str(BOLD[session].n_regions) )
 
         return BOLD
 
