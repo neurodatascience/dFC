@@ -1632,7 +1632,7 @@ class HMM_CONT(dFC):
 
         Z = self.hmm_model.predict(time_series.data.T)
         dFCM = DFCM(measure=self)
-        dFCM.add_FC(FCSs=self.FCS_, FCS_idx=Z, subj_id_array=time_series.subj_id_lst)
+        dFCM.set_dFC(FCSs=self.FCS_, FCS_idx=Z, TS_info=time_series.TS_info)
 
         return dFCM
 
@@ -1720,7 +1720,7 @@ class WINDOWLESS(dFC):
             Z.append(np.argwhere(gamma[i, :] != 0)[0,0])
             
         dFCM = DFCM(measure=self)
-        dFCM.add_FC(FCSs=self.FCS_, FCS_idx=Z, subj_id_array=time_series.subj_id_lst)
+        dFCM.set_dFC(FCSs=self.FCS_, FCS_idx=Z, TS_info=time_series.TS_info)
         return dFCM
 
 ################################# Time-Frequency #################################
@@ -1902,7 +1902,7 @@ class TIME_FREQ(dFC):
             WT[:, i, :] = np.array(Q).T
 
         dFCM = DFCM(measure=self)
-        dFCM.add_FC(FCSs=WT, subj_id_array=time_series.subj_id_lst)
+        dFCM.set_dFC(FCSs=WT, TS_info=time_series.TS_info)
         return dFCM
 
 ################################# Sliding-Window #################################
@@ -2006,7 +2006,7 @@ class SLIDING_WINDOW(dFC):
                 
         return C
 
-    def dFC(self, time_series, subj_id, W=None, n_overlap=None, tapered_window=False):
+    def dFC(self, time_series, W=None, n_overlap=None, tapered_window=False):
         # W is in time samples
         
         L = time_series.shape[1]
@@ -2015,7 +2015,9 @@ class SLIDING_WINDOW(dFC):
             step = 1
 
         window_taper = signal.windows.gaussian(W, std=3*W/22)
-        C = DFCM(measure=self)
+        # C = DFCM(measure=self)
+        FCSs = list()
+        TR_array = list()
         for l in range(0, L-W+1, step):
 
             ######### creating a rectangel window ############
@@ -2029,17 +2031,15 @@ class SLIDING_WINDOW(dFC):
             window = np.repeat(np.expand_dims(window, axis=0), time_series.shape[0], axis=0)
 
             # int(l-W/2):int(l+3*W/2) is the nonzero interval after tapering
-            C.add_FC(FCSs=self.FC( \
+            FCSs.append(self.FC( \
                         np.multiply(time_series, window)[ \
                             :,max(int(l-W/2),0):min(int(l+3*W/2),L) \
-                                ] \
-                                    ), \
-                        subj_id_array = subj_id, \
-                        TR_array=np.array( [ int((l + (l+W)) / 2) ] ) \
+                                                        ] \
+                                )
                         )
-            # print('dFC step = %d' %(l))
+            TR_array.append(np.array( [ int((l + (l+W)) / 2) ] ))
 
-        return C
+        return FCSs, TR_array
     
     def estimate_dFCM(self, time_series):
         
@@ -2056,12 +2056,14 @@ class SLIDING_WINDOW(dFC):
         # self.n_time = time_series.n_time
 
         # W is converted from sec to samples
-        dFCM = self.dFC(time_series=time_series.data, \
-            subj_id=time_series.subj_id_lst, \
+        FCSs, TR_array = self.dFC(time_series=time_series.data, \
             W=int(self.params['W'] * time_series.Fs) , \
             n_overlap=self.params['n_overlap'], \
             tapered_window=self.params['tapered_window'] \
             )
+
+        dFCM = DFCM(measure=self)
+        dFCM.set_dFC(FCSs=FCSs, TR_array=TR_array, TS_info=time_series.TS_info)
 
         return dFCM
 
@@ -2269,9 +2271,9 @@ class SLIDING_WINDOW_CLUSTR(dFC):
             Z = self.kmeans_.predict(F)
 
         dFCM = DFCM(measure=self)
-        dFCM.add_FC(FCSs=self.FCS_, \
+        dFCM.set_dFC(FCSs=self.FCS_, \
             FCS_idx=Z, \
-            subj_id_array=dFCM_raw.subj_id_array, \
+            TS_info=time_series.TS_info, \
             TR_array=dFCM_raw.TR_array \
             )
 
@@ -2402,9 +2404,9 @@ class HMM_DISC(dFC):
         Z = self.hmm_model.predict(FCC.FCS_idx_array.reshape(-1, 1))
 
         dFCM = DFCM(measure=self)
-        dFCM.add_FC(FCSs=self.FCS_, \
+        dFCM.set_dFC(FCSs=self.FCS_, \
             FCS_idx=Z, \
-            subj_id_array=FCC.subj_id_array, \
+            TS_info=time_series.TS_info, \
             TR_array=FCC.TR_array \
                 )
 
@@ -2794,7 +2796,8 @@ class DFCM():
         self.measure_ = measure
         self.FCSs_ = None # is a dict
         self.FCS_idx_ = None # is a dict
-        self.subj_id_array_ = None
+        # info of the time series used for dFC estimation
+        self.TS_info_ = None
         self.TR_array_ = None
         self.n_regions_ = None
         self.n_time_ = -1
@@ -2842,8 +2845,9 @@ class DFCM():
         return np.array([int(self.FCS_idx[TR][self.FCS_idx[TR].find('S')+1:])-1 for TR in self.FCS_idx])
 
     @property
-    def subj_id_array(self):
-        return self.subj_id_array_
+    def TS_info(self):
+        # info of the time series used for dFC estimation
+        return self.TS_info_
 
     
     # test
@@ -2966,7 +2970,7 @@ class DFCM():
     #         self.n_time_ = self.FCP_idx.shape[0]
     #         self.TR_array_ = np.concatenate((self.TR_array, dFCM.TR_array))
 
-    def add_FC(self, FCSs, FCS_idx=None, subj_id_array=None, TR_array=None):
+    def set_dFC(self, FCSs, FCS_idx=None, TS_info=None, TR_array=None):
         
         if len(FCSs.shape)==2:
             FCSs = np.expand_dims(FCSs, axis=0)
@@ -2979,16 +2983,13 @@ class DFCM():
 
         if len(FCS_idx.shape)>1:
             FCS_idx = np.squeeze(FCS_idx)
-
-        if not type(subj_id_array) is list:
-            subj_id_array = list(subj_id_array)
         
         assert FCSs.shape[1] == FCSs.shape[2], \
                 "FC matrices must be square."
 
-        assert len(subj_id_array)==FCS_idx.shape[0], \
-            "FCS_idx and subj_id_array length mismatch."
-
+        assert self.n_time==-1, \
+            'why n_time is not -1 ?'
+        
         if TR_array is None:
             TR_array = np.arange(start=self.n_time+1, stop=self.n_time+len(FCS_idx)+1, step=1)
 
@@ -2996,41 +2997,19 @@ class DFCM():
             'TRs not sorted !'
 
         # the input FCS_idx is ranged from 0 to len(FCS)-1 but we shift it to 1 to len(FCS)
-        if self.FCSs_ is None:
-            self.FCSs_ = {}
-            for i, FCS in enumerate(FCSs):
-                self.FCSs_['FCS'+str(i+1)] = FCS
+        self.FCSs_ = {}
+        for i, FCS in enumerate(FCSs):
+            self.FCSs_['FCS'+str(i+1)] = FCS
 
-            self.FCS_idx_ = {}
-            for i, idx in enumerate(FCS_idx):
-                self.FCS_idx_['TR'+str(TR_array[i])] = 'FCS'+str(idx+1)
+        self.FCS_idx_ = {}
+        for i, idx in enumerate(FCS_idx):
+            self.FCS_idx_['TR'+str(TR_array[i])] = 'FCS'+str(idx+1)
 
-            self.subj_id_array_ = subj_id_array
-            self.n_regions_ = FCSs.shape[1]
-            self.n_time_ = len(self.FCS_idx_)
-            self.TR_array_ = TR_array
-        else:
-            # test this part
-            assert self.n_regions == FCSs.shape[1], \
-                "FCS region numbers mismatch."
+        self.TS_info_ = TS_info
+        self.n_regions_ = FCSs.shape[1]
+        self.n_time_ = len(self.FCS_idx_)
+        self.TR_array_ = TR_array
 
-            FCS_idx_offset = len(self.FCSs_)+1 # test FCS_idx_offset
-
-            for i, FCS in enumerate(FCSs):
-                assert not 'FCS'+str(i+FCS_idx_offset) in self.FCSs_, \
-                    'key already exists in self.FCSs_ !' 
-                self.FCSs_['FCS'+str(i+FCS_idx_offset)] = FCS
-
-            for i, idx in enumerate(FCS_idx):
-                assert not 'TR'+str(TR_array[i]) in self.FCS_idx_, \
-                    'key already exists in self.FCS_idx_ !' 
-                assert TR_array[i] > self.TR_array_[-1], \
-                    'TR overlap !' 
-                self.FCS_idx_['TR'+str(TR_array[i])] = 'FCS'+str(idx+FCS_idx_offset) 
-
-            self.subj_id_array_ = self.subj_id_array_ + subj_id_array
-            self.n_time_ = len(self.FCS_idx_) 
-            self.TR_array_ = np.concatenate((self.TR_array, TR_array))
 
     def visualize_dFC(self, TRs=None, normalize=True, \
         threshold=0.0, save_image=False, fig_name=None, fix_lim=True):
