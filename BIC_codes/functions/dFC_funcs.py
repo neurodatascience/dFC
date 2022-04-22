@@ -43,10 +43,10 @@ fig_pad = 0.1
 ################################# Other Functions ####################################
 
 # test
-def get_subj_ts_dict(time_series_dict, subj_id):
+def get_subj_ts_dict(time_series_dict, subjs_id):
     subj_ts_dict = {}
     for session in time_series_dict:
-        subj_ts_dict[session] = time_series_dict[session].get_subj_ts(subj_id=subj_id)
+        subj_ts_dict[session] = time_series_dict[session].get_subj_ts(subjs_id=subjs_id)
     return subj_ts_dict
 
 # test
@@ -828,19 +828,19 @@ class DFC_ANALYZER:
 
             ###### SLIDING WINDOW ######
             if MEASURES_name=='SlidingWindow':
-                measure = SLIDING_WINDOW(sw_method='pear_corr', **params)
+                measure = SLIDING_WINDOW(**params)
 
             ###### TIME FREQUENCY ######
             if MEASURES_name=='Time-Freq':
-                measure = TIME_FREQ(TF_method='WTC', **params)
+                measure = TIME_FREQ(**params)
 
             ###### SLIDING WINDOW + CLUSTERING ######
             if MEASURES_name=='Clustering':
-                measure = SLIDING_WINDOW_CLUSTR(base_method='pear_corr', **params)
+                measure = SLIDING_WINDOW_CLUSTR(**params)
 
             ###### DISCRETE HMM ######
             if MEASURES_name=='DiscreteHMM':
-                measure = HMM_DISC(base_method='pear_corr', **params)
+                measure = HMM_DISC(**params)
 
             MEASURES_lst.append(measure)
 
@@ -943,7 +943,7 @@ class DFC_ANALYZER:
             for subject in SUBJECTs:
                 OUT.append( \
                     self.subj_lvl_dFC_assess( \
-                    time_series_dict=get_subj_ts_dict(time_series_dict, subj_id=subject), \
+                    time_series_dict=get_subj_ts_dict(time_series_dict, subjs_id=subject), \
                     ))
         else:
             OUT = Parallel( \
@@ -951,7 +951,7 @@ class DFC_ANALYZER:
                         verbose=self.params['verbose'], \
                         backend=self.params['backend'])( \
                     delayed(self.subj_lvl_dFC_assess)( \
-                        time_series_dict=get_subj_ts_dict(time_series_dict, subj_id=subject), \
+                        time_series_dict=get_subj_ts_dict(time_series_dict, subjs_id=subject), \
                         ) \
                         for subject in SUBJECTs)
         
@@ -1420,7 +1420,7 @@ class dFC:
         'GraphLasso', \
     ]
 
-    base_methods_name_lst = sw_methods_name_lst + TF_methods_name_lst
+    base_methods_name_lst = ['SlidingWindow', 'Time-Freq']
 
     def __init__(self):
         self.measure_name = ''
@@ -1428,6 +1428,12 @@ class dFC:
         self._stat = []
         self.TPM = []
         self.params = {}
+        self.TS_info_ = {}
+
+    @property
+    def TS_info(self):
+        # info of the time series used to train/estimate FCSs
+        return self.TS_info_
 
     @property
     def FCS(self):
@@ -1470,7 +1476,7 @@ class dFC:
         # SUBJECTs
         new_time_series.select_subjs(num_subj=self.params['num_subj'])
         # SPATIAL RESOLUTION
-        new_time_series.spatial_downsample(num_select_nodes=self.params['num_select_nodes'], rand_node_slct=False)
+        new_time_series.spatial_downsample(num_select_nodes=self.params['num_select_nodes'], rand_node_slct=True)
         # TEMPORAL RESOLUTION
         new_time_series.Fs_resample(Fs_ratio=self.params['Fs_ratio'])
         # NORMALIZE
@@ -1481,6 +1487,8 @@ class dFC:
         # NUMBER OF TIME POINTS
         new_time_series.truncate(start_point=0, end_point=self.params['num_time_point'])
 
+        self.TS_info_ = new_time_series.info_dict
+
         return new_time_series
 
     def manipulate_time_series4dFC(self, time_series):
@@ -1488,7 +1496,7 @@ class dFC:
         new_time_series = deepcopy(time_series)
 
         # SPATIAL RESOLUTION
-        new_time_series.spatial_downsample(num_select_nodes=self.params['num_select_nodes'], rand_node_slct=False)
+        new_time_series.spatial_downsample(num_select_nodes=self.params['num_select_nodes'], rand_node_slct=True)
         # TEMPORAL RESOLUTION
         new_time_series.Fs_resample(Fs_ratio=self.params['Fs_ratio'])
         # NORMALIZE
@@ -1578,7 +1586,7 @@ class HMM_CONT(dFC):
         self.TPM = []
         self.FCS_ = []
 
-        self.params_name_lst = ['n_states', \
+        self.params_name_lst = ['n_states', 'hmm_iter', \
             'normalization', 'num_subj', 'num_select_nodes', 'num_time_point', \
             'Fs_ratio', 'noise_ratio', 'num_realization']
         self.params = {}
@@ -1607,7 +1615,7 @@ class HMM_CONT(dFC):
         time_series = self.manipulate_time_series4FCS(time_series)
 
         Models, Scores = [], []
-        for i in range(100):
+        for i in range(self.params['hmm_iter']):
             model = hmm.GaussianHMM(n_components=self.params['n_states'], covariance_type="full")
             model.fit(time_series.data.T) 
             score = model.score(time_series.data.T)
@@ -1632,7 +1640,7 @@ class HMM_CONT(dFC):
 
         Z = self.hmm_model.predict(time_series.data.T)
         dFCM = DFCM(measure=self)
-        dFCM.set_dFC(FCSs=self.FCS_, FCS_idx=Z, TS_info=time_series.TS_info)
+        dFCM.set_dFC(FCSs=self.FCS_, FCS_idx=Z, TS_info=time_series.info_dict)
 
         return dFCM
 
@@ -1720,7 +1728,7 @@ class WINDOWLESS(dFC):
             Z.append(np.argwhere(gamma[i, :] != 0)[0,0])
             
         dFCM = DFCM(measure=self)
-        dFCM.set_dFC(FCSs=self.FCS_, FCS_idx=Z, TS_info=time_series.TS_info)
+        dFCM.set_dFC(FCSs=self.FCS_, FCS_idx=Z, TS_info=time_series.info_dict)
         return dFCM
 
 ################################# Time-Frequency #################################
@@ -1902,7 +1910,7 @@ class TIME_FREQ(dFC):
             WT[:, i, :] = np.array(Q).T
 
         dFCM = DFCM(measure=self)
-        dFCM.set_dFC(FCSs=WT, TS_info=time_series.TS_info)
+        dFCM.set_dFC(FCSs=WT, TS_info=time_series.info_dict)
         return dFCM
 
 ################################# Sliding-Window #################################
@@ -1923,14 +1931,10 @@ from sklearn.covariance import GraphicalLassoCV
 
 class SLIDING_WINDOW(dFC):
 
-    def __init__(self, sw_method='pear_corr', tapered_window=True, **params):
-
-        assert sw_method in self.sw_methods_name_lst, \
-            "sw_method not recognized."
+    def __init__(self, **params):
 
         self.measure_name_ = 'SlidingWindow'
         self.is_state_based = False
-        self.sw_method_ = sw_method
         self.TPM = []
         self.FCS_ = []
 
@@ -1942,9 +1946,9 @@ class SLIDING_WINDOW(dFC):
         for params_name in self.params_name_lst:
             if params_name in params:
                 self.params[params_name] = params[params_name]
-        
-        self.params['sw_method'] = sw_method
-        self.params['tapered_window'] = tapered_window
+
+        assert self.params['sw_method'] in self.sw_methods_name_lst, \
+            "sw_method not recognized."
         
     
     @property
@@ -2037,9 +2041,9 @@ class SLIDING_WINDOW(dFC):
                                                         ] \
                                 )
                         )
-            TR_array.append(np.array( [ int((l + (l+W)) / 2) ] ))
+            TR_array.append(int((l + (l+W)) / 2) )
 
-        return FCSs, TR_array
+        return np.array(FCSs), np.array(TR_array)
     
     def estimate_dFCM(self, time_series):
         
@@ -2063,7 +2067,7 @@ class SLIDING_WINDOW(dFC):
             )
 
         dFCM = DFCM(measure=self)
-        dFCM.set_dFC(FCSs=FCSs, TR_array=TR_array, TS_info=time_series.TS_info)
+        dFCM.set_dFC(FCSs=FCSs, TR_array=TR_array, TS_info=time_series.info_dict)
 
         return dFCM
 
@@ -2096,22 +2100,18 @@ from pyclustering.utils.metric import distance_metric, type_metric
 
 class SLIDING_WINDOW_CLUSTR(dFC):
 
-    def __init__(self, base_method='pear_corr', clstr_distance='euclidean',
-    tapered_window=True, **params):
+    def __init__(self, clstr_distance='euclidean', **params):
 
         assert clstr_distance=='euclidean' or clstr_distance=='manhattan', \
             "Clustering distance not recognized. It must be either \
                 euclidean or manhattan."
-
-        assert base_method in self.base_methods_name_lst, \
-            "Base method not recognized."
     
         self.measure_name_ = 'Clustering'
         self.is_state_based = True
         self.TPM = []
         self.FCS_ = []
 
-        self.params_name_lst = ['base_method', 'tapered_window', 'clstr_distance', \
+        self.params_name_lst = ['clstr_base_measure', 'sw_method', 'tapered_window', 'clstr_distance', \
             'coi_correction', \
             'n_subj_clstrs', 'W', 'n_overlap', 'n_states', 'normalization', \
             'n_jobs', 'verbose', 'backend', \
@@ -2122,9 +2122,10 @@ class SLIDING_WINDOW_CLUSTR(dFC):
             if params_name in params:
                 self.params[params_name] = params[params_name]
         
-        self.params['base_method'] = base_method
         self.params['clstr_distance'] = clstr_distance
-        self.params['tapered_window'] = tapered_window
+
+        assert self.params['clstr_base_measure'] in self.base_methods_name_lst, \
+            "Base method not recognized."
 
     @property
     def measure_name(self):
@@ -2189,14 +2190,11 @@ class SLIDING_WINDOW_CLUSTR(dFC):
         # self.n_regions = time_series.n_regions
         # self.n_time = time_series.n_time
 
-        if self.params['base_method']=='CWT_mag' or self.params['base_method']=='CWT_phase_r' \
-            or self.params['base_method']=='CWT_phase_a' or self.params['base_method']=='WTC':
-            # params = {'n_jobs': self.params['n_jobs'], 'verbose': self.params['verbose'], 'backend': self.params['backend']}
-            base_dFC = TIME_FREQ(TF_method=self.params['base_method'], **self.params)
-        else:
-            # params = {'W': self.W, 'n_overlap': self.n_overlap}
-            base_dFC = SLIDING_WINDOW(sw_method=self.params['base_method'], \
-                    tapered_window=self.params['tapered_window'], **self.params)
+        base_dFC = None
+        if self.params['clstr_base_measure']=='Time-Freq':
+            base_dFC = TIME_FREQ(**self.params)
+        if self.params['clstr_base_measure']=='SlidingWindow':
+            base_dFC = SLIDING_WINDOW(**self.params)
 
         # 1-level clustering
         # dFCM_raw = base_dFC.estimate_dFCM( \
@@ -2213,7 +2211,7 @@ class SLIDING_WINDOW_CLUSTR(dFC):
         for subject in SUBJECTs:
             
             dFCM_raw = base_dFC.estimate_dFCM( \
-                time_series=time_series.get_subj_ts(subj_id=subject) \
+                time_series=time_series.get_subj_ts(subjs_id=subject) \
                 )
 
             # test
@@ -2248,14 +2246,11 @@ class SLIDING_WINDOW_CLUSTR(dFC):
 
         time_series = self.manipulate_time_series4dFC(time_series)
 
-        if self.params['base_method']=='CWT_mag' or self.params['base_method']=='CWT_phase_r' \
-            or self.params['base_method']=='CWT_phase_a' or self.params['base_method']=='WTC':
-            params = {'n_jobs': self.params['n_jobs'], 'verbose': self.params['verbose'], 'backend': self.params['backend']}
-            base_dFC = TIME_FREQ(TF_method=self.params['base_method'], **params)
-        else:
-            params = {'W': self.params['W'], 'n_overlap': self.params['n_overlap']}
-            base_dFC = SLIDING_WINDOW(sw_method=self.params['base_method'], \
-                    tapered_window=self.params['tapered_window'], **params)
+        base_dFC = None
+        if self.params['clstr_base_measure']=='Time-Freq':
+            base_dFC = TIME_FREQ(**self.params)
+        if self.params['clstr_base_measure']=='SlidingWindow':
+            base_dFC = SLIDING_WINDOW(**self.params)
                     
         dFCM_raw = base_dFC.estimate_dFCM(time_series=time_series)
 
@@ -2273,7 +2268,7 @@ class SLIDING_WINDOW_CLUSTR(dFC):
         dFCM = DFCM(measure=self)
         dFCM.set_dFC(FCSs=self.FCS_, \
             FCS_idx=Z, \
-            TS_info=time_series.TS_info, \
+            TS_info=time_series.info_dict, \
             TR_array=dFCM_raw.TR_array \
             )
 
@@ -2305,10 +2300,7 @@ from hmmlearn import hmm
 
 class HMM_DISC(dFC):
 
-    def __init__(self, base_method='pear_corr', tapered_window=True, **params):
-        
-        assert base_method in self.base_methods_name_lst, \
-            "Base method not recognized."
+    def __init__(self, **params):
             
         self.measure_name_ = 'DiscreteHMM'
         self.is_state_based = True
@@ -2316,8 +2308,8 @@ class HMM_DISC(dFC):
         self.FCS_ = []
         self.swc = None
         
-        self.params_name_lst = ['base_method', 'tapered_window', 'n_hid_states', \
-            'coi_correction', \
+        self.params_name_lst = ['clstr_base_measure', 'sw_method', 'tapered_window', 'n_hid_states', \
+            'coi_correction', 'hmm_iter', \
             'n_jobs', 'verbose', 'backend', \
             'n_subj_clstrs', 'W', 'n_overlap', 'n_states', 'normalization', \
             'num_subj', 'num_select_nodes', 'num_time_point', 'Fs_ratio', \
@@ -2327,9 +2319,10 @@ class HMM_DISC(dFC):
             if params_name in params:
                 self.params[params_name] = params[params_name]
         
-        self.params['base_method'] = base_method
         self.params['n_hid_states'] = self.params['n_states']
-        self.params['tapered_window'] = tapered_window
+
+        assert self.params['clstr_base_measure'] in self.base_methods_name_lst, \
+            "Base measure not recognized."
 
     @property
     def measure_name(self):
@@ -2357,13 +2350,12 @@ class HMM_DISC(dFC):
         # params = {'W': self.W, 'n_overlap': self.n_overlap, \
         #     'n_subj_clstrs': self.n_subj_clstrs, 'n_states': self.n_states, \
         #     'n_jobs': self.params['n_jobs'], 'verbose': self.params['verbose'], 'backend': self.params['backend']}
-        self.swc = SLIDING_WINDOW_CLUSTR(base_method=self.params['base_method'], \
-            tapered_window=self.params['tapered_window'], **self.params)
+        self.swc = SLIDING_WINDOW_CLUSTR(**self.params)
         self.swc.estimate_FCS(time_series=time_series)
         self.FCC_ = self.swc.estimate_dFCM(time_series=time_series)
 
         Models, Scores = [], []
-        for i in range(100):
+        for i in range(self.params['hmm_iter']):
             model = hmm.MultinomialHMM(n_components=self.params['n_hid_states'])
             model.fit(self.FCC_.FCS_idx_array.reshape(-1, 1)) 
             score = model.score(self.FCC_.FCS_idx_array.reshape(-1, 1))
@@ -2406,7 +2398,7 @@ class HMM_DISC(dFC):
         dFCM = DFCM(measure=self)
         dFCM.set_dFC(FCSs=self.FCS_, \
             FCS_idx=Z, \
-            TS_info=time_series.TS_info, \
+            TS_info=time_series.info_dict, \
             TR_array=FCC.TR_array \
                 )
 
@@ -2475,10 +2467,11 @@ class TIME_SERIES():
         info_dict['n_time'] = self.n_time
         info_dict['n_regions'] = self.n_regions
         info_dict['Fs'] = self.Fs
-        info_dict['Fs_ratio'] = self.Fs_ratio
+        info_dict['Fs_ratio'] = self.Fs_ratio_
         info_dict['noise_ratio'] = self.noise_ratio
-        info_dict['selected_nodes'] = self.select_nodes
+        info_dict['nodes_lst'] = self.nodes_lst
         info_dict['nodes_info'] = self.nodes_info
+        info_dict['nodes_locs'] = self.locs
         info_dict['subj_id_lst'] = self.subj_id_lst
         info_dict['interval'] = self.interval
         info_dict['time'] = self.time
@@ -2533,7 +2526,7 @@ class TIME_SERIES():
         if self.nodes_info_ is None:
             return None
         else:
-            return [self.nodes_info_[0]] + [self.nodes_info_[i[0]+1] for i in self.nodes_lst] 
+            return [self.nodes_info_[0]] + [self.nodes_info_[i+1] for i in self.nodes_lst] 
 
     @property
     def Fs(self):
@@ -3137,7 +3130,7 @@ class DATA_LOADER():
 
     def load_gordon(self, subj_id2load=None):
 
-        SESSIONs = ['Rest1_LR' , 'Rest1_RL', 'Rest2_LR', 'Rest2_RL']
+        SESSIONs = self.params['SESSIONs'] #['Rest1_LR' , 'Rest1_RL', 'Rest2_LR', 'Rest2_RL']
         if subj_id2load is None:
             SUBJECTS = self.SUBJECTS
         else:
@@ -3188,7 +3181,7 @@ class DATA_LOADER():
 
     def load_ica(self, subj_id2load=None):
 
-        SESSIONs = ['session_1']
+        SESSIONs = self.params['SESSIONs'] #['session_1']
         if subj_id2load is None:
             SUBJECTS = self.SUBJECTS
         else:
@@ -3965,7 +3958,7 @@ class DYN_CONN_DETECTOR:
             SUBJs_TH_mask_lst = list()
             for subject in SUBJECTs:
                 SURROGATE = self.gen_surrogate( \
-                    time_series=time_series.get_subj_ts(subj_id=subject), \
+                    time_series=time_series.get_subj_ts(subjs_id=subject), \
                     N=N, L=L, verbose=self.params['verbose']  \
                 )
                 dFCM_var = self.calc_dFC_var(time_series=SURROGATE, MEASURES_lst=MEASURES_lst)
@@ -3977,7 +3970,7 @@ class DYN_CONN_DETECTOR:
                     verbose=self.params['verbose'] , \
                     backend=self.params['backend'])( \
                 delayed(self.subj_lvl_calc_TH_mask)( \
-                    time_series=time_series.get_subj_ts(subj_id=subject), \
+                    time_series=time_series.get_subj_ts(subjs_id=subject), \
                     MEASURES_lst=MEASURES_lst, \
                     N=N, L=L \
                     ) \

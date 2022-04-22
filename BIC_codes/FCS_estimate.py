@@ -21,14 +21,7 @@ output_root = './../../../../../RESULTs/methods_implementation/'
 # DATA_type is either 'sample' or 'Gordon' or 'simulated' or 'ICA'
 params_data_load = { \
     'DATA_type': 'Gordon', \
-    # 'normalization': True, \
-    # 'num_subj': 10, \
-    # 'select_nodes': True, \
-    # 'rand_node_slct': False, \
-    # 'num_select_nodes': 50, \
-    # 'num_time_point': 1200, \
-    # 'Fs_ratio': 1.00, \
-    # 'noise_ratio': 0.00, \
+    'SESSIONs':['Rest1_LR'], \
 
     'data_root_simul': './../../../../DATA/TVB data/', \
     'data_root_sample': './sampleDATA/', \
@@ -42,18 +35,24 @@ params_data_load = { \
 
 params_methods = { \
     # Sliding Parameters
-    'W': 44, 'n_overlap': 0.5, \
+    'W': 44, 'n_overlap': 0.5, 'sw_method':'pear_corr', 'tapered_window':True, \
+    # TIME_FREQ
+    'TF_method':'WTC', \
+    # CLUSTERING AND DHMM
+    'clstr_base_measure':'SlidingWindow', \
+    # HMM
+    'hmm_iter': 20, \
     # State Parameters
-    'n_states': 6, 'n_subj_clstrs': 20, 'n_hid_states': 4, \
+    'n_states': 12, 'n_subj_clstrs': 20, \
     # Parallelization Parameters
     'n_jobs': 2, 'verbose': 0, 'backend': 'loky', \
     # Hyper Parameters
     'normalization': True, \
-    'num_subj': 10, \
+    'num_subj': 100, \
     'num_select_nodes': 100, \
     'num_time_point': 1200, \
     'Fs_ratio': 1.00, \
-    'noise_ratio': 1.00, \
+    'noise_ratio': 0.00, \
     'num_realization': 1 \
 }
 
@@ -69,14 +68,14 @@ MEASURES_name_lst = [ \
                 ]
 
 alter_hparams = { \
-            'n_states': [6, 12, 16], \
-            'normalization': [True], \
-            'num_subj': [50, 100, 395], \
-            'num_select_nodes': [50, 100, 333], \
-            'num_time_point': [500, 800, 1200], \
-            'Fs_ratio': [0.50, 1.00, 1.50], \
-            'noise_ratio': [0.00, 0.50, 1.00], \
-            'num_realization': [1, 2, 3] \
+            'n_states': [6, 16], \
+            'normalization': [], \
+            'num_subj': [50, 80], \
+            'num_select_nodes': [50], \
+            'num_time_point': [500, 800], \
+            'Fs_ratio': [0.50, 1.50], \
+            'noise_ratio': [0.50, 1.00], \
+            'num_realization': [2, 3] \
             }
 
 ###### SIMILARITY PARAMETERS ######
@@ -103,11 +102,6 @@ params_dFC_analyzer = { \
     'vis_TR_idx': list(range(10, 20, 1)),'save_image': True, 'output_root': output_root, \
     # Parallelization Parameters
     'n_jobs': 8, 'verbose': 0, 'backend': 'loky', \
-    # Methods Parameters
-    'params_methods': params_methods, \
-    'methods': MEASURES_name_lst, \
-    # hyper parameters alternative values
-    'alter_hparams': alter_hparams, \
     # Similarity Assessment Parameters
     'sim_assess_params': sim_assess_params, \
     # Dynamic Connection Detector Parameters
