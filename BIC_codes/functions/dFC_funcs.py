@@ -663,43 +663,7 @@ class DFC_ANALYZER:
         # if 'dyn_conn_det_params' in params:
             # self.dyn_conn_det_params = params['dyn_conn_det_params']
 
-        self.methods_assess_dict_lst_ = list()
-
-    @property
-    def methods_corr(self):
-        # it assumes all subjects have all sessions and the order of their measures is the same ?
-        
-        methods_corr_dict = {}
-        for session in self.methods_assess_dict_lst[0]:
-            methods_corr_dict[session] = {}
-            methods_corr = list()
-            
-            # dFC corr
-            for methods_assess_subj_dict in self.methods_assess_dict_lst:
-                methods_corr.append(methods_assess_subj_dict[session]['corr_mat'])
-            
-            methods_corr = np.array(methods_corr)
-            methods_corr_dict[session]['corr_mat'] = np.mean(methods_corr, axis=0)
-            methods_corr_dict[session]['measure_lst'] = methods_assess_subj_dict[session]['measure_lst']
-
-        return methods_corr_dict
-
-    @property
-    def methods_assess_dict_lst(self):
-        # methods_assess_dict_lst:
-        # -> subject (list)
-        #   -> session
-        #       -> methods_corr
-        #       -> measure_lst
-        #       -> state_match
-        #           -> [measure_i][measure_j][FCS_i]['trans_sim_vec'] 
-        #       -> FO
-        #           -> [measure][FCS]
-        #       -> trans_freq
-        #           -> [measure] -> trans_freq
-        #           -> [measure] -> trans_norm
-
-        return self.methods_assess_dict_lst_
+        # self.methods_assess_dict_lst_ = list()
 
     @property
     def MEASURES_lst(self):
@@ -742,26 +706,6 @@ class DFC_ANALYZER:
             for measure in self.SB_MEASURES_lst(self.MEASURES_fit_lst[session]):
                 FCS_dict[session][measure.measure_name] = measure.FCS_dict
         return FCS_dict
-
-    @property
-    def FCS_sim_dict(self):
-        ## normalize ??
-        normalize = False
-        # FCS_sim_dict[session][measure_i][measure_j][FCS_i]
-        FCS_sim_dict = {}
-        for session in self.FCS_dict:
-            FCS_sim_dict[session] = {}
-            for measure_i in self.FCS_dict[session]:
-                FCS_sim_dict[session][measure_i] = {}
-                for measure_j in self.FCS_dict[session]:
-
-                    FCS_sim_dict[session][measure_i][measure_j] = self.FCS_sim_calc( \
-                        FCS_dict_i = self.FCS_dict[session][measure_i], \
-                        FCS_dict_j = self.FCS_dict[session][measure_j], \
-                        normalize=normalize \
-                    )
-
-        return FCS_sim_dict
 
     def set_MEASURES_lst(self, MEASURES_lst):
         self.MEASURES_lst_ = MEASURES_lst
@@ -981,12 +925,12 @@ class DFC_ANALYZER:
                     delayed(measure.estimate_dFCM)(time_series=time_series) \
                         for measure in self.MEASURES_fit_lst_[session])
 
-            MEASURES_dFCM = {}
-            for dFCM in dFCM_lst:
-                # test if self.MEASURES_lst[m].measure_name=dFCM.measure.measure_name
-                MEASURES_dFCM[dFCM.measure.measure_name] = dFCM
+            # MEASURES_dFCM = {}
+            # for dFCM in dFCM_lst:
+            #     # test if self.MEASURES_lst[m].measure_name=dFCM.measure.measure_name
+            #     MEASURES_dFCM[dFCM.measure.measure_name] = dFCM
 
-            dFCM_dict[session] = MEASURES_dFCM
+            # dFCM_dict[session] = MEASURES_dFCM
 
             # self.dFC_corr_assess returns a dict with 'corr_mat', 
             # 'measure_lst', 'sb_measure_lst', and 'state_match' keys
@@ -1016,18 +960,43 @@ class DFC_ANALYZER:
         corr= np.array(corr)
         return corr
     
+    def dFCM_lst_corr(self, dFCM_lst, a=0.1):
+        # a is portion of the dFCs to ignore from 
+        # the beginning and the end
+
+        common_TRs = TR_intersection(dFCM_lst)
+
+        corr_mat = np.zeros((len(dFCM_lst), len(dFCM_lst)))
+        for i in range(len(dFCM_lst)):
+            for j in range(i+1, len(dFCM_lst)):
+
+                corr_ij = self.dFC_corr( \
+                    dFCM_lst[i], dFCM_lst[j], \
+                    TRs=common_TRs \
+                        )
+                corr_mat[i,j] = np.mean(corr_ij[ \
+                    int(len(corr_ij)*a) : int(len(corr_ij)*(1-a)) \
+                        ])
+                corr_mat[j,i] = corr_mat[i,j] 
+
+        return corr_mat
+
     def FO_calc(self, dFCM, common_TRs=None):
 
         # returns, for each state the Fractional Occupancy (FO)
         # see Visaure et al., 2017
         # it only considers TRs in common_TRs
 
+        FO = {}
+
+        if not dFCM.measure.is_state_based:
+            return FO
+
         if common_TRs is None:
             common_TRs = dFCM.TR_array
 
         state_act_dict = dFCM.state_act_dict(TRs=common_TRs)
-
-        FO = {}
+        
         for FCS_key in state_act_dict['state_TC']:
             FO[FCS_key] = np.mean(state_act_dict['state_TC'][FCS_key]['act_TC'])
 
@@ -1052,19 +1021,19 @@ class DFC_ANALYZER:
         # list of FCS names
         ############## when combining COMs check if the order of FCS names is the same
         FCS_name_lst = list()
-        for dFCM in dFCM_lst:
+        for i, dFCM in enumerate(dFCM_lst):
             if dFCM.measure.is_state_based:
                 for FCS in dFCM.FCSs:
-                    FCS_name_lst.append(dFCM.measure.measure_name+'_'+FCS)
+                    FCS_name_lst.append('measure_'+str(i)+'_'+FCS)
         # print(FCS_name_lst)
 
         # building the observation sequence
         Obs_seq = list()
         for TR in TRs_lst:
             Obs_vec = list()
-            for dFCM in dFCM_lst:
+            for i, dFCM in enumerate(dFCM_lst):
                 if dFCM.measure.is_state_based:
-                    Obs_vec.append(dFCM.measure.measure_name + '_' + dFCM.FCS_idx[TR])
+                    Obs_vec.append('measure_' + str(i) + '_' + dFCM.FCS_idx[TR])
             Obs_seq.append(Obs_vec)
         # print(Obs_seq)
 
@@ -1088,14 +1057,17 @@ class DFC_ANALYZER:
         # and the number of total state transitions regardless of common_TRs
         # but normalized by total number of TRs -> trans_norm
 
+        trans_freq_dict = {}
+
+        if not dFCM.measure.is_state_based:
+            return trans_freq_dict
+
         if common_TRs is None:
             common_TRs = dFCM.TR_array
 
         TRs_lst = list()
         for TR in common_TRs:
             TRs_lst.append('TR'+str(TR))
-
-        trans_freq_dict = {}
 
         trans_freq = 0
         last_TR = None
@@ -1223,38 +1195,18 @@ class DFC_ANALYZER:
 
     def dFC_corr_assess(self, dFCM_lst):
 
-        ########## dFCM corr ##########
-        # returns averaged correlation of dFC measures in a dict format
-        # with 'corr_mat' and 'measure_lst' keys
-
-        a = 0.1 # portion of the dFCs to ignore from the beginning and the end
-
         measure_lst = list()
-        common_TRs = dFCM_lst[0].TR_array
+        TS_info_lst = list()
         for dFCM in dFCM_lst:
-            measure_lst.append(dFCM.measure.measure_name)
-            common_TRs = intersection(common_TRs, dFCM.TR_array)
-        common_TRs.sort()
-        assert len(common_TRs)!=0, \
-            'No TR intersection.'
+            measure_lst.append(dFCM.measure)
+            TS_info_lst.append(dFCM.TS_info)
 
-        methods_assess = {}
-        corr_mat = np.zeros((len(measure_lst), len(measure_lst)))
-        for i in range(len(measure_lst)):
-            for j in range(i+1, len(measure_lst)):
+        common_TRs = TR_intersection(dFCM_lst)
 
-                # assert dFCM_lst[i].measure.measure_name==self.MEASURES_lst[i].measure_name and \
-                #     dFCM_lst[j].measure.measure_name==self.MEASURES_lst[j].measure_name, \
-                #     'mismatch in MEASURES_lst order'
+        ########## dFCM corr ##########
+        # returns averaged correlation of dFC measures 
 
-                corr_ij = self.dFC_corr( \
-                    dFCM_lst[i], dFCM_lst[j], \
-                    TRs=common_TRs \
-                        )
-                corr_mat[i,j] = np.mean(corr_ij[ \
-                    int(len(corr_ij)*a) : int(len(corr_ij)*(1-a)) \
-                        ])
-                corr_mat[j,i] = corr_mat[i,j] 
+        corr_mat = self.dFCM_lst_corr(self, dFCM_lst, a=0.1)
 
         ########## distance calc ##########
 
@@ -1296,10 +1248,6 @@ class DFC_ANALYZER:
 
         ########## state coactivation corr ##########
 
-        sb_dFCM_dict = {}
-        for dFCM in dFCM_lst:
-            if dFCM.measure.is_state_based:
-                sb_dFCM_dict[dFCM.measure.measure_name] = dFCM
 
         # ## using the same common_TRs as dFC corr
 
@@ -1316,11 +1264,12 @@ class DFC_ANALYZER:
 
         ########## Fractional Occupancy ##########
 
-        FO = {}
-        for sb_measure in sb_dFCM_dict:
-            FO[sb_measure] = self.FO_calc(
-                dFCM=sb_dFCM_dict[sb_measure], \
+        FO = list()
+        for dFCM in dFCM_lst:
+            FO.append(self.FO_calc(
+                dFCM=dFCM, \
                 common_TRs=common_TRs \
+            )
             )
 
         ########## Co-Occurance Matrix and Transition Probability Matrix ##########
@@ -1337,19 +1286,22 @@ class DFC_ANALYZER:
 
         ########## transition frequency ##########
 
-        trans_freq = {}
-        for sb_measure in sb_dFCM_dict:
-            trans_freq[sb_measure] = self.transition_freq(
-                dFCM=sb_dFCM_dict[sb_measure], \
+        trans_freq = list()
+        for dFCM in dFCM_lst:
+            trans_freq.append(self.transition_freq(
+                dFCM=dFCM, \
                 common_TRs=common_TRs \
+            )
             )
                 
         ##############################################
 
+        methods_assess = {}
+        methods_assess['measure_lst'] = measure_lst
+        methods_assess['TS_info_lst'] = TS_info_lst
         methods_assess['corr_mat'] = corr_mat
         methods_assess['dFC_distance'] = dFC_distance
         methods_assess['dFC_distance_var'] = dFC_distance_var
-        methods_assess['measure_lst'] = measure_lst
         # methods_assess['state_match'] = state_match
         methods_assess['FO'] = FO
         methods_assess['CO'] = CO
@@ -1436,6 +1388,10 @@ class dFC:
         return self.TS_info_
 
     @property
+    def is_state_based(self):
+        return self.params['is_state_based']
+
+    @property
     def FCS(self):
         return self.FCS_
 
@@ -1461,7 +1417,22 @@ class dFC:
         print_dict(self.params)
 
     def issame(self, dFC):
-        pass
+        if type(self)==type(dFC):
+            for param_name in self.params:
+                if self.params[param_name] != dFC.params[param_name]:
+                    return False
+        else:
+            return False
+        return True
+
+    def param_match(self, **param_dict):
+        for param in param_dict:
+            if param in self.params:
+                if self.params[param]!=param_dict[param]:
+                    return False
+            else:
+                return False
+        return True
 
     def estimate_FCS(self, time_series=None):
         pass
@@ -1485,7 +1456,7 @@ class dFC:
         # NOISE
         new_time_series.add_noise(noise_ratio=self.params['noise_ratio'], mean_noise=0)
         # NUMBER OF TIME POINTS
-        new_time_series.truncate(start_point=0, end_point=self.params['num_time_point'])
+        new_time_series.truncate(start_point=0, end_point=self.params['num_time_point']-1)
 
         self.TS_info_ = new_time_series.info_dict
 
@@ -1505,7 +1476,7 @@ class dFC:
         # NOISE
         new_time_series.add_noise(noise_ratio=self.params['noise_ratio'], mean_noise=0)
         # NUMBER OF TIME POINTS
-        new_time_series.truncate(start_point=0, end_point=self.params['num_time_point'])
+        new_time_series.truncate(start_point=0, end_point=self.params['num_time_point']-1)
 
         return new_time_series
     
@@ -1581,12 +1552,10 @@ from hmmlearn import hmm
 class HMM_CONT(dFC):
 
     def __init__(self, **params):
-        self.measure_name = 'ContinuousHMM'
-        self.is_state_based = True
         self.TPM = []
         self.FCS_ = []
 
-        self.params_name_lst = ['n_states', 'hmm_iter', \
+        self.params_name_lst = ['measure_name', 'is_state_based', 'n_states', 'hmm_iter', \
             'normalization', 'num_subj', 'num_select_nodes', 'num_time_point', \
             'Fs_ratio', 'noise_ratio', 'num_realization']
         self.params = {}
@@ -1594,15 +1563,12 @@ class HMM_CONT(dFC):
             if params_name in params:
                 self.params[params_name] = params[params_name]
 
-    def issame(self, dFC):
-        if type(self)==type(dFC):
-            for param_name in self.params:
-                if self.params[param_name] != dFC.params[param_name]:
-                    return False
-        else:
-            return False
-        return True
+        self.params['measure_name'] = 'ContinuousHMM'
+        self.params['is_state_based'] = True
 
+    @property
+    def measure_name(self):
+        return self.params['measure_name'] 
 
     def estimate_FCS(self, time_series):
 
@@ -1667,27 +1633,23 @@ from ksvd import ApproximateKSVD
 class WINDOWLESS(dFC):
 
     def __init__(self, **params):
-        self.measure_name = 'Windowless'
-        self.is_state_based = True
         self.TPM = []
         self.FCS_ = []
 
-        self.params_name_lst = ['n_states', \
+        self.params_name_lst = ['measure_name', 'is_state_based', 'n_states', \
             'normalization', 'num_subj', 'num_select_nodes', 'num_time_point', \
             'Fs_ratio', 'noise_ratio', 'num_realization']
         self.params = {}
         for params_name in self.params_name_lst:
             if params_name in params:
                 self.params[params_name] = params[params_name]
+
+        self.params['measure_name'] = 'Windowless'
+        self.params['is_state_based'] = True
     
-    def issame(self, dFC):
-        if type(self)==type(dFC):
-            for param_name in self.params:
-                if self.params[param_name] != dFC.params[param_name]:
-                    return False
-        else:
-            return False
-        return True
+    @property
+    def measure_name(self):
+        return self.params['measure_name'] 
 
     def estimate_FCS(self, time_series):
 
@@ -1791,35 +1753,26 @@ class TIME_FREQ(dFC):
         assert TF_method in self.TF_methods_name_lst, \
             "Time-frequency method not recognized."
 
-        self.measure_name_ = 'Time-Freq'
-        self.is_state_based = False
         self.TPM = []
         self.FCS_ = []
 
-        self.params_name_lst = ['TF_method', 'coi_correction', \
+        self.params_name_lst = ['measure_name', 'is_state_based', 'TF_method', 'coi_correction', \
             'n_jobs', 'verbose', 'backend', \
-            'normalization', 'num_subj', 'num_select_nodes', 'num_time_point', \
+            'normalization', 'num_select_nodes', 'num_time_point', \
             'Fs_ratio', 'noise_ratio', 'num_realization']
         self.params = {}
         for params_name in self.params_name_lst:
             if params_name in params:
                 self.params[params_name] = params[params_name]
         
+        self.params['measure_name'] = 'Time-Freq'
+        self.params['is_state_based'] = False
         self.params['TF_method'] = TF_method
         self.params['coi_correction'] = coi_correction
 
     @property
     def measure_name(self):
-        return self.measure_name_ # + '_' + self.params['TF_method']
-
-    def issame(self, dFC):
-        if type(self)==type(dFC):
-            for param_name in self.params:
-                if self.params[param_name] != dFC.params[param_name]:
-                    return False
-        else:
-            return False
-        return True
+        return self.params['measure_name'] # + '_' + self.params['TF_method']
 
     def coi_correct(self, X, coi, freqs):
         # correct the edge effect in matrix X = [freqs, time] using coi
@@ -1933,19 +1886,20 @@ class SLIDING_WINDOW(dFC):
 
     def __init__(self, **params):
 
-        self.measure_name_ = 'SlidingWindow'
-        self.is_state_based = False
         self.TPM = []
         self.FCS_ = []
 
-        self.params_name_lst = ['sw_method', 'tapered_window', \
+        self.params_name_lst = ['measure_name', 'is_state_based', 'sw_method', 'tapered_window', \
             'W', 'n_overlap', 'normalization', \
-            'num_subj', 'num_select_nodes', 'num_time_point', 'Fs_ratio', \
+            'num_select_nodes', 'num_time_point', 'Fs_ratio', \
             'noise_ratio', 'num_realization']
         self.params = {}
         for params_name in self.params_name_lst:
             if params_name in params:
                 self.params[params_name] = params[params_name]
+
+        self.params['measure_name'] = 'SlidingWindow'
+        self.params['is_state_based'] = False
 
         assert self.params['sw_method'] in self.sw_methods_name_lst, \
             "sw_method not recognized."
@@ -1953,16 +1907,7 @@ class SLIDING_WINDOW(dFC):
     
     @property
     def measure_name(self):
-        return self.measure_name_ #+ '_' + self.sw_method
-
-    def issame(self, dFC):
-        if type(self)==type(dFC):
-            for param_name in self.params:
-                if self.params[param_name] != dFC.params[param_name]:
-                    return False
-        else:
-            return False
-        return True
+        return self.params['measure_name'] #+ '_' + self.sw_method
 
     def shan_entropy(self, c):
         c_normalized = c / float(np.sum(c))
@@ -2106,13 +2051,11 @@ class SLIDING_WINDOW_CLUSTR(dFC):
             "Clustering distance not recognized. It must be either \
                 euclidean or manhattan."
     
-        self.measure_name_ = 'Clustering'
-        self.is_state_based = True
         self.TPM = []
         self.FCS_ = []
 
-        self.params_name_lst = ['clstr_base_measure', 'sw_method', 'tapered_window', 'clstr_distance', \
-            'coi_correction', \
+        self.params_name_lst = ['measure_name', 'is_state_based', 'clstr_base_measure', 'sw_method', 'tapered_window', \
+            'clstr_distance', 'coi_correction', \
             'n_subj_clstrs', 'W', 'n_overlap', 'n_states', 'normalization', \
             'n_jobs', 'verbose', 'backend', \
             'num_subj', 'num_select_nodes', 'num_time_point', 'Fs_ratio', \
@@ -2122,6 +2065,8 @@ class SLIDING_WINDOW_CLUSTR(dFC):
             if params_name in params:
                 self.params[params_name] = params[params_name]
         
+        self.params['measure_name'] = 'Clustering'
+        self.params['is_state_based'] = True
         self.params['clstr_distance'] = clstr_distance
 
         assert self.params['clstr_base_measure'] in self.base_methods_name_lst, \
@@ -2129,16 +2074,7 @@ class SLIDING_WINDOW_CLUSTR(dFC):
 
     @property
     def measure_name(self):
-        return self.measure_name_ #+ '_' + self.base_method
-
-    def issame(self, dFC):
-        if type(self)==type(dFC):
-            for param_name in self.params:
-                if self.params[param_name] != dFC.params[param_name]:
-                    return False
-        else:
-            return False
-        return True
+        return self.params['measure_name'] #+ '_' + self.base_method
 
     def dFC_mat2vec(self, C_t):
         return dFC_mat2vec(C_t)
@@ -2302,14 +2238,12 @@ class HMM_DISC(dFC):
 
     def __init__(self, **params):
             
-        self.measure_name_ = 'DiscreteHMM'
-        self.is_state_based = True
         self.TPM = []
         self.FCS_ = []
         self.swc = None
         
-        self.params_name_lst = ['clstr_base_measure', 'sw_method', 'tapered_window', 'n_hid_states', \
-            'coi_correction', 'hmm_iter', \
+        self.params_name_lst = ['measure_name', 'is_state_based', 'clstr_base_measure', 'sw_method', 'tapered_window', \
+            'n_hid_states', 'coi_correction', 'hmm_iter', \
             'n_jobs', 'verbose', 'backend', \
             'n_subj_clstrs', 'W', 'n_overlap', 'n_states', 'normalization', \
             'num_subj', 'num_select_nodes', 'num_time_point', 'Fs_ratio', \
@@ -2319,6 +2253,8 @@ class HMM_DISC(dFC):
             if params_name in params:
                 self.params[params_name] = params[params_name]
         
+        self.params['measure_name'] = 'DiscreteHMM'
+        self.params['is_state_based'] = True
         self.params['n_hid_states'] = self.params['n_states']
 
         assert self.params['clstr_base_measure'] in self.base_methods_name_lst, \
@@ -2326,16 +2262,7 @@ class HMM_DISC(dFC):
 
     @property
     def measure_name(self):
-        return self.measure_name_ #+ '_' + self.base_method
-
-    def issame(self, dFC):
-        if type(self)==type(dFC):
-            for param_name in self.params:
-                if self.params[param_name] != dFC.params[param_name]:
-                    return False
-        else:
-            return False
-        return True
+        return self.params['measure_name'] #+ '_' + self.base_method
 
     def estimate_FCS(self, time_series):
         
@@ -3258,6 +3185,62 @@ class DATA_LOADER():
 
 '''
 ################################# dFC_analyzer #################################
+
+@property
+def methods_corr(self):
+    # it assumes all subjects have all sessions and the order of their measures is the same ?
+    
+    methods_corr_dict = {}
+    for session in self.methods_assess_dict_lst[0]:
+        methods_corr_dict[session] = {}
+        methods_corr = list()
+        
+        # dFC corr
+        for methods_assess_subj_dict in self.methods_assess_dict_lst:
+            methods_corr.append(methods_assess_subj_dict[session]['corr_mat'])
+        
+        methods_corr = np.array(methods_corr)
+        methods_corr_dict[session]['corr_mat'] = np.mean(methods_corr, axis=0)
+        methods_corr_dict[session]['measure_lst'] = methods_assess_subj_dict[session]['measure_lst']
+
+    return methods_corr_dict
+
+@property
+def methods_assess_dict_lst(self):
+    # methods_assess_dict_lst:
+    # -> subject (list)
+    #   -> session
+    #       -> methods_corr
+    #       -> measure_lst
+    #       -> state_match
+    #           -> [measure_i][measure_j][FCS_i]['trans_sim_vec'] 
+    #       -> FO
+    #           -> [measure][FCS]
+    #       -> trans_freq
+    #           -> [measure] -> trans_freq
+    #           -> [measure] -> trans_norm
+
+    return self.methods_assess_dict_lst_
+
+@property
+def FCS_sim_dict(self):
+    ## normalize ??
+    normalize = False
+    # FCS_sim_dict[session][measure_i][measure_j][FCS_i]
+    FCS_sim_dict = {}
+    for session in self.FCS_dict:
+        FCS_sim_dict[session] = {}
+        for measure_i in self.FCS_dict[session]:
+            FCS_sim_dict[session][measure_i] = {}
+            for measure_j in self.FCS_dict[session]:
+
+                FCS_sim_dict[session][measure_i][measure_j] = self.FCS_sim_calc( \
+                    FCS_dict_i = self.FCS_dict[session][measure_i], \
+                    FCS_dict_j = self.FCS_dict[session][measure_j], \
+                    normalize=normalize \
+                )
+
+    return FCS_sim_dict
 
 def FCS_sim_calc(self, FCS_dict_i, FCS_dict_j, normalize=False):
     # FCS_sim_dict[FCS_i] = FCS_similarity_vec
