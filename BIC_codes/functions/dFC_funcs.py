@@ -652,7 +652,7 @@ class DFC_ANALYZER:
         if not 'backend' in self.params:
             self.params['backend'] = 'loky'
 
-        self.measures_initializer()
+        self.MEASURES_lst_ = None
         self.MEASURES_fit_lst_ = {}
 
         # self.sim_assess_params = {}
@@ -703,6 +703,8 @@ class DFC_ANALYZER:
 
     @property
     def MEASURES_lst(self):
+        assert not self.MEASURES_lst_ is None, \
+            'first set the MEASURES_lst!'
         return self.MEASURES_lst_
 
     # test
@@ -761,7 +763,10 @@ class DFC_ANALYZER:
 
         return FCS_sim_dict
 
-    def measures_initializer(self):
+    def set_MEASURES_lst(self, MEASURES_lst):
+        self.MEASURES_lst_ = MEASURES_lst
+
+    def measures_initializer(self, MEASURES_name_lst, params_methods, alter_hparams):
 
         '''
         - this will test values in hyper_params other than
@@ -789,22 +794,24 @@ class DFC_ANALYZER:
                 )
         '''
 
-        MEASURES_lst = list()
-        MEASURES_lst.append( \
-                self.create_measure_obj(MEASURES_name_lst=self.params['methods'], **self.params['params_methods']) \
-                )
-        for hyper_param in self.params['alter_hparams']:
-            params = deepcopy(self.params['params_methods'])
-            for value in self.params['alter_hparams'][hyper_param]:
+        # a list of MEASURES with default parameter values
+        MEASURES_lst = self.create_measure_obj(MEASURES_name_lst=MEASURES_name_lst, **params_methods)
+
+        # adding MEASURES with alternative parameter values
+        for hyper_param in alter_hparams:
+            params = deepcopy(params_methods)
+            for value in alter_hparams[hyper_param]:
                 params[hyper_param] = value
-                MEASURES_lst.append( \
-                    self.create_measure_obj(MEASURES_name_lst=self.params['methods'], **params) \
-                    )
-        self.MEASURES_lst_ = MEASURES_lst
+                new_MEASURES = self.create_measure_obj(MEASURES_name_lst=MEASURES_name_lst, **params)
+                for new_measure in new_MEASURES:
+                    flag=0
+                    for MEASURE in MEASURES_lst:
+                        if new_measure.issame(MEASURE):
+                            flag=1
+                    if flag==0:
+                        MEASURES_lst.append(new_measure)
 
-        # self.MEASURES_lst_ = self.DD_MEASURES_lst(MEASURES_lst) + self.SB_MEASURES_lst(MEASURES_lst)
-
-        return
+        return MEASURES_lst
 
     def create_measure_obj(self, MEASURES_name_lst, **params):
 
@@ -825,7 +832,7 @@ class DFC_ANALYZER:
 
             ###### TIME FREQUENCY ######
             if MEASURES_name=='Time-Freq':
-                measure = TIME_FREQ(method='WTC', **params)
+                measure = TIME_FREQ(TF_method='WTC', **params)
 
             ###### SLIDING WINDOW + CLUSTERING ######
             if MEASURES_name=='Clustering':
@@ -838,7 +845,6 @@ class DFC_ANALYZER:
             MEASURES_lst.append(measure)
 
         return MEASURES_lst
-
 
     def SB_MEASURES_lst(self, MEASURES_lst): # returns state_based measures
         SB_MEASURES = list()
@@ -1401,7 +1407,7 @@ todo:
 
 class dFC:
 
-    methods_name_lst = [ \
+    TF_methods_name_lst = [ \
         'CWT_mag', \
         'CWT_phase_r', \
         'CWT_phase_a', \
@@ -1414,13 +1420,14 @@ class dFC:
         'GraphLasso', \
     ]
 
-    base_methods_name_lst = sw_methods_name_lst + methods_name_lst
+    base_methods_name_lst = sw_methods_name_lst + TF_methods_name_lst
 
     def __init__(self):
         self.measure_name = ''
         self.is_state_based = bool()
         self._stat = []
         self.TPM = []
+        self.params = {}
 
     @property
     def FCS(self):
@@ -1443,120 +1450,54 @@ class dFC:
             
         return state_act_dict
 
+    @property
+    def info(self):
+        print_dict(self.params)
+
+    def issame(self, dFC):
+        pass
+
     def estimate_FCS(self, time_series=None):
         pass
 
     def estimate_dFCM(self, time_series=None):
         pass
 
-    def manipulate_FCS_time_series(self, time_series):
+    def manipulate_time_series4FCS(self, time_series):
 
-        SUBJECTS = list(set(time_series.subj_id_array))
-        if self.num_subj < len(SUBJECTS):
-            new_time_series = None
-            for subj in range(self.num_subj):
-                if new_time_series is None:
-                    new_time_series = time_series.get_subj_ts(subj_id=SUBJECTS[subj])
-                else:
-                    new_time_series = np.concatenate((new_time_series, time_series.get_subj_ts(subj_id=SUBJECTS[subj])), axis=1)
-        else:
-            new_time_series = deepcopy(time_series)
-            new_time_series = new_time_series.data
+        new_time_series = deepcopy(time_series)
 
-        # # select nodes
-
-        # if self.params['select_nodes']:
-        #     if self.params['rand_node_slct']:
-        #         nodes_idx = np.random.choice(range(BOLD[session].n_regions), size=self.params['num_select_nodes'], replace=False)
-        #         nodes_idx.sort()
-        #     else:
-        #         nodes_idx = np.array(list(range(47, 88)) + list(range(224, 263)))
-        #     BOLD[session].select_nodes(nodes_idx=nodes_idx)
-
-        #     print( 'number of regions selected= ' + str(BOLD[session].n_regions) )
-
-        # normalization
-        if self.normalization:
-            for n in range(new_time_series.shape[0]):
-                new_time_series[n, :] = new_time_series[n, :] - np.mean(new_time_series[n, :])
-                new_time_series[n, :] = np.divide(new_time_series[n, :], np.std(new_time_series[n, :]))
-
-        # downsample frequency
-        if self.Fs_ratio != 1:
-            downsampled_time_series = np.zeros((new_time_series.shape[0], int(new_time_series.shape[1]*self.Fs_ratio)))
-            for n in range(new_time_series.shape[0]):
-                downsampled_time_series[n, :] =  signal.resample(new_time_series[n, :], int(new_time_series.shape[1]*self.Fs_ratio))
-            new_time_series = downsampled_time_series
-
-        # truncate num time points
-        if self.num_time_point < new_time_series.shape[1]:
-            new_time_series = new_time_series[:, :self.num_time_point]
-
-        # adding noise perturbation 
-        if self.noise_ratio > 0:
-            mean_noise = 0
-            power_signal = np.mean(new_time_series ** 2)
-            power_noise = power_signal * self.noise_ratio
-            new_time_series += np.random.normal(mean_noise, np.sqrt(power_noise), (new_time_series.shape[0], new_time_series.shape[1]))
-
-        # test, be careful with this option
-        # select nodes
-        rand_node_slct = True
-        if self.num_select_nodes < new_time_series.shape[0]:
-            if rand_node_slct:
-                np.random.seed(0)
-                nodes_idx = np.random.choice(range(new_time_series.shape[0]), size=self.num_select_nodes, replace=False)
-                nodes_idx.sort()
-            else:
-                nodes_idx = np.array(list(range(self.num_select_nodes)))
-            nodes_idx = nodes_idx[:, np.newaxis]
-            new_time_series = new_time_series[nodes_idx, :]
+        # SUBJECTs
+        new_time_series.select_subjs(num_subj=self.params['num_subj'])
+        # SPATIAL RESOLUTION
+        new_time_series.spatial_downsample(num_select_nodes=self.params['num_select_nodes'], rand_node_slct=False)
+        # TEMPORAL RESOLUTION
+        new_time_series.Fs_resample(Fs_ratio=self.params['Fs_ratio'])
+        # NORMALIZE
+        if self.params['normalization']:
+            new_time_series.normalize()
+        # NOISE
+        new_time_series.add_noise(noise_ratio=self.params['noise_ratio'], mean_noise=0)
+        # NUMBER OF TIME POINTS
+        new_time_series.truncate(start_point=0, end_point=self.params['num_time_point'])
 
         return new_time_series
 
-    def manipulate_dFCM_time_series(self, time_series):
+    def manipulate_time_series4dFC(self, time_series):
 
         new_time_series = deepcopy(time_series)
-        new_time_series = new_time_series.data
 
-        # time_series = time_series - np.repeat(np.mean(time_series, axis=1)[:,None], time_series.shape[1], axis=1) # ???????????????????????
-
-        # normalization
-        if self.normalization:
-            for n in range(new_time_series.shape[0]):
-                new_time_series[n, :] = new_time_series[n, :] - np.mean(new_time_series[n, :])
-                new_time_series[n, :] = np.divide(new_time_series[n, :], np.std(new_time_series[n, :]))
-
-        # downsample frequency
-        if self.Fs_ratio != 1:
-            downsampled_time_series = np.zeros((new_time_series.shape[0], int(new_time_series.shape[1]*self.Fs_ratio)))
-            for n in range(new_time_series.shape[0]):
-                downsampled_time_series[n, :] =  signal.resample(new_time_series[n, :], int(new_time_series.shape[1]*self.Fs_ratio))
-            new_time_series = downsampled_time_series
-
-        # truncate num time points
-        if self.num_time_point < new_time_series.shape[1]:
-            new_time_series = new_time_series[:, :self.num_time_point]
-
-        # adding noise perturbation 
-        if self.noise_ratio > 0:
-            mean_noise = 0
-            power_signal = np.mean(new_time_series ** 2)
-            power_noise = power_signal * self.noise_ratio
-            new_time_series += np.random.normal(mean_noise, np.sqrt(power_noise), (new_time_series.shape[0], new_time_series.shape[1]))
-
-        # test, be careful with this option
-        # select nodes
-        rand_node_slct = True
-        if self.num_select_nodes < new_time_series.shape[0]:
-            if rand_node_slct:
-                np.random.seed(0)
-                nodes_idx = np.random.choice(range(new_time_series.shape[0]), size=self.num_select_nodes, replace=False)
-                nodes_idx.sort()
-            else:
-                nodes_idx = np.array(list(range(self.num_select_nodes)))
-            nodes_idx = nodes_idx[:, np.newaxis]
-            new_time_series = new_time_series[nodes_idx, :]
+        # SPATIAL RESOLUTION
+        new_time_series.spatial_downsample(num_select_nodes=self.params['num_select_nodes'], rand_node_slct=False)
+        # TEMPORAL RESOLUTION
+        new_time_series.Fs_resample(Fs_ratio=self.params['Fs_ratio'])
+        # NORMALIZE
+        if self.params['normalization']:
+            new_time_series.normalize()
+        # NOISE
+        new_time_series.add_noise(noise_ratio=self.params['noise_ratio'], mean_noise=0)
+        # NUMBER OF TIME POINTS
+        new_time_series.truncate(start_point=0, end_point=self.params['num_time_point'])
 
         return new_time_series
     
@@ -1636,15 +1577,23 @@ class HMM_CONT(dFC):
         self.is_state_based = True
         self.TPM = []
         self.FCS_ = []
-        # Hyper Parameters
-        self.n_states = params['n_states']
-        self.normalization = params['normalization']
-        self.num_subj = params['num_subj']
-        self.num_select_nodes = params['num_select_nodes']
-        self.num_time_point = params['num_time_point']
-        self.Fs_ratio = params['Fs_ratio']
-        self.noise_ratio = params['noise_ratio']
-        self.num_realization = params['num_realization']
+
+        self.params_name_lst = ['n_states', \
+            'normalization', 'num_subj', 'num_select_nodes', 'num_time_point', \
+            'Fs_ratio', 'noise_ratio', 'num_realization']
+        self.params = {}
+        for params_name in self.params_name_lst:
+            if params_name in params:
+                self.params[params_name] = params[params_name]
+
+    def issame(self, dFC):
+        if type(self)==type(dFC):
+            for param_name in self.params:
+                if self.params[param_name] != dFC.params[param_name]:
+                    return False
+        else:
+            return False
+        return True
 
 
     def estimate_FCS(self, time_series):
@@ -1655,9 +1604,11 @@ class HMM_CONT(dFC):
         # self.n_regions = time_series.n_regions
         # self.n_time = time_series.n_time
 
+        time_series = self.manipulate_time_series4FCS(time_series)
+
         Models, Scores = [], []
         for i in range(100):
-            model = hmm.GaussianHMM(n_components=self.n_states, covariance_type="full")
+            model = hmm.GaussianHMM(n_components=self.params['n_states'], covariance_type="full")
             model.fit(time_series.data.T) 
             score = model.score(time_series.data.T)
             Models.append(model)
@@ -1676,6 +1627,8 @@ class HMM_CONT(dFC):
 
         assert type(time_series) is TIME_SERIES, \
             "time_series must be of TIME_SERIES class."
+
+        time_series = self.manipulate_time_series4dFC(time_series)
 
         Z = self.hmm_model.predict(time_series.data.T)
         dFCM = DFCM(measure=self)
@@ -1710,31 +1663,41 @@ class WINDOWLESS(dFC):
         self.is_state_based = True
         self.TPM = []
         self.FCS_ = []
-        # Hyper Parameters
-        self.n_states = params['n_states']
-        self.normalization = params['normalization']
-        self.num_subj = params['num_subj']
-        self.num_select_nodes = params['num_select_nodes']
-        self.num_time_point = params['num_time_point']
-        self.Fs_ratio = params['Fs_ratio']
-        self.noise_ratio = params['noise_ratio']
-        self.num_realization = params['num_realization']
+
+        self.params_name_lst = ['n_states', \
+            'normalization', 'num_subj', 'num_select_nodes', 'num_time_point', \
+            'Fs_ratio', 'noise_ratio', 'num_realization']
+        self.params = {}
+        for params_name in self.params_name_lst:
+            if params_name in params:
+                self.params[params_name] = params[params_name]
     
+    def issame(self, dFC):
+        if type(self)==type(dFC):
+            for param_name in self.params:
+                if self.params[param_name] != dFC.params[param_name]:
+                    return False
+        else:
+            return False
+        return True
+
     def estimate_FCS(self, time_series):
 
         assert type(time_series) is TIME_SERIES, \
             "time_series must be of TIME_SERIES class."
 
+        time_series = self.manipulate_time_series4FCS(time_series)
+
         # self.n_regions = time_series.n_regions
         # self.n_time = time_series.n_time
 
         # time_series ~ gamma.dot(dictionary)
-        self.aksvd = ApproximateKSVD(n_components=self.n_states, transform_n_nonzero_coefs=1)
+        self.aksvd = ApproximateKSVD(n_components=self.params['n_states'], transform_n_nonzero_coefs=1)
         self.dictionary = self.aksvd.fit(time_series.data.T).components_
         self.gamma = self.aksvd.transform(time_series.data.T)
 
-        self.FCS_ = np.zeros([self.n_states, time_series.n_regions, time_series.n_regions])
-        for i in range(self.n_states):
+        self.FCS_ = np.zeros([self.params['n_states'], time_series.n_regions, time_series.n_regions])
+        for i in range(self.params['n_states']):
             self.FCS_[i, :, :] = np.multiply(np.expand_dims(self.dictionary[i,:], axis=0).T, np.expand_dims(self.dictionary[i,:], axis=0))
 
         self.Z = list()
@@ -1747,6 +1710,8 @@ class WINDOWLESS(dFC):
         
         assert type(time_series) is TIME_SERIES, \
             "time_series must be of TIME_SERIES class."
+
+        time_series = self.manipulate_time_series4dFC(time_series)
 
         gamma = self.aksvd.transform(time_series.data.T)
 
@@ -1813,45 +1778,46 @@ import pycwt as wavelet
 
 class TIME_FREQ(dFC):
 
-    def __init__(self, method='WTC', coi_correction=True, **params):
+    def __init__(self, TF_method='WTC', coi_correction=True, **params):
         
-        assert method in self.methods_name_lst, \
+        assert TF_method in self.TF_methods_name_lst, \
             "Time-frequency method not recognized."
 
         self.measure_name_ = 'Time-Freq'
         self.is_state_based = False
         self.TPM = []
         self.FCS_ = []
-        self.method_ = method
-        self.coi_correction_ = coi_correction
-        self.params = params
 
-        # Hyper Parameters
-        self.normalization = params['normalization']
-        self.num_subj = params['num_subj']
-        self.num_select_nodes = params['num_select_nodes']
-        self.num_time_point = params['num_time_point']
-        self.Fs_ratio = params['Fs_ratio']
-        self.noise_ratio = params['noise_ratio']
-        self.num_realization = params['num_realization']
-    
-    @property
-    def coi_correction(self):
-        return self.coi_correction_
-
-    @property
-    def method(self):
-        return self.method_
+        self.params_name_lst = ['TF_method', 'coi_correction', \
+            'n_jobs', 'verbose', 'backend', \
+            'normalization', 'num_subj', 'num_select_nodes', 'num_time_point', \
+            'Fs_ratio', 'noise_ratio', 'num_realization']
+        self.params = {}
+        for params_name in self.params_name_lst:
+            if params_name in params:
+                self.params[params_name] = params[params_name]
+        
+        self.params['TF_method'] = TF_method
+        self.params['coi_correction'] = coi_correction
 
     @property
     def measure_name(self):
-        return self.measure_name_ + '_' + self.method
+        return self.measure_name_ # + '_' + self.params['TF_method']
+
+    def issame(self, dFC):
+        if type(self)==type(dFC):
+            for param_name in self.params:
+                if self.params[param_name] != dFC.params[param_name]:
+                    return False
+        else:
+            return False
+        return True
 
     def coi_correct(self, X, coi, freqs):
         # correct the edge effect in matrix X = [freqs, time] using coi
         # if self.coi_correction=True
 
-        if not self.coi_correction:
+        if not self.params['coi_correction']:
             return X
         periods = 1/freqs
         periods = np.repeat(periods[:, None], X.shape[1], axis=1)
@@ -1860,16 +1826,16 @@ class TIME_FREQ(dFC):
         return X_corrected
 
     def WT_dFC(self, Y1, Y2, Fs, J, s0, dj):
-        if self.method_=='CWT_mag' or self.method_=='CWT_phase_r' or self.method_=='CWT_phase_a':
+        if self.params['TF_method']=='CWT_mag' or self.params['TF_method']=='CWT_phase_r' or self.params['TF_method']=='CWT_phase_a':
             # Cross Wavelet Transform
             WT_xy, coi, freqs, _ = wavelet.xwt(Y1, Y2, dt=1/Fs, dj=dj, s0=s0, J=J, 
                 significance_level=0.95, wavelet='morlet', normalize=True)
 
-            if self.method_=='CWT_mag':
+            if self.params['TF_method']=='CWT_mag':
                 WT_xy_corrected = self.coi_correct(WT_xy, coi, freqs)
                 wt = np.abs(np.mean(WT_xy_corrected, axis=0))
 
-            if self.method_=='CWT_phase_r' or self.method_=='CWT_phase_a':
+            if self.params['TF_method']=='CWT_phase_r' or self.params['TF_method']=='CWT_phase_a':
                 cosA = np.cos(np.angle(WT_xy))
                 sinA = np.sin(np.angle(WT_xy))
 
@@ -1878,12 +1844,12 @@ class TIME_FREQ(dFC):
 
                 A = (cosA_corrected + sinA_corrected * 1j)
 
-                if self.method_=='CWT_phase_r':
+                if self.params['TF_method']=='CWT_phase_r':
                     wt = np.abs(np.mean(A, axis=0))
                 else:
                     wt = np.angle(np.mean(A, axis=0))
         
-        if self.method_=='WTC':
+        if self.params['TF_method']=='WTC':
             # Wavelet Transform Coherence
             WT_xy, _, coi, freqs, _ = wavelet.wct(Y1, Y2, dt=1/Fs, dj=dj, s0=s0, J=J, 
                 sig=False, significance_level=0.95, wavelet='morlet', normalize=True)
@@ -1905,6 +1871,8 @@ class TIME_FREQ(dFC):
 
         assert type(time_series) is TIME_SERIES, \
             "time_series must be of TIME_SERIES class."
+
+        time_series = self.manipulate_time_series4dFC(time_series)
 
         # self.n_regions = time_series.n_regions
         # self.n_time = time_series.n_time
@@ -1965,25 +1933,32 @@ class SLIDING_WINDOW(dFC):
         self.sw_method_ = sw_method
         self.TPM = []
         self.FCS_ = []
-        self.W = params['W']
-        self.n_overlap = params['n_overlap']
-        self.tapered_window = tapered_window
-        # Hyper Parameters
-        self.normalization = params['normalization']
-        self.num_subj = params['num_subj']
-        self.num_select_nodes = params['num_select_nodes']
-        self.num_time_point = params['num_time_point']
-        self.Fs_ratio = params['Fs_ratio']
-        self.noise_ratio = params['noise_ratio']
-        self.num_realization = params['num_realization']
+
+        self.params_name_lst = ['sw_method', 'tapered_window', \
+            'W', 'n_overlap', 'normalization', \
+            'num_subj', 'num_select_nodes', 'num_time_point', 'Fs_ratio', \
+            'noise_ratio', 'num_realization']
+        self.params = {}
+        for params_name in self.params_name_lst:
+            if params_name in params:
+                self.params[params_name] = params[params_name]
+        
+        self.params['sw_method'] = sw_method
+        self.params['tapered_window'] = tapered_window
+        
     
     @property
     def measure_name(self):
-        return self.measure_name_ + '_' + self.sw_method
-        
-    @property
-    def sw_method(self):
-        return self.sw_method_
+        return self.measure_name_ #+ '_' + self.sw_method
+
+    def issame(self, dFC):
+        if type(self)==type(dFC):
+            for param_name in self.params:
+                if self.params[param_name] != dFC.params[param_name]:
+                    return False
+        else:
+            return False
+        return True
 
     def shan_entropy(self, c):
         c_normalized = c / float(np.sum(c))
@@ -2008,7 +1983,7 @@ class SLIDING_WINDOW(dFC):
 
     def FC(self, time_series):
     
-        if self.sw_method=='GraphLasso':
+        if self.params['sw_method']=='GraphLasso':
             model = GraphicalLassoCV()
             model.fit(time_series.T)
             C = model.covariance_
@@ -2020,7 +1995,7 @@ class SLIDING_WINDOW(dFC):
                     X = time_series[i, :]
                     Y = time_series[j, :]
 
-                    if self.sw_method=='MI':
+                    if self.params['sw_method']=='MI':
                         ########### Mutual Information ##############
                         C[j, i] = self.calc_MI(X, Y)
                     else:
@@ -2075,15 +2050,17 @@ class SLIDING_WINDOW(dFC):
         assert type(time_series) is TIME_SERIES, \
             "time_series must be of TIME_SERIES class."
 
+        time_series = self.manipulate_time_series4dFC(time_series)
+
         # self.n_regions = time_series.n_regions
         # self.n_time = time_series.n_time
 
         # W is converted from sec to samples
         dFCM = self.dFC(time_series=time_series.data, \
             subj_id=time_series.subj_id_lst, \
-            W=int(self.W * time_series.Fs) , \
-            n_overlap=self.n_overlap, \
-            tapered_window=self.tapered_window \
+            W=int(self.params['W'] * time_series.Fs) , \
+            n_overlap=self.params['n_overlap'], \
+            tapered_window=self.params['tapered_window'] \
             )
 
         return dFCM
@@ -2129,32 +2106,36 @@ class SLIDING_WINDOW_CLUSTR(dFC):
     
         self.measure_name_ = 'Clustering'
         self.is_state_based = True
-        self.clstr_distance = clstr_distance
         self.TPM = []
         self.FCS_ = []
-        self.base_method_ = base_method
-        self.n_subj_clstrs = params['n_subj_clstrs']
-        self.W = params['W']
-        self.n_overlap = params['n_overlap']
-        self.params = params
-        self.tapered_window = tapered_window
-        # Hyper Parameters
-        self.n_states = params['n_states']
-        self.normalization = params['normalization']
-        self.num_subj = params['num_subj']
-        self.num_select_nodes = params['num_select_nodes']
-        self.num_time_point = params['num_time_point']
-        self.Fs_ratio = params['Fs_ratio']
-        self.noise_ratio = params['noise_ratio']
-        self.num_realization = params['num_realization']
-    
-    @property
-    def base_method(self):
-        return self.base_method_
+
+        self.params_name_lst = ['base_method', 'tapered_window', 'clstr_distance', \
+            'coi_correction', \
+            'n_subj_clstrs', 'W', 'n_overlap', 'n_states', 'normalization', \
+            'n_jobs', 'verbose', 'backend', \
+            'num_subj', 'num_select_nodes', 'num_time_point', 'Fs_ratio', \
+            'noise_ratio', 'num_realization']
+        self.params = {}
+        for params_name in self.params_name_lst:
+            if params_name in params:
+                self.params[params_name] = params[params_name]
+        
+        self.params['base_method'] = base_method
+        self.params['clstr_distance'] = clstr_distance
+        self.params['tapered_window'] = tapered_window
 
     @property
     def measure_name(self):
-        return self.measure_name_ + '_' + self.base_method
+        return self.measure_name_ #+ '_' + self.base_method
+
+    def issame(self, dFC):
+        if type(self)==type(dFC):
+            for param_name in self.params:
+                if self.params[param_name] != dFC.params[param_name]:
+                    return False
+        else:
+            return False
+        return True
 
     def dFC_mat2vec(self, C_t):
         return dFC_mat2vec(C_t)
@@ -2173,7 +2154,7 @@ class SLIDING_WINDOW_CLUSTR(dFC):
 
         F = self.dFC_mat2vec(FCS_raw)
 
-        if self.clstr_distance=='manhattan':
+        if self.params['clstr_distance']=='manhattan':
             pass
             # ########### Manhattan Clustering ##############
             # # Prepare initial centers using K-Means++ method.
@@ -2201,17 +2182,19 @@ class SLIDING_WINDOW_CLUSTR(dFC):
         assert type(time_series) is TIME_SERIES, \
             "time_series must be of TIME_SERIES class."
 
+        time_series = self.manipulate_time_series4FCS(time_series)
+
         # self.n_regions = time_series.n_regions
         # self.n_time = time_series.n_time
 
-        if self.base_method=='CWT_mag' or self.base_method=='CWT_phase_r' \
-            or self.base_method=='CWT_phase_a' or self.base_method=='WTC':
-            params = {'n_jobs': self.params['n_jobs'], 'verbose': self.params['verbose'], 'backend': self.params['backend']}
-            base_dFC = TIME_FREQ(method=self.base_method, **params)
+        if self.params['base_method']=='CWT_mag' or self.params['base_method']=='CWT_phase_r' \
+            or self.params['base_method']=='CWT_phase_a' or self.params['base_method']=='WTC':
+            # params = {'n_jobs': self.params['n_jobs'], 'verbose': self.params['verbose'], 'backend': self.params['backend']}
+            base_dFC = TIME_FREQ(TF_method=self.params['base_method'], **self.params)
         else:
-            params = {'W': self.W, 'n_overlap': self.n_overlap}
-            base_dFC = SLIDING_WINDOW(sw_method=self.base_method, \
-                    tapered_window=self.tapered_window, **params)
+            # params = {'W': self.W, 'n_overlap': self.n_overlap}
+            base_dFC = SLIDING_WINDOW(sw_method=self.params['base_method'], \
+                    tapered_window=self.params['tapered_window'], **self.params)
 
         # 1-level clustering
         # dFCM_raw = base_dFC.estimate_dFCM( \
@@ -2232,15 +2215,15 @@ class SLIDING_WINDOW_CLUSTR(dFC):
                 )
 
             # test
-            if dFCM_raw.n_time<self.n_subj_clstrs:
+            if dFCM_raw.n_time<self.params['n_subj_clstrs']:
                 print( \
                     'Number of subject-level clusters cannot be more than SW dFCM samples! n_subj_clstrs was changed to ' \
                         + str(dFCM_raw.n_time))
-                self.n_subj_clstrs = dFCM_raw.n_time
+                self.params['n_subj_clstrs'] = dFCM_raw.n_time
 
             FCS, _ = self.cluster_FC( \
                 FCS_raw = dFCM_raw.get_dFC_mat(TRs=dFCM_raw.TR_array), \
-                n_clusters = self.n_subj_clstrs, \
+                n_clusters = self.params['n_subj_clstrs'], \
                 n_regions = dFCM_raw.n_regions \
                 )
             if FCS_1st_level is None:
@@ -2250,7 +2233,7 @@ class SLIDING_WINDOW_CLUSTR(dFC):
         
         self.FCS_, self.kmeans_ = self.cluster_FC( \
             FCS_raw=FCS_1st_level, \
-            n_clusters = self.n_states, \
+            n_clusters = self.params['n_states'], \
             n_regions = dFCM_raw.n_regions \
             )
 
@@ -2261,20 +2244,22 @@ class SLIDING_WINDOW_CLUSTR(dFC):
         assert type(time_series) is TIME_SERIES, \
             "time_series must be of TIME_SERIES class."
 
-        if self.base_method=='CWT_mag' or self.base_method=='CWT_phase_r' \
-            or self.base_method=='CWT_phase_a' or self.base_method=='WTC':
+        time_series = self.manipulate_time_series4dFC(time_series)
+
+        if self.params['base_method']=='CWT_mag' or self.params['base_method']=='CWT_phase_r' \
+            or self.params['base_method']=='CWT_phase_a' or self.params['base_method']=='WTC':
             params = {'n_jobs': self.params['n_jobs'], 'verbose': self.params['verbose'], 'backend': self.params['backend']}
-            base_dFC = TIME_FREQ(method=self.base_method, **params)
+            base_dFC = TIME_FREQ(TF_method=self.params['base_method'], **params)
         else:
-            params = {'W': self.W, 'n_overlap': self.n_overlap}
-            base_dFC = SLIDING_WINDOW(sw_method=self.base_method, \
-                    tapered_window=self.tapered_window, **params)
+            params = {'W': self.params['W'], 'n_overlap': self.params['n_overlap']}
+            base_dFC = SLIDING_WINDOW(sw_method=self.params['base_method'], \
+                    tapered_window=self.params['tapered_window'], **params)
                     
         dFCM_raw = base_dFC.estimate_dFCM(time_series=time_series)
 
         F = self.dFC_mat2vec(dFCM_raw.get_dFC_mat(TRs=dFCM_raw.TR_array))
 
-        if self.clstr_distance=='manhattan':
+        if self.params['clstr_distance']=='manhattan':
             pass
             # ########### Manhattan Clustering ##############
             # self.kmeans_.predict(F)
@@ -2327,51 +2312,57 @@ class HMM_DISC(dFC):
         self.is_state_based = True
         self.TPM = []
         self.FCS_ = []
-        self.base_method_ = base_method
         self.swc = None
-        self.n_subj_clstrs = params['n_subj_clstrs']
-        self.n_hid_states = params['n_hid_states']
-        self.W = params['W']
-        self.n_overlap = params['n_overlap']
-        self.params = params
-        self.tapered_window = tapered_window
-        # Hyper Parameters
-        self.n_states = params['n_states']
-        self.normalization = params['normalization']
-        self.num_subj = params['num_subj']
-        self.num_select_nodes = params['num_select_nodes']
-        self.num_time_point = params['num_time_point']
-        self.Fs_ratio = params['Fs_ratio']
-        self.noise_ratio = params['noise_ratio']
-        self.num_realization = params['num_realization']
-
-    @property
-    def base_method(self):
-        return self.base_method_
+        
+        self.params_name_lst = ['base_method', 'tapered_window', 'n_hid_states', \
+            'coi_correction', \
+            'n_jobs', 'verbose', 'backend', \
+            'n_subj_clstrs', 'W', 'n_overlap', 'n_states', 'normalization', \
+            'num_subj', 'num_select_nodes', 'num_time_point', 'Fs_ratio', \
+            'noise_ratio', 'num_realization']
+        self.params = {}
+        for params_name in self.params_name_lst:
+            if params_name in params:
+                self.params[params_name] = params[params_name]
+        
+        self.params['base_method'] = base_method
+        self.params['n_hid_states'] = self.params['n_states']
+        self.params['tapered_window'] = tapered_window
 
     @property
     def measure_name(self):
-        return self.measure_name_ + '_' + self.base_method
+        return self.measure_name_ #+ '_' + self.base_method
+
+    def issame(self, dFC):
+        if type(self)==type(dFC):
+            for param_name in self.params:
+                if self.params[param_name] != dFC.params[param_name]:
+                    return False
+        else:
+            return False
+        return True
 
     def estimate_FCS(self, time_series):
         
         assert type(time_series) is TIME_SERIES, \
             "time_series must be of TIME_SERIES class."
 
+        time_series = self.manipulate_time_series4FCS(time_series)
+
         # self.n_regions = time_series.n_regions
         # self.n_time = time_series.n_time
 
-        params = {'W': self.W, 'n_overlap': self.n_overlap, \
-            'n_subj_clstrs': self.n_subj_clstrs, 'n_states': self.n_states, \
-            'n_jobs': self.params['n_jobs'], 'verbose': self.params['verbose'], 'backend': self.params['backend']}
-        self.swc = SLIDING_WINDOW_CLUSTR(base_method=self.base_method, \
-            tapered_window=self.tapered_window, **params)
+        # params = {'W': self.W, 'n_overlap': self.n_overlap, \
+        #     'n_subj_clstrs': self.n_subj_clstrs, 'n_states': self.n_states, \
+        #     'n_jobs': self.params['n_jobs'], 'verbose': self.params['verbose'], 'backend': self.params['backend']}
+        self.swc = SLIDING_WINDOW_CLUSTR(base_method=self.params['base_method'], \
+            tapered_window=self.params['tapered_window'], **self.params)
         self.swc.estimate_FCS(time_series=time_series)
         self.FCC_ = self.swc.estimate_dFCM(time_series=time_series)
 
         Models, Scores = [], []
         for i in range(100):
-            model = hmm.MultinomialHMM(n_components=self.n_hid_states)
+            model = hmm.MultinomialHMM(n_components=self.params['n_hid_states'])
             model.fit(self.FCC_.FCS_idx_array.reshape(-1, 1)) 
             score = model.score(self.FCC_.FCS_idx_array.reshape(-1, 1))
             Models.append(model)
@@ -2382,16 +2373,16 @@ class HMM_DISC(dFC):
         self.TPM = self.hmm_model.transmat_
         self.EPM = self.hmm_model.emissionprob_ 
 
-        # self.hmm_model = hmm.MultinomialHMM(n_components=self.n_hid_states)
+        # self.hmm_model = hmm.MultinomialHMM(n_components=self.params['n_hid_states'])
         # self.hmm_model.fit(self.FCC_.FCS_idx_array.reshape(-1, 1))
 
         # self.Z = self.hmm_model.predict(self.FCC_.FCS_idx_array.reshape(-1, 1))
         # self.TPM = self.hmm_model.transmat_
         # self.EPM = self.hmm_model.emissionprob_ 
 
-        self.FCS_ = np.zeros((self.n_hid_states, \
+        self.FCS_ = np.zeros((self.params['n_hid_states'], \
             time_series.n_regions, time_series.n_regions))
-        for i in range(self.n_hid_states):
+        for i in range(self.params['n_hid_states']):
             if len(np.argwhere(self.Z==i))>0:
                 self.FCS_[i,:,:] = np.mean(self.FCC_.get_dFC_mat(\
                     TRs=self.FCC_.TR_array[np.squeeze(np.argwhere(self.Z==i))]\
@@ -2403,6 +2394,8 @@ class HMM_DISC(dFC):
         
         assert type(time_series) is TIME_SERIES, \
             "time_series must be of TIME_SERIES class."
+
+        time_series = self.manipulate_time_series4dFC(time_series)
 
         FCC = self.swc.estimate_dFCM(time_series=time_series)
 
@@ -2449,6 +2442,8 @@ class TIME_SERIES():
         self.data_ = None
         self.Fs_ = Fs
         self.Fs_ratio_ = 1.00
+        self.noise_ratio = 0.0
+        self.normalized = False
         self.TS_name_ = TS_name
         self.session_name_ = session_name
         self.n_regions_ = data.shape[0]
@@ -2467,6 +2462,26 @@ class TIME_SERIES():
 
         self.interval_ = np.arange(0, self.n_time_)
         self.nodes_selection_ = list(range(self.n_regions_))
+
+    @property
+    def info(self):
+        print_dict(self.info_dict)
+
+    @property
+    def info_dict(self):
+        info_dict = {}
+        info_dict['n_time'] = self.n_time
+        info_dict['n_regions'] = self.n_regions
+        info_dict['Fs'] = self.Fs
+        info_dict['Fs_ratio'] = self.Fs_ratio
+        info_dict['noise_ratio'] = self.noise_ratio
+        info_dict['selected_nodes'] = self.select_nodes
+        info_dict['nodes_info'] = self.nodes_info
+        info_dict['subj_id_lst'] = self.subj_id_lst
+        info_dict['interval'] = self.interval
+        info_dict['time'] = self.time
+
+        return info_dict
 
     @property
     def data_dict(self):
@@ -2613,29 +2628,32 @@ class TIME_SERIES():
         if not end_time is None:
             end = np.argwhere(self.time_array_<=end_time)[-1,0] + 1
 
-        # make sure the interval is not out of range
-        start = max(start, 0)
-        end = min(end, self.n_time)
+        if start > self.interval_[0] or end < self.interval_[-1]:
+            # make sure the interval is not out of range
+            start = max(start, 0)
+            end = min(end, self.n_time)
 
-        self.interval_ = np.arange(start, end)
-        
-        for subj in self.data_dict_:
-            self.data_dict_[subj]['data'] = self.data_dict_[subj]['data'][:, self.interval]
+            self.interval_ = np.arange(start, end)
+            
+            for subj in self.data_dict_:
+                self.data_dict_[subj]['data'] = self.data_dict_[subj]['data'][:, self.interval]
 
-        self.data_ = None
+            self.data_ = None
 
     def normalize(self):
         # normalization
-        for subj_id in self.data_dict:
-            new_time_series = self.data_dict[subj_id]['data']
-            for n in range(new_time_series.shape[0]):
-                new_time_series[n, :] = new_time_series[n, :] - np.mean(new_time_series[n, :])
-                new_time_series[n, :] = np.divide(new_time_series[n, :], np.std(new_time_series[n, :]))
-            self.data_dict_[subj_id]['data'] = new_time_series
+        if not self.normalized:
+            for subj_id in self.data_dict:
+                new_time_series = self.data_dict[subj_id]['data']
+                for n in range(new_time_series.shape[0]):
+                    new_time_series[n, :] = new_time_series[n, :] - np.mean(new_time_series[n, :])
+                    new_time_series[n, :] = np.divide(new_time_series[n, :], np.std(new_time_series[n, :]))
+                self.data_dict_[subj_id]['data'] = new_time_series
 
-        self.data_ = None
+            self.normalized = True
+            self.data_ = None
 
-    def spatial_downsample(self, num_select_nodes, rand_node_slct=True):
+    def spatial_downsample(self, num_select_nodes, rand_node_slct=False):
         if num_select_nodes < self.n_regions:
             if rand_node_slct:
                 np.random.seed(0)
@@ -2650,7 +2668,7 @@ class TIME_SERIES():
 
     def Fs_resample(self, Fs_ratio=None):
         # downsample frequency
-        if Fs_ratio != 1:
+        if Fs_ratio != 1 and self.Fs_ratio_ == 1:
             for subj_id in self.data_dict:
                 new_time_series = self.data_dict[subj_id]['data']
                 downsampled_time_series = np.zeros((new_time_series.shape[0], int(new_time_series.shape[1]*Fs_ratio)))
@@ -2672,7 +2690,7 @@ class TIME_SERIES():
 
     def add_noise(self, noise_ratio, mean_noise=0):
         # adding noise perturbation 
-        if noise_ratio > 0:
+        if noise_ratio > 0 and self.noise_ratio == 0 :
             for subj_id in self.data_dict:
                 new_time_series = self.data_dict[subj_id]['data']
                 power_signal = np.mean(new_time_series ** 2)
@@ -2680,6 +2698,7 @@ class TIME_SERIES():
                 new_time_series += np.random.normal(mean_noise, np.sqrt(power_noise), (new_time_series.shape[0], new_time_series.shape[1]))
                 self.data_dict_[subj_id]['data'] = new_time_series
 
+            self.noise_ratio = noise_ratio
             self.data_ = None
 
     def select_subjs(self, num_subj):
