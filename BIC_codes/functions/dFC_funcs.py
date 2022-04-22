@@ -50,6 +50,14 @@ def get_subj_ts_dict(time_series_dict, subjs_id):
     return subj_ts_dict
 
 # test
+def filter_dFCM_lst(dFCM_lst, **param_dict):
+    dFCM_lst2check = list()
+    for dFCM in dFCM_lst:
+        if dFCM.measure.param_match(**param_dict):
+            dFCM_lst2check.append(dFCM) 
+    return dFCM_lst2check
+
+# test
 def normalizeAdjacency(W):
     """
     NormalizeAdjacency: Computes the [0, 1]-normalized adjacency matrix
@@ -69,7 +77,9 @@ def normalizeAdjacency(W):
 # test
 def normalized_euc_dist(x, y):
 
-    return 0.5*((np.linalg.norm((x-np.mean(x))-(y-np.mean(y)))**2)/(np.linalg.norm(x-np.mean(x))**2+np.linalg.norm(y-np.mean(y))**2))
+    if np.linalg.norm(x-np.mean(x))**2==0 and np.linalg.norm(y-np.mean(y))**2==0:
+        return 0
+    return 0.5*((np.linalg.norm((x-np.mean(x)) - (y-np.mean(y)))**2)/(np.linalg.norm(x-np.mean(x))**2 + np.linalg.norm(y-np.mean(y))**2))
 
 def calc_ECM(A):
     """
@@ -654,16 +664,9 @@ class DFC_ANALYZER:
 
         self.MEASURES_lst_ = None
         self.MEASURES_fit_lst_ = {}
-
-        # self.sim_assess_params = {}
-        # if 'sim_assess_params' in params:
-        #     self.sim_assess_params = params['sim_assess_params']
-
-        # self.dyn_conn_det_params = {}
-        # if 'dyn_conn_det_params' in params:
-            # self.dyn_conn_det_params = params['dyn_conn_det_params']
-
-        # self.methods_assess_dict_lst_ = list()
+        self.MEASURES_name_lst = []
+        self.params_methods = {}
+        self.alter_hparams = {}
 
     @property
     def MEASURES_lst(self):
@@ -671,41 +674,9 @@ class DFC_ANALYZER:
             'first set the MEASURES_lst!'
         return self.MEASURES_lst_
 
-    # test
-    @property
-    def MEASURES_dict(self):
-        dict = {}
-        for measure in self.MEASURES_lst:
-            assert not measure.measure_name in dict, \
-                'duplicate measure name.'
-            dict[measure.measure_name] = measure
-        return dict
-
     @property
     def MEASURES_fit_lst(self):
         return self.MEASURES_fit_lst_
-
-    # test
-    @property
-    def MEASURES_fit_dict(self):
-        dict = {}
-        for session in self.MEASURES_fit_lst:
-            dict[session] = {}
-            for measure in self.MEASURES_fit_lst[session]:
-                assert not measure.measure_name in dict[session], \
-                    'duplicate measure name.'
-                dict[session][measure.measure_name] = measure
-        return dict
-
-    @property
-    def FCS_dict(self):
-        #FCS_dict[session][measure.measure_name]['state_TC'][FCS_i]['FCS']
-        FCS_dict = {}
-        for session in self.MEASURES_fit_lst:
-            FCS_dict[session] = {}
-            for measure in self.SB_MEASURES_lst(self.MEASURES_fit_lst[session]):
-                FCS_dict[session][measure.measure_name] = measure.FCS_dict
-        return FCS_dict
 
     def set_MEASURES_lst(self, MEASURES_lst):
         self.MEASURES_lst_ = MEASURES_lst
@@ -737,6 +708,10 @@ class DFC_ANALYZER:
                 'DiscreteHMM' \
                 )
         '''
+
+        self.MEASURES_name_lst = MEASURES_name_lst
+        self.params_methods = params_methods
+        self.alter_hparams = alter_hparams
 
         # a list of MEASURES with default parameter values
         MEASURES_lst = self.create_measure_obj(MEASURES_name_lst=MEASURES_name_lst, **params_methods)
@@ -878,7 +853,7 @@ class DFC_ANALYZER:
 
         # time_series_dict is a dict of time_series
 
-        SUBJ_s_output = {}
+        SUBJ_s_dFCM_dict = {}
         
         SUBJECTs = common_subj_lst(time_series_dict) 
 
@@ -899,19 +874,16 @@ class DFC_ANALYZER:
                         ) \
                         for subject in SUBJECTs)
         
-        SUBJ_s_output['dFC_assess'] = [out['dFC_corr_assess_dict'] for out in OUT]
-
-        return SUBJ_s_output
+        return OUT
 
     def subj_lvl_dFC_assess(self, time_series_dict):
 
         # time_series_dict is a dict of time_series
 
-        SUBJ_output = {}
-
         dFCM_dict = {}
         dFC_corr_assess_dict = {}
         for session in time_series_dict:
+            dFCM_dict[session] = {}
             time_series = time_series_dict[session]
             if self.params['n_jobs'] is None:
                 dFCM_lst = list()
@@ -925,23 +897,13 @@ class DFC_ANALYZER:
                     delayed(measure.estimate_dFCM)(time_series=time_series) \
                         for measure in self.MEASURES_fit_lst_[session])
 
-            # MEASURES_dFCM = {}
-            # for dFCM in dFCM_lst:
-            #     # test if self.MEASURES_lst[m].measure_name=dFCM.measure.measure_name
-            #     MEASURES_dFCM[dFCM.measure.measure_name] = dFCM
+            # dFC_corr_assess_dict[session] = self.dFC_corr_assess(dFCM_lst=dFCM_lst)
 
-            # dFCM_dict[session] = MEASURES_dFCM
+            dFCM_dict[session]['dFCM_lst'] = dFCM_lst
 
-            # self.dFC_corr_assess returns a dict with 'corr_mat', 
-            # 'measure_lst', 'sb_measure_lst', and 'state_match' keys
-            dFC_corr_assess_dict[session] = self.dFC_corr_assess(dFCM_lst=dFCM_lst)
+        # SUBJ_output['dFC_corr_assess_dict'] = dFC_corr_assess_dict
 
-        # dFC_session_sim_dict = self.dFC_session_similarity(dFCM_dict)
-
-        # SUBJ_output['dFC_session_sim_dict'] = dFC_session_sim_dict
-        SUBJ_output['dFC_corr_assess_dict'] = dFC_corr_assess_dict
-
-        return SUBJ_output
+        return dFCM_dict
 
 
     ##################### dFC CHARACTERISTICS ######################
@@ -981,26 +943,30 @@ class DFC_ANALYZER:
 
         return corr_mat
 
-    def FO_calc(self, dFCM, common_TRs=None):
+    def FO_calc(self, dFCM_lst, common_TRs=None):
 
         # returns, for each state the Fractional Occupancy (FO)
         # see Visaure et al., 2017
         # it only considers TRs in common_TRs
 
-        FO = {}
-
-        if not dFCM.measure.is_state_based:
-            return FO
-
         if common_TRs is None:
-            common_TRs = dFCM.TR_array
+            common_TRs = TR_intersection(dFCM_lst)
 
-        state_act_dict = dFCM.state_act_dict(TRs=common_TRs)
+        FO_list = list()
+        for dFCM in dFCM_lst:
         
-        for FCS_key in state_act_dict['state_TC']:
-            FO[FCS_key] = np.mean(state_act_dict['state_TC'][FCS_key]['act_TC'])
+            FO = {}
 
-        return FO
+            if dFCM.measure.is_state_based:
+
+                state_act_dict = dFCM.state_act_dict(TRs=common_TRs)
+                
+                for FCS_key in state_act_dict['state_TC']:
+                    FO[FCS_key] = np.mean(state_act_dict['state_TC'][FCS_key]['act_TC'])
+
+            FO_list.append(FO)
+
+        return FO_list
 
     def COM_calc(self, dFCM_lst, common_TRs=None, lag=0):
         # returns co-occurance (CO) with specified lag, a dict with:
@@ -1052,46 +1018,50 @@ class DFC_ANALYZER:
         return CO
 
 
-    def transition_freq(self, dFCM, common_TRs=None):
+    def transition_freq(self, dFCM_lst, common_TRs=None):
         # returns the number of total state transition within common_TRs -> trans_freq
         # and the number of total state transitions regardless of common_TRs
         # but normalized by total number of TRs -> trans_norm
 
-        trans_freq_dict = {}
-
-        if not dFCM.measure.is_state_based:
-            return trans_freq_dict
-
         if common_TRs is None:
-            common_TRs = dFCM.TR_array
+            common_TRs = TR_intersection(dFCM_lst)
 
         TRs_lst = list()
         for TR in common_TRs:
             TRs_lst.append('TR'+str(TR))
 
-        trans_freq = 0
-        last_TR = None
-        for TR in dFCM.FCS_idx:
-            if TR in TRs_lst:
-                if not last_TR is None:
-                    if dFCM.FCS_idx[TR]!=dFCM.FCS_idx[last_TR]:
-                        trans_freq += 1
-                last_TR = TR
+        trans_freq_lst = list()
+        for dFCM in dFCM_lst:
+        
+            trans_freq_dict = {}
 
-        trans_freq_dict['trans_freq'] = trans_freq
+            if dFCM.measure.is_state_based:
 
-        trans_norm = 0
-        last_TR = None
-        for TR in dFCM.FCS_idx:
-            if not last_TR is None:
-                if dFCM.FCS_idx[TR]!=dFCM.FCS_idx[last_TR]:
-                    trans_norm += 1
-            last_TR = TR
-        trans_norm = trans_norm / len(dFCM.FCS_idx)
+                trans_freq = 0
+                last_TR = None
+                for TR in dFCM.FCS_idx:
+                    if TR in TRs_lst:
+                        if not last_TR is None:
+                            if dFCM.FCS_idx[TR]!=dFCM.FCS_idx[last_TR]:
+                                trans_freq += 1
+                        last_TR = TR
 
-        trans_freq_dict['trans_norm'] = trans_norm
+                trans_freq_dict['trans_freq'] = trans_freq
 
-        return trans_freq_dict 
+                trans_norm = 0
+                last_TR = None
+                for TR in dFCM.FCS_idx:
+                    if not last_TR is None:
+                        if dFCM.FCS_idx[TR]!=dFCM.FCS_idx[last_TR]:
+                            trans_norm += 1
+                    last_TR = TR
+                trans_norm = trans_norm / len(dFCM.FCS_idx)
+
+                trans_freq_dict['trans_norm'] = trans_norm
+
+            trans_freq_lst.append(trans_freq_dict)
+
+        return trans_freq_lst 
 
     def dFC_distance(self, FC_t_i, FC_t_j, metric, normalize=True):
         '''
@@ -1193,8 +1163,19 @@ class DFC_ANALYZER:
                     )
         return distance_var_mat
 
-    def dFC_corr_assess(self, dFCM_lst):
-
+    def post_analysis(self, dFCM_lst, analysis_name_lst):
+        '''
+        analysis_name_lst = [ \
+            'corr_mat', \
+            'dFC_distance', \
+            'dFC_distance_var', \
+            'FO', \
+            'CO', \
+            'TP', \
+            'trans_freq' \
+            ]
+        '''
+        
         measure_lst = list()
         TS_info_lst = list()
         for dFCM in dFCM_lst:
@@ -1206,93 +1187,81 @@ class DFC_ANALYZER:
         ########## dFCM corr ##########
         # returns averaged correlation of dFC measures 
 
-        corr_mat = self.dFCM_lst_corr(self, dFCM_lst, a=0.1)
+        corr_mat = []
+        if 'corr_mat' in analysis_name_lst:
+            corr_mat = self.dFCM_lst_corr(dFCM_lst, a=0.1)
 
         ########## distance calc ##########
 
         dFC_distance = {}
-        dFC_distance['euclidean'] = self.dFCM_lst_distance(\
-            dFCM_lst, \
-            metric='euclidean', \
-            normalize=True \
-            )
-        dFC_distance['correlation'] = self.dFCM_lst_distance(\
-            dFCM_lst, \
-            metric='correlation', \
-            normalize=True \
-            )
-        dFC_distance['ECM'] = self.dFCM_lst_distance(\
-            dFCM_lst, \
-            metric='ECM', \
-            normalize=True \
-            )
+        if 'dFC_distance' in analysis_name_lst:
+            dFC_distance['euclidean'] = self.dFCM_lst_distance(\
+                dFCM_lst, \
+                metric='euclidean', \
+                normalize=True \
+                )
+            dFC_distance['correlation'] = self.dFCM_lst_distance(\
+                dFCM_lst, \
+                metric='correlation', \
+                normalize=True \
+                )
+            dFC_distance['ECM'] = self.dFCM_lst_distance(\
+                dFCM_lst, \
+                metric='ECM', \
+                normalize=True \
+                )
 
         ########## distance var calc ##########
 
         dFC_distance_var = {}
-        dFC_distance_var['euclidean'] = self.dFCM_lst_var(\
-            dFCM_lst, \
-            metric='euclidean', \
-            normalize=True \
-            )
-        dFC_distance_var['correlation'] = self.dFCM_lst_var(\
-            dFCM_lst, \
-            metric='correlation', \
-            normalize=True \
-            )
-        dFC_distance_var['ECM'] = self.dFCM_lst_var(\
-            dFCM_lst, \
-            metric='ECM', \
-            normalize=True \
-            )
-
-        ########## state coactivation corr ##########
-
-
-        # ## using the same common_TRs as dFC corr
-
-        # state_match = {}
-        # for sb_measure_i in sb_dFCM_dict:
-        #     state_match[sb_measure_i] = {}
-        #     for sb_measure_j in sb_dFCM_dict:
-
-        #         state_match[sb_measure_i][sb_measure_j] = self.dFCM_trans_sim( \
-        #             dFCM_i=sb_dFCM_dict[sb_measure_i], \
-        #             dFCM_j=sb_dFCM_dict[sb_measure_j], \
-        #             common_TRs=common_TRs \
-        #         )
+        if 'dFC_distance_var' in analysis_name_lst:
+            dFC_distance_var['euclidean'] = self.dFCM_lst_var(\
+                dFCM_lst, \
+                metric='euclidean', \
+                normalize=True \
+                )
+            dFC_distance_var['correlation'] = self.dFCM_lst_var(\
+                dFCM_lst, \
+                metric='correlation', \
+                normalize=True \
+                )
+            dFC_distance_var['ECM'] = self.dFCM_lst_var(\
+                dFCM_lst, \
+                metric='ECM', \
+                normalize=True \
+                )
 
         ########## Fractional Occupancy ##########
 
-        FO = list()
-        for dFCM in dFCM_lst:
-            FO.append(self.FO_calc(
-                dFCM=dFCM, \
+        FO_lst = []
+        if 'FO' in analysis_name_lst:
+            FO_lst = self.FO_calc(dFCM_lst, \
                 common_TRs=common_TRs \
-            )
-            )
+                )
 
         ########## Co-Occurance Matrix and Transition Probability Matrix ##########
 
-        CO = self.COM_calc(dFCM_lst, \
-            common_TRs=common_TRs, \
-            lag=0 \
-            )
+        CO = {}
+        if 'CO' in analysis_name_lst:
+            CO = self.COM_calc(dFCM_lst, \
+                common_TRs=common_TRs, \
+                lag=0 \
+                )
 
-        TP = self.COM_calc(dFCM_lst, \
-            common_TRs=common_TRs, \
-            lag=1 \
-            )
+        TP = {}
+        if 'TP' in analysis_name_lst:
+            TP = self.COM_calc(dFCM_lst, \
+                common_TRs=common_TRs, \
+                lag=1 \
+                )
 
         ########## transition frequency ##########
 
-        trans_freq = list()
-        for dFCM in dFCM_lst:
-            trans_freq.append(self.transition_freq(
-                dFCM=dFCM, \
+        trans_freq_lst = []
+        if 'trans_freq' in analysis_name_lst:
+            trans_freq_lst = self.transition_freq(dFCM_lst, \
                 common_TRs=common_TRs \
-            )
-            )
+                )
                 
         ##############################################
 
@@ -1303,10 +1272,10 @@ class DFC_ANALYZER:
         methods_assess['dFC_distance'] = dFC_distance
         methods_assess['dFC_distance_var'] = dFC_distance_var
         # methods_assess['state_match'] = state_match
-        methods_assess['FO'] = FO
+        methods_assess['FO'] = FO_lst
         methods_assess['CO'] = CO
         methods_assess['TP'] = TP
-        methods_assess['trans_freq'] = trans_freq
+        methods_assess['trans_freq'] = trans_freq_lst
 
         return methods_assess
 
@@ -1430,8 +1399,6 @@ class dFC:
             if param in self.params:
                 if self.params[param]!=param_dict[param]:
                     return False
-            else:
-                return False
         return True
 
     def estimate_FCS(self, time_series=None):
@@ -3185,6 +3152,38 @@ class DATA_LOADER():
 
 '''
 ################################# dFC_analyzer #################################
+
+ # test
+@property
+def MEASURES_dict(self):
+    dict = {}
+    for measure in self.MEASURES_lst:
+        assert not measure.measure_name in dict, \
+            'duplicate measure name.'
+        dict[measure.measure_name] = measure
+    return dict
+
+# test
+@property
+def MEASURES_fit_dict(self):
+    dict = {}
+    for session in self.MEASURES_fit_lst:
+        dict[session] = {}
+        for measure in self.MEASURES_fit_lst[session]:
+            assert not measure.measure_name in dict[session], \
+                'duplicate measure name.'
+            dict[session][measure.measure_name] = measure
+    return dict
+
+@property
+def FCS_dict(self):
+    #FCS_dict[session][measure.measure_name]['state_TC'][FCS_i]['FCS']
+    FCS_dict = {}
+    for session in self.MEASURES_fit_lst:
+        FCS_dict[session] = {}
+        for measure in self.SB_MEASURES_lst(self.MEASURES_fit_lst[session]):
+            FCS_dict[session][measure.measure_name] = measure.FCS_dict
+    return FCS_dict
 
 @property
 def methods_corr(self):

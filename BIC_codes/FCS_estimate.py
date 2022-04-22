@@ -41,14 +41,14 @@ params_methods = { \
     # CLUSTERING AND DHMM
     'clstr_base_measure':'SlidingWindow', \
     # HMM
-    'hmm_iter': 20, \
+    'hmm_iter': 100, \
     # State Parameters
     'n_states': 12, 'n_subj_clstrs': 20, \
     # Parallelization Parameters
     'n_jobs': 2, 'verbose': 0, 'backend': 'loky', \
     # Hyper Parameters
     'normalization': True, \
-    'num_subj': 100, \
+    'num_subj': 10, \
     'num_select_nodes': 100, \
     'num_time_point': 1200, \
     'Fs_ratio': 1.00, \
@@ -70,30 +70,13 @@ MEASURES_name_lst = [ \
 alter_hparams = { \
             'n_states': [6, 16], \
             'normalization': [], \
-            'num_subj': [50, 80], \
+            'num_subj': [50], \
             'num_select_nodes': [50], \
-            'num_time_point': [500, 800], \
-            'Fs_ratio': [0.50, 1.50], \
-            'noise_ratio': [0.50, 1.00], \
-            'num_realization': [2, 3] \
+            'num_time_point': [500], \
+            'Fs_ratio': [0.50], \
+            'noise_ratio': [1.00], \
+            'num_realization': [] \
             }
-
-###### SIMILARITY PARAMETERS ######
-
-sim_assess_params= { \
-    'run_analysis': True, \
-    'num_samples': 100, \
-    'matching_method': 'score', \
-    'n_jobs': 8, 'backend': 'loky' \
-}
-
-###### SIMILARITY PARAMETERS ######
-
-dyn_conn_det_params = { \
-    'run_analysis': False, \
-    'N': 30, 'L': 1200, 'p': 100, \
-    'n_jobs': 8, 'backend': 'loky' \
-}
 
 ###### dFC ANALYZER PARAMETERS ######
 
@@ -101,11 +84,7 @@ params_dFC_analyzer = { \
     # VISUALIZATION
     'vis_TR_idx': list(range(10, 20, 1)),'save_image': True, 'output_root': output_root, \
     # Parallelization Parameters
-    'n_jobs': 8, 'verbose': 0, 'backend': 'loky', \
-    # Similarity Assessment Parameters
-    'sim_assess_params': sim_assess_params, \
-    # Dynamic Connection Detector Parameters
-    'dyn_conn_det_params': dyn_conn_det_params \
+    'n_jobs': 8, 'verbose': 0, 'backend': 'loky' \
 }
 
 
@@ -116,9 +95,9 @@ BOLD = data_loader.load()
 
 ################################# Visualize BOLD #################################
 
-for session in BOLD:
-    BOLD[session].visualize(start_time=0, end_time=50, nodes_lst=list(range(10)), \
-        save_image=params_dFC_analyzer['save_image'], output_root=output_root+'BOLD_signal_'+session)
+# for session in BOLD:
+#     BOLD[session].visualize(start_time=0, end_time=50, nodes_lst=list(range(10)), \
+#         save_image=params_dFC_analyzer['save_image'], output_root=output_root+'BOLD_signal_'+session)
 
 ################################# Measures of dFC #################################
 
@@ -126,6 +105,14 @@ dFC_analyzer = DFC_ANALYZER( \
     analysis_name='reproducibility assessment', \
     **params_dFC_analyzer \
 )
+
+MEASURES_lst = dFC_analyzer.measures_initializer( \
+    MEASURES_name_lst, \
+    params_methods, \
+    alter_hparams \
+    )
+
+dFC_analyzer.set_MEASURES_lst(MEASURES_lst)
 
 tic = time.time()
 print('Measurement Started ...')
@@ -138,23 +125,8 @@ print("FCS estimation done.")
 
 print('Measurement required %0.3f seconds.' % (time.time() - tic, ))
 
-### Visualize FCS ###
-
-# dFC_analyzer.visualize_FCS(normalize=True, \
-#                         threshold=0.0, \
-#                         )
-
 # Save
 np.save('./dFC_analyzer.npy', dFC_analyzer) 
 np.save('./data_loader.npy', data_loader) 
 
-# ################################# SIMILARITY ASSESSMENT #################################
-
-# # print_dict(dFC_analyzer.methods_corr)
-# dFC_analyzer.similarity_analyze(SUBJs_dFC_session_sim_dict)
-
-# ################################# STATE MATCH #################################
-
-# state_match = dFC_analyzer.state_match()
-# # Save
-# np.save('./state_match.npy', state_match) 
+#################################################################################

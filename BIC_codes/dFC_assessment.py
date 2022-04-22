@@ -36,37 +36,81 @@ tic = time.time()
 print('Measurement Started ...')
 
 print("dFCM estimation started...")
-SUBJ_output = dFC_analyzer.subj_lvl_dFC_assess(time_series_dict=BOLD)
+dFCM_dict = dFC_analyzer.subj_lvl_dFC_assess(time_series_dict=BOLD)
 # SUBJ_output = dFC_analyzer.group_dFCM_assess(time_series_dict=BOLD)
 print("dFCM estimation done.")
 
 print('Measurement required %0.3f seconds.' % (time.time() - tic, ))
 
-# #### Methods dFC Corr MAT ###
 
-# fig_name = None
-# if dFC_analyzer.params['save_image']:
-#     output_root = dFC_analyzer.params['output_root']+'dFC/'
-#     fig_name = output_root + 'avg_dFC_corr' 
+################################# POST ANALYSIS #################################
 
-# visualize_conn_mat(dFC_analyzer.methods_corr, \
-#     title='intra session dFC correlation', \
-#     name_lst_key='measure_lst', mat_key='corr_mat', \
-#     cmap='viridis',\
-#     save_image=dFC_analyzer.params['save_image'], output_root=fig_name, \
-#         fix_lim=True \
-# )
+SUBJ_output = {}
+
+for session in SUBJ_output:
+    output = {}
+    dFCM_lst = dFCM_dict[session]['dFCM_lst']
+
+    ########################## DEFAULT VALUES #######################
+
+    param_dict = dFC_analyzer.params_methods
+    analysis_name_lst = [ \
+        'corr_mat', \
+        'dFC_distance', \
+        'dFC_distance_var', \
+        'FO', \
+        'CO', \
+        'TP', \
+        'trans_freq' \
+        ]
+    dFCM_lst2check = filter_dFCM_lst(dFCM_lst, **param_dict)
+    output['default_values'] = dFC_analyzer.post_analysis( \
+        dFCM_lst=dFCM_lst2check, \
+        analysis_name_lst=analysis_name_lst \
+        )
+
+    ########################## 6_states #######################
+
+    param_dict = {'n_states': 6, 'is_state_based': True}
+    analysis_name_lst = [ \
+        'corr_mat', \
+        'dFC_distance', \
+        'dFC_distance_var', \
+        'FO', \
+        'CO', \
+        'TP', \
+        'trans_freq' \
+        ]
+    dFCM_lst2check = filter_dFCM_lst(dFCM_lst, **param_dict)
+    output['6_states'] = dFC_analyzer.post_analysis( \
+        dFCM_lst=dFCM_lst2check, \
+        analysis_name_lst=analysis_name_lst \
+        )
+
+    ########################## SlidingWindow_100_nodes #######################
+
+    param_dict = {'measure_name': 'SlidingWindow', 'num_select_nodes': 100}
+    analysis_name_lst = [ \
+        'corr_mat', \
+        'dFC_distance', \
+        'dFC_distance_var', \
+        'FO', \
+        'CO', \
+        'TP', \
+        'trans_freq' \
+        ]
+    dFCM_lst2check = filter_dFCM_lst(dFCM_lst, **param_dict)
+    output['SlidingWindow_100_nodes'] = dFC_analyzer.post_analysis( \
+        dFCM_lst=dFCM_lst2check, \
+        analysis_name_lst=analysis_name_lst \
+        )
+
+
+    SUBJ_output[session] = output
+
 
 # Save
 np.save('./dFC_assessed/SUBJ_'+str(subj_id)+'_output.npy', SUBJ_output) 
 
-# ################################# SIMILARITY ASSESSMENT #################################
 
-# # print_dict(dFC_analyzer.methods_corr)
-# dFC_analyzer.similarity_analyze(SUBJs_dFC_session_sim_dict)
-
-# ################################# STATE MATCH #################################
-
-# state_match = dFC_analyzer.state_match()
-# # Save
-# np.save('./state_match.npy', state_match) 
+#################################################################################
