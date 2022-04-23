@@ -663,7 +663,7 @@ class DFC_ANALYZER:
             self.params['backend'] = 'loky'
 
         self.MEASURES_lst_ = None
-        self.MEASURES_fit_lst_ = {}
+        self.MEASURES_fit_lst_ = []
         self.MEASURES_name_lst = []
         self.params_methods = {}
         self.alter_hparams = {}
@@ -680,6 +680,9 @@ class DFC_ANALYZER:
 
     def set_MEASURES_lst(self, MEASURES_lst):
         self.MEASURES_lst_ = MEASURES_lst
+
+    def set_MEASURES_fit_lst(self, MEASURES_fit_lst):
+        self.MEASURES_fit_lst_ = MEASURES_fit_lst
 
     def measures_initializer(self, MEASURES_name_lst, params_methods, alter_hparams):
 
@@ -1407,11 +1410,16 @@ class dFC:
             return False
         return True
 
+    #test
     def param_match(self, **param_dict):
         for param in param_dict:
             if param in self.params:
-                if self.params[param]!=param_dict[param]:
-                    return False
+                if type(param_dict[param]) is list:
+                    if not self.params[param] in param_dict[param]:
+                        return False
+                else:
+                    if self.params[param]!=param_dict[param]:
+                        return False
         return True
 
     def estimate_FCS(self, time_series=None):

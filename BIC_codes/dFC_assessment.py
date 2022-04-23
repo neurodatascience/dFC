@@ -20,10 +20,26 @@ output_root = './../../../../../RESULTs/methods_implementation/'
 # output_root = '/data/origami/dFC/RESULTs/methods_implementation/'
 # output_root = '/Users/mte/Documents/McGill/Project/dFC/RESULTs/methods_implementation/'
 
-################################# LOAD DATA #################################
+################################# LOAD #################################
 
 dFC_analyzer = np.load('./dFC_analyzer.npy',allow_pickle='TRUE').item()
 data_loader = np.load('./data_loader.npy',allow_pickle='TRUE').item()
+
+################################# LOAD FIT MEASURES #################################
+
+if dFC_analyzer.MEASURES_fit_lst==[]:
+    ALL_RECORDS = os.listdir('./fitted_MEASURES/')
+    ALL_RECORDS = [i for i in ALL_RECORDS if 'MEASURE' in i]
+    ALL_RECORDS.sort()
+    MEASURES_fit_lst = list()
+    for s in ALL_RECORDS:
+        fit_measure = np.load('./fitted_MEASURES/'+s,allow_pickle='TRUE').item()
+        MEASURES_fit_lst.append(fit_measure)
+    dFC_analyzer.set_MEASURES_fit_lst(MEASURES_fit_lst)
+    print('fitted MEASURES loaded ...')
+    # np.save('./dFC_analyzer.npy', dFC_analyzer) 
+
+################################# LOAD DATA #################################
 
 task_id = int(os.getenv("SGE_TASK_ID"))
 subj_id = data_loader.SUBJECTS[task_id-1] # SGE_TASK_ID starts from 1 not 0
@@ -69,7 +85,7 @@ SUBJ_output['default_values'] = dFC_analyzer.post_analysis( \
 
 ########################## 6_states #######################
 
-param_dict = {'n_states': 6, 'is_state_based': True}
+param_dict = {'n_states': [6], 'is_state_based': [True]}
 analysis_name_lst = [ \
     'corr_mat', \
     'dFC_distance', \
@@ -87,7 +103,7 @@ SUBJ_output['6_states'] = dFC_analyzer.post_analysis( \
 
 ########################## SlidingWindow_100_nodes #######################
 
-param_dict = {'measure_name': 'SlidingWindow', 'num_select_nodes': 100}
+param_dict = {'measure_name': ['SlidingWindow'], 'num_select_nodes': [100]}
 analysis_name_lst = [ \
     'corr_mat', \
     'dFC_distance', \
@@ -103,8 +119,42 @@ SUBJ_output['SlidingWindow_100_nodes'] = dFC_analyzer.post_analysis( \
     analysis_name_lst=analysis_name_lst \
     )
 
+########################## Fs_ratio_0.5 #######################
+
+param_dict = {'Fs_ratio': [0.5]}
+analysis_name_lst = [ \
+    'corr_mat', \
+    'dFC_distance', \
+    'dFC_distance_var', \
+    'FO', \
+    'CO', \
+    'TP', \
+    'trans_freq' \
+    ]
+dFCM_lst2check = filter_dFCM_lst(dFCM_lst, **param_dict)
+SUBJ_output['Fs_ratio_0.5'] = dFC_analyzer.post_analysis( \
+    dFCM_lst=dFCM_lst2check, \
+    analysis_name_lst=analysis_name_lst \
+    )
+
+########################## noise_ratio_1 #######################
+
+param_dict = {'noise_ratio': [1.0]}
+analysis_name_lst = [ \
+    'corr_mat', \
+    'dFC_distance', \
+    'dFC_distance_var', \
+    'FO', \
+    'CO', \
+    'TP', \
+    'trans_freq' \
+    ]
+dFCM_lst2check = filter_dFCM_lst(dFCM_lst, **param_dict)
+SUBJ_output['noise_ratio_1'] = dFC_analyzer.post_analysis( \
+    dFCM_lst=dFCM_lst2check, \
+    analysis_name_lst=analysis_name_lst \
+    )
+
 # Save
 np.save('./dFC_assessed/SUBJ_'+str(subj_id)+'_output.npy', SUBJ_output) 
-
-
 #################################################################################

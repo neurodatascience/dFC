@@ -41,7 +41,7 @@ params_methods = { \
     # CLUSTERING AND DHMM
     'clstr_base_measure':'SlidingWindow', \
     # HMM
-    'hmm_iter': 100, \
+    'hmm_iter': 50, \
     # State Parameters
     'n_states': 12, 'n_subj_clstrs': 20, \
     # Parallelization Parameters
@@ -50,7 +50,7 @@ params_methods = { \
     'session': 'Rest1_LR', \
     # Hyper Parameters
     'normalization': True, \
-    'num_subj': 10, \
+    'num_subj': 100, \
     'num_select_nodes': 100, \
     'num_time_point': 1200, \
     'Fs_ratio': 1.00, \
@@ -70,15 +70,15 @@ MEASURES_name_lst = [ \
                 ]
 
 alter_hparams = { \
-            'session': [], \
-            'n_states': [6, 16], \
-            'normalization': [], \
-            'num_subj': [50], \
-            'num_select_nodes': [50], \
-            'num_time_point': [500], \
+            # 'session': [], \
+            'n_states': [6], \
+            # 'normalization': [], \
+            # 'num_subj': [5], \
+            # 'num_select_nodes': [50], \
+            # 'num_time_point': [500], \
             'Fs_ratio': [0.50], \
             'noise_ratio': [1.00], \
-            'num_realization': [] \
+            # 'num_realization': [] \
             }
 
 ###### dFC ANALYZER PARAMETERS ######
@@ -122,22 +122,27 @@ print('Measurement Started ...')
 
 task_id = int(os.getenv("SGE_TASK_ID"))
 MEASURE_id = task_id-1 # SGE_TASK_ID starts from 1 not 0
-measure = MEASURES_lst[MEASURE_id]
 
-print("FCS estimation started...")
 
-time_series = BOLD[measure.params['session']]
-if measure.is_state_based:
-    measure.estimate_FCS(time_series=time_series)
-        
-# dFC_analyzer.estimate_group_FCS(time_series_dict=BOLD)
-print("FCS estimation done.")
+if MEASURE_id >= len(MEASURES_lst):
+    print("MEASURE_id out of MEASURES_lst ")
+else:
+    measure = MEASURES_lst[MEASURE_id]
 
-print('Measurement required %0.3f seconds.' % (time.time() - tic, ))
+    print("FCS estimation started...")
 
-# Save
-np.save('./fitted_MEASURES/MEASURE_'+str(MEASURE_id)+'.npy', measure) 
-np.save('./dFC_analyzer.npy', dFC_analyzer) 
-np.save('./data_loader.npy', data_loader) 
+    time_series = BOLD[measure.params['session']]
+    if measure.is_state_based:
+        measure.estimate_FCS(time_series=time_series)
+            
+    # dFC_analyzer.estimate_group_FCS(time_series_dict=BOLD)
+    print("FCS estimation done.")
+
+    print('Measurement required %0.3f seconds.' % (time.time() - tic, ))
+
+    # Save
+    np.save('./fitted_MEASURES/MEASURE_'+str(MEASURE_id)+'.npy', measure) 
+    np.save('./dFC_analyzer.npy', dFC_analyzer) 
+    np.save('./data_loader.npy', data_loader) 
 
 #################################################################################
