@@ -881,25 +881,38 @@ class DFC_ANALYZER:
         # time_series_dict is a dict of time_series
 
         dFCM_dict = {}
-        dFC_corr_assess_dict = {}
-        for session in time_series_dict:
-            dFCM_dict[session] = {}
-            time_series = time_series_dict[session]
-            if self.params['n_jobs'] is None:
-                dFCM_lst = list()
-                for measure in self.MEASURES_fit_lst_[session]:
-                    dFCM_lst.append( \
-                        measure.estimate_dFCM(time_series=time_series) \
-                    )
-            else:
-                dFCM_lst = Parallel( \
-                    n_jobs=self.params['n_jobs'], verbose=self.params['verbose'], backend=self.params['backend'])( \
-                    delayed(measure.estimate_dFCM)(time_series=time_series) \
-                        for measure in self.MEASURES_fit_lst_[session])
+        # dFC_corr_assess_dict = {}
+
+        if self.params['n_jobs'] is None:
+            dFCM_lst = list()
+            for measure in self.MEASURES_fit_lst_:
+                dFCM_lst.append( \
+                    measure.estimate_dFCM(time_series=time_series_dict[measure.params['session']]) \
+                )
+        else:
+            dFCM_lst = Parallel( \
+                n_jobs=self.params['n_jobs'], verbose=self.params['verbose'], backend=self.params['backend'])( \
+                delayed(measure.estimate_dFCM)(time_series=time_series_dict[measure.params['session']]) \
+                    for measure in self.MEASURES_fit_lst_)
+
+        # for session in time_series_dict:
+        #     dFCM_dict[session] = {}
+        #     time_series = time_series_dict[session]
+        #     if self.params['n_jobs'] is None:
+        #         dFCM_lst = list()
+        #         for measure in self.MEASURES_fit_lst_[session]:
+        #             dFCM_lst.append( \
+        #                 measure.estimate_dFCM(time_series=time_series) \
+        #             )
+        #     else:
+        #         dFCM_lst = Parallel( \
+        #             n_jobs=self.params['n_jobs'], verbose=self.params['verbose'], backend=self.params['backend'])( \
+        #             delayed(measure.estimate_dFCM)(time_series=time_series) \
+        #                 for measure in self.MEASURES_fit_lst_[session])
 
             # dFC_corr_assess_dict[session] = self.dFC_corr_assess(dFCM_lst=dFCM_lst)
 
-            dFCM_dict[session]['dFCM_lst'] = dFCM_lst
+            dFCM_dict['dFCM_lst'] = dFCM_lst
 
         # SUBJ_output['dFC_corr_assess_dict'] = dFC_corr_assess_dict
 
@@ -1524,7 +1537,7 @@ class HMM_CONT(dFC):
 
         self.params_name_lst = ['measure_name', 'is_state_based', 'n_states', 'hmm_iter', \
             'normalization', 'num_subj', 'num_select_nodes', 'num_time_point', \
-            'Fs_ratio', 'noise_ratio', 'num_realization']
+            'Fs_ratio', 'noise_ratio', 'num_realization', 'session']
         self.params = {}
         for params_name in self.params_name_lst:
             if params_name in params:
@@ -1605,7 +1618,7 @@ class WINDOWLESS(dFC):
 
         self.params_name_lst = ['measure_name', 'is_state_based', 'n_states', \
             'normalization', 'num_subj', 'num_select_nodes', 'num_time_point', \
-            'Fs_ratio', 'noise_ratio', 'num_realization']
+            'Fs_ratio', 'noise_ratio', 'num_realization', 'session']
         self.params = {}
         for params_name in self.params_name_lst:
             if params_name in params:
@@ -1726,7 +1739,7 @@ class TIME_FREQ(dFC):
         self.params_name_lst = ['measure_name', 'is_state_based', 'TF_method', 'coi_correction', \
             'n_jobs', 'verbose', 'backend', \
             'normalization', 'num_select_nodes', 'num_time_point', \
-            'Fs_ratio', 'noise_ratio', 'num_realization']
+            'Fs_ratio', 'noise_ratio', 'num_realization', 'session']
         self.params = {}
         for params_name in self.params_name_lst:
             if params_name in params:
@@ -1859,7 +1872,7 @@ class SLIDING_WINDOW(dFC):
         self.params_name_lst = ['measure_name', 'is_state_based', 'sw_method', 'tapered_window', \
             'W', 'n_overlap', 'normalization', \
             'num_select_nodes', 'num_time_point', 'Fs_ratio', \
-            'noise_ratio', 'num_realization']
+            'noise_ratio', 'num_realization', 'session']
         self.params = {}
         for params_name in self.params_name_lst:
             if params_name in params:
@@ -2026,7 +2039,7 @@ class SLIDING_WINDOW_CLUSTR(dFC):
             'n_subj_clstrs', 'W', 'n_overlap', 'n_states', 'normalization', \
             'n_jobs', 'verbose', 'backend', \
             'num_subj', 'num_select_nodes', 'num_time_point', 'Fs_ratio', \
-            'noise_ratio', 'num_realization']
+            'noise_ratio', 'num_realization', 'session']
         self.params = {}
         for params_name in self.params_name_lst:
             if params_name in params:
@@ -2214,7 +2227,7 @@ class HMM_DISC(dFC):
             'n_jobs', 'verbose', 'backend', \
             'n_subj_clstrs', 'W', 'n_overlap', 'n_states', 'normalization', \
             'num_subj', 'num_select_nodes', 'num_time_point', 'Fs_ratio', \
-            'noise_ratio', 'num_realization']
+            'noise_ratio', 'num_realization', 'session']
         self.params = {}
         for params_name in self.params_name_lst:
             if params_name in params:

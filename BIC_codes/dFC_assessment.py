@@ -47,67 +47,61 @@ print('Measurement required %0.3f seconds.' % (time.time() - tic, ))
 
 SUBJ_output = {}
 
-for session in SUBJ_output:
-    output = {}
-    dFCM_lst = dFCM_dict[session]['dFCM_lst']
+dFCM_lst = dFCM_dict['dFCM_lst']
 
-    ########################## DEFAULT VALUES #######################
+########################## DEFAULT VALUES #######################
 
-    param_dict = dFC_analyzer.params_methods
-    analysis_name_lst = [ \
-        'corr_mat', \
-        'dFC_distance', \
-        'dFC_distance_var', \
-        'FO', \
-        'CO', \
-        'TP', \
-        'trans_freq' \
-        ]
-    dFCM_lst2check = filter_dFCM_lst(dFCM_lst, **param_dict)
-    output['default_values'] = dFC_analyzer.post_analysis( \
-        dFCM_lst=dFCM_lst2check, \
-        analysis_name_lst=analysis_name_lst \
-        )
+param_dict = dFC_analyzer.params_methods
+analysis_name_lst = [ \
+    'corr_mat', \
+    'dFC_distance', \
+    'dFC_distance_var', \
+    'FO', \
+    'CO', \
+    'TP', \
+    'trans_freq' \
+    ]
+dFCM_lst2check = filter_dFCM_lst(dFCM_lst, **param_dict)
+SUBJ_output['default_values'] = dFC_analyzer.post_analysis( \
+    dFCM_lst=dFCM_lst2check, \
+    analysis_name_lst=analysis_name_lst \
+    )
 
-    ########################## 6_states #######################
+########################## 6_states #######################
 
-    param_dict = {'n_states': 6, 'is_state_based': True}
-    analysis_name_lst = [ \
-        'corr_mat', \
-        'dFC_distance', \
-        'dFC_distance_var', \
-        'FO', \
-        'CO', \
-        'TP', \
-        'trans_freq' \
-        ]
-    dFCM_lst2check = filter_dFCM_lst(dFCM_lst, **param_dict)
-    output['6_states'] = dFC_analyzer.post_analysis( \
-        dFCM_lst=dFCM_lst2check, \
-        analysis_name_lst=analysis_name_lst \
-        )
+param_dict = {'n_states': 6, 'is_state_based': True}
+analysis_name_lst = [ \
+    'corr_mat', \
+    'dFC_distance', \
+    'dFC_distance_var', \
+    'FO', \
+    'CO', \
+    'TP', \
+    'trans_freq' \
+    ]
+dFCM_lst2check = filter_dFCM_lst(dFCM_lst, **param_dict)
+SUBJ_output['6_states'] = dFC_analyzer.post_analysis( \
+    dFCM_lst=dFCM_lst2check, \
+    analysis_name_lst=analysis_name_lst \
+    )
 
-    ########################## SlidingWindow_100_nodes #######################
+########################## SlidingWindow_100_nodes #######################
 
-    param_dict = {'measure_name': 'SlidingWindow', 'num_select_nodes': 100}
-    analysis_name_lst = [ \
-        'corr_mat', \
-        'dFC_distance', \
-        'dFC_distance_var', \
-        'FO', \
-        'CO', \
-        'TP', \
-        'trans_freq' \
-        ]
-    dFCM_lst2check = filter_dFCM_lst(dFCM_lst, **param_dict)
-    output['SlidingWindow_100_nodes'] = dFC_analyzer.post_analysis( \
-        dFCM_lst=dFCM_lst2check, \
-        analysis_name_lst=analysis_name_lst \
-        )
-
-
-    SUBJ_output[session] = output
-
+param_dict = {'measure_name': 'SlidingWindow', 'num_select_nodes': 100}
+analysis_name_lst = [ \
+    'corr_mat', \
+    'dFC_distance', \
+    'dFC_distance_var', \
+    'FO', \
+    'CO', \
+    'TP', \
+    'trans_freq' \
+    ]
+dFCM_lst2check = filter_dFCM_lst(dFCM_lst, **param_dict)
+SUBJ_output['SlidingWindow_100_nodes'] = dFC_analyzer.post_analysis( \
+    dFCM_lst=dFCM_lst2check, \
+    analysis_name_lst=analysis_name_lst \
+    )
 
 # Save
 np.save('./dFC_assessed/SUBJ_'+str(subj_id)+'_output.npy', SUBJ_output) 

@@ -21,7 +21,7 @@ output_root = './../../../../../RESULTs/methods_implementation/'
 # DATA_type is either 'sample' or 'Gordon' or 'simulated' or 'ICA'
 params_data_load = { \
     'DATA_type': 'Gordon', \
-    'SESSIONs':['Rest1_LR'], \
+    'SESSIONs':['Rest1_LR' , 'Rest1_RL', 'Rest2_LR', 'Rest2_RL'], \
 
     'data_root_simul': './../../../../DATA/TVB data/', \
     'data_root_sample': './sampleDATA/', \
@@ -46,6 +46,8 @@ params_methods = { \
     'n_states': 12, 'n_subj_clstrs': 20, \
     # Parallelization Parameters
     'n_jobs': 2, 'verbose': 0, 'backend': 'loky', \
+    # SESSION
+    'session': 'Rest1_LR', \
     # Hyper Parameters
     'normalization': True, \
     'num_subj': 10, \
@@ -68,6 +70,7 @@ MEASURES_name_lst = [ \
                 ]
 
 alter_hparams = { \
+            'session': [], \
             'n_states': [6, 16], \
             'normalization': [], \
             'num_subj': [50], \
@@ -112,20 +115,28 @@ MEASURES_lst = dFC_analyzer.measures_initializer( \
     alter_hparams \
     )
 
-dFC_analyzer.set_MEASURES_lst(MEASURES_lst)
-
 tic = time.time()
 print('Measurement Started ...')
 
 ################################# estimate FCS #################################
 
+task_id = int(os.getenv("SGE_TASK_ID"))
+MEASURE_id = task_id-1 # SGE_TASK_ID starts from 1 not 0
+measure = MEASURES_lst[MEASURE_id]
+
 print("FCS estimation started...")
-dFC_analyzer.estimate_group_FCS(time_series_dict=BOLD)
+
+time_series = BOLD[measure.params['session']]
+if measure.is_state_based:
+    measure.estimate_FCS(time_series=time_series)
+        
+# dFC_analyzer.estimate_group_FCS(time_series_dict=BOLD)
 print("FCS estimation done.")
 
 print('Measurement required %0.3f seconds.' % (time.time() - tic, ))
 
 # Save
+np.save('./fitted_MEASURES/MEASURE_'+str(MEASURE_id)+'.npy', measure) 
 np.save('./dFC_analyzer.npy', dFC_analyzer) 
 np.save('./data_loader.npy', data_loader) 
 
