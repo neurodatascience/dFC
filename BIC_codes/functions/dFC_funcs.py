@@ -938,11 +938,12 @@ class DFC_ANALYZER:
         corr= np.array(corr)
         return corr
     
-    def dFCM_lst_corr(self, dFCM_lst, a=0.1):
+    def dFCM_lst_corr(self, dFCM_lst, common_TRs=None, a=0.1):
         # a is portion of the dFCs to ignore from 
         # the beginning and the end
 
-        common_TRs = TR_intersection(dFCM_lst)
+        if common_TRs is None:
+            common_TRs = TR_intersection(dFCM_lst)
 
         corr_mat = np.zeros((len(dFCM_lst), len(dFCM_lst)))
         for i in range(len(dFCM_lst)):
@@ -1138,15 +1139,16 @@ class DFC_ANALYZER:
         # reg = LinearRegression().fit(xx.T, y.T)
         # reg_dist.append(reg.coef_)
 
-    def dFCM_lst_distance(self, dFCM_lst, metric, normalize=True):
+    def dFCM_lst_distance(self, dFCM_lst, metric, common_TRs=None, normalize=True):
 
-        TRs = TR_intersection(dFCM_lst)
+        if common_TRs is None:
+            common_TRs = TR_intersection(dFCM_lst)
         
-        distance_mat = np.zeros((len(TRs), len(dFCM_lst), len(dFCM_lst)))
+        distance_mat = np.zeros((len(common_TRs), len(dFCM_lst), len(dFCM_lst)))
         for i, dFCM_i in enumerate(dFCM_lst):
             for j, dFCM_j in enumerate(dFCM_lst):
-                dFC_mat_i = dFCM_i.get_dFC_mat(TRs=TRs)
-                dFC_mat_j = dFCM_j.get_dFC_mat(TRs=TRs)
+                dFC_mat_i = dFCM_i.get_dFC_mat(TRs=common_TRs)
+                dFC_mat_j = dFCM_j.get_dFC_mat(TRs=common_TRs)
                 distance_mat[:, i, j] = self.dFC_distance(\
                     FC_t_i=dFC_mat_i, \
                     FC_t_j=dFC_mat_j, \
@@ -1155,22 +1157,23 @@ class DFC_ANALYZER:
                         )
         return distance_mat
 
-    def dFCM_lst_var(self, dFCM_lst, metric, normalize=True):
+    def dFCM_lst_var(self, dFCM_lst, metric, common_TRs=None, normalize=True):
 
-        TRs = TR_intersection(dFCM_lst)
+        if common_TRs is None:
+            common_TRs = TR_intersection(dFCM_lst)
 
         dFC_mat_avg = None
         for i, dFCM_i in enumerate(dFCM_lst):
-            dFC_mat_i = dFCM_i.get_dFC_mat(TRs=TRs)
+            dFC_mat_i = dFCM_i.get_dFC_mat(TRs=common_TRs)
             if dFC_mat_avg is None:
                 dFC_mat_avg = dFC_mat_normalize(C_t=dFC_mat_i, global_normalization=True) 
             else:
                 dFC_mat_avg += dFC_mat_normalize(C_t=dFC_mat_i, global_normalization=True) 
         dFC_mat_avg = np.divide(dFC_mat_avg, len(dFCM_lst))
 
-        distance_var_mat = np.zeros((len(TRs), len(dFCM_lst)))
+        distance_var_mat = np.zeros((len(common_TRs), len(dFCM_lst)))
         for i, dFCM_i in enumerate(dFCM_lst):
-            dFC_mat_i = dFCM_i.get_dFC_mat(TRs=TRs)
+            dFC_mat_i = dFCM_i.get_dFC_mat(TRs=common_TRs)
             distance_var_mat[:, i] = self.dFC_distance(\
                 FC_t_i=dFC_mat_i, \
                 FC_t_j=dFC_mat_avg, \
@@ -1205,7 +1208,10 @@ class DFC_ANALYZER:
 
         corr_mat = []
         if 'corr_mat' in analysis_name_lst:
-            corr_mat = self.dFCM_lst_corr(dFCM_lst, a=0.1)
+            corr_mat = self.dFCM_lst_corr(dFCM_lst, \
+                common_TRs=common_TRs, \
+                a=0.1 \
+                )
 
         ########## distance calc ##########
 
@@ -1214,16 +1220,19 @@ class DFC_ANALYZER:
             dFC_distance['euclidean'] = self.dFCM_lst_distance(\
                 dFCM_lst, \
                 metric='euclidean', \
+                common_TRs=common_TRs, \
                 normalize=True \
                 )
             dFC_distance['correlation'] = self.dFCM_lst_distance(\
                 dFCM_lst, \
                 metric='correlation', \
+                common_TRs=common_TRs, \
                 normalize=True \
                 )
             dFC_distance['ECM'] = self.dFCM_lst_distance(\
                 dFCM_lst, \
                 metric='ECM', \
+                common_TRs=common_TRs, \
                 normalize=True \
                 )
 
@@ -1234,16 +1243,19 @@ class DFC_ANALYZER:
             dFC_distance_var['euclidean'] = self.dFCM_lst_var(\
                 dFCM_lst, \
                 metric='euclidean', \
+                common_TRs=common_TRs, \
                 normalize=True \
                 )
             dFC_distance_var['correlation'] = self.dFCM_lst_var(\
                 dFCM_lst, \
                 metric='correlation', \
+                common_TRs=common_TRs, \
                 normalize=True \
                 )
             dFC_distance_var['ECM'] = self.dFCM_lst_var(\
                 dFCM_lst, \
                 metric='ECM', \
+                common_TRs=common_TRs, \
                 normalize=True \
                 )
 
@@ -1284,6 +1296,7 @@ class DFC_ANALYZER:
         methods_assess = {}
         methods_assess['measure_lst'] = measure_lst
         methods_assess['TS_info_lst'] = TS_info_lst
+        methods_assess['common_TRs'] = common_TRs
         methods_assess['corr_mat'] = corr_mat
         methods_assess['dFC_distance'] = dFC_distance
         methods_assess['dFC_distance_var'] = dFC_distance_var
