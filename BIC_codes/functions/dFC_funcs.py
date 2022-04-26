@@ -111,6 +111,8 @@ def zip_name(name_lst):
     for name in name_lst:
         if 'Clustering' in name:
             new_name = 'SWC' + name[name.rfind('_'):]
+        if 'CAP' in name:
+            new_name = 'CAP' + name[name.rfind('_'):]
         if 'ContinuousHMM' in name:
             new_name = 'CHMM' + name[name.rfind('_'):]
         if 'Windowless' in name:
@@ -132,18 +134,20 @@ def unzip_name(name):
     if not '_' in name:
         name = name + '_'
         flag=True
+    if 'CAP' in name:
+        new_name = 'CAP' + name[name.rfind('_'):]
     if 'SWC' in name:
-        new_name = 'Clustering_pear_corr' + name[name.rfind('_'):]
+        new_name = 'Clustering' + name[name.rfind('_'):]
     if 'CHMM' in name:
         new_name = 'ContinuousHMM' + name[name.rfind('_'):]
     if 'WL' in name:
         new_name = 'Windowless' + name[name.rfind('_'):]
     if 'DHMM' in name:
-        new_name = 'DiscreteHMM_pear_corr' + name[name.rfind('_'):]
+        new_name = 'DiscreteHMM' + name[name.rfind('_'):]
     if 'TF' in name:
         new_name = 'Time-Freq' + name[name.rfind('_'):]
     if 'SW_' in name:
-        new_name = 'SlidingWindow_pear_corr' + name[name.rfind('_'):]
+        new_name = 'SlidingWindow' + name[name.rfind('_'):]
     if flag:
         new_name = new_name[:-1]
     return new_name
@@ -705,6 +709,7 @@ class DFC_ANALYZER:
             MEASURES_name_lst = ( \
                 'SlidingWindow', \
                 'Time-Freq', \
+                'CAP', \
                 'ContinuousHMM', \
                 'Windowless', \
                 'Clustering', \
@@ -739,6 +744,10 @@ class DFC_ANALYZER:
 
         MEASURES_lst = list()
         for MEASURES_name in MEASURES_name_lst:
+
+            ###### CAP ######
+            if MEASURES_name=='CAP':
+                measure = CAP(**params)
 
             ###### CONTINUOUS HMM ######
             if MEASURES_name=='ContinuousHMM':
@@ -1531,6 +1540,179 @@ class dFC:
         else:
             plt.show()
 
+
+################################## NEW METHOD ##################################
+
+'''
+by : web link
+
+Reference: ##
+
+Parameters
+    ----------
+    y1, y2 : numpy.ndarray, list
+        Input signals.
+    dt : float
+        Sample spacing.
+
+todo:
+
+import needed_toolbox
+
+class method_name(dFC):
+
+    def __init__(self, **params):
+        self.FCS_ = []
+
+        self.params_name_lst = ['measure_name', 'is_state_based', 'n_states', \
+            'normalization', 'num_subj', 'num_select_nodes', 'num_time_point', \
+            'Fs_ratio', 'noise_ratio', 'num_realization', 'session']
+        self.params = {}
+        for params_name in self.params_name_lst:
+            if params_name in params:
+                self.params[params_name] = params[params_name]
+
+        self.params['specific_param'] = value
+        self.params['measure_name'] = 'method_name'
+        self.params['is_state_based'] = True/False
+    
+    @property
+    def measure_name(self):
+        return self.params['measure_name'] 
+
+    def estimate_FCS(self, time_series):
+
+        assert type(time_series) is TIME_SERIES, \
+            "time_series must be of TIME_SERIES class."
+
+        time_series = self.manipulate_time_series4FCS(time_series)
+
+        # calc FCSs
+
+        return self
+
+    def estimate_dFCM(self, time_series):
+        
+        assert type(time_series) is TIME_SERIES, \
+            "time_series must be of TIME_SERIES class."
+
+        time_series = self.manipulate_time_series4dFC(time_series)
+
+        # calc FCSs and FCS_idx
+            
+        dFCM = DFCM(measure=self)
+        dFCM.set_dFC(FCSs=self.FCS_, FCS_idx=FCS_idx, TS_info=time_series.info_dict)
+        return dFCM
+'''
+
+################################## CAP ##################################
+
+'''
+by : web link
+
+Reference: ##
+
+Parameters
+    ----------
+    y1, y2 : numpy.ndarray, list
+        Input signals.
+    dt : float
+        Sample spacing.
+
+todo:
+'''
+from sklearn.cluster import KMeans
+
+class CAP(dFC):
+
+    def __init__(self, **params):
+        self.FCS_ = []
+
+        self.params_name_lst = ['measure_name', 'is_state_based', 'n_states', \
+            'n_subj_clstrs', 'normalization', 'num_subj', 'num_select_nodes', 'num_time_point', \
+            'Fs_ratio', 'noise_ratio', 'num_realization', 'session']
+        self.params = {}
+        for params_name in self.params_name_lst:
+            if params_name in params:
+                self.params[params_name] = params[params_name]
+
+        self.params['measure_name'] = 'CAP'
+        self.params['is_state_based'] = True
+
+    @property
+    def measure_name(self):
+        return self.params['measure_name'] 
+
+    def act_vec2FCS(self, act_vecs):
+        FCS_ = list()
+        for act_vec in act_vecs:
+            FCS_.append(np.multiply(act_vec[:, np.newaxis], act_vec[np.newaxis, :]))
+        return np.array(FCS_)
+
+    def cluster_act_vec(self, act_vecs, n_clusters):
+
+        kmeans_ = KMeans(n_clusters=n_clusters, n_init=500).fit(act_vecs)
+        Z = kmeans_.predict(act_vecs)
+        act_centroids = kmeans_.cluster_centers_
+
+        return act_centroids, kmeans_
+
+    def estimate_FCS(self, time_series):
+
+        assert type(time_series) is TIME_SERIES, \
+            "time_series must be of TIME_SERIES class."
+
+        time_series = self.manipulate_time_series4FCS(time_series)
+
+        # 2-level clustering
+        SUBJECTs = time_series.subj_id_lst
+        act_center_1st_level = None
+        for subject in SUBJECTs:
+            
+            act_vecs = time_series.get_subj_ts(subjs_id=subject).data.T
+
+            # test
+            if act_vecs.shape[0]<self.params['n_subj_clstrs']:
+                print( \
+                    'Number of subject-level clusters cannot be more than time samples! n_subj_clstrs was changed to ' \
+                        + str(act_vecs.shape[0]))
+                self.params['n_subj_clstrs'] = act_vecs.shape[0]
+
+            act_centroids, _ = self.cluster_act_vec( \
+                act_vecs = act_vecs, \
+                n_clusters = self.params['n_subj_clstrs'] \
+                )
+            if act_center_1st_level is None:
+                act_center_1st_level = act_centroids
+            else:
+                act_center_1st_level = np.concatenate((act_center_1st_level, act_centroids), axis=0)
+        
+        group_act_centroids, self.kmeans_ = self.cluster_act_vec( \
+            act_vecs=act_center_1st_level, \
+            n_clusters = self.params['n_states'] \
+            )
+        self.FCS_ = self.act_vec2FCS(group_act_centroids)
+
+        return self
+
+    def estimate_dFCM(self, time_series):
+        
+        assert type(time_series) is TIME_SERIES, \
+            "time_series must be of TIME_SERIES class."
+
+        time_series = self.manipulate_time_series4dFC(time_series)
+                    
+        act_vecs = time_series.data.T
+
+        Z = self.kmeans_.predict(act_vecs)
+
+        dFCM = DFCM(measure=self)
+        dFCM.set_dFC(FCSs=self.FCS_, \
+            FCS_idx=Z, \
+            TS_info=time_series.info_dict \
+            )
+        return dFCM
+
 ################################# HMM Continuous ###############################
 
 """
@@ -2256,7 +2438,6 @@ class HMM_DISC(dFC):
         
         self.params['measure_name'] = 'DiscreteHMM'
         self.params['is_state_based'] = True
-        self.params['n_hid_states'] = self.params['n_states']
 
         assert self.params['clstr_base_measure'] in self.base_methods_name_lst, \
             "Base measure not recognized."

@@ -41,7 +41,7 @@ params_methods = { \
     # CLUSTERING AND DHMM
     'clstr_base_measure':'SlidingWindow', \
     # HMM
-    'hmm_iter': 50, \
+    'hmm_iter': 50, 'n_hid_states': 24, \
     # State Parameters
     'n_states': 12, 'n_subj_clstrs': 20, \
     # Parallelization Parameters
@@ -63,6 +63,7 @@ params_methods = { \
 MEASURES_name_lst = [ \
                 'SlidingWindow', \
                 'Time-Freq', \
+                'CAP', \
                 'ContinuousHMM', \
                 'Windowless', \
                 'Clustering', \
