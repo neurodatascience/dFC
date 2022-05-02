@@ -946,7 +946,7 @@ class DFC_ANALYZER:
         dFC_mat_j = dFCM_j.get_dFC_mat(TRs=TRs)
         corr = list()
         for t in range(len(TRs)):
-            corr.append(np.corrcoef(dFC_mat_i[t,:,:].flatten(), dFC_mat_j[t,:,:].flatten())[0,1])
+            corr.append(np.corrcoef(dFC_mat2vec(dFC_mat_i[t,:,:]), dFC_mat2vec(dFC_mat_j[t,:,:]))[0,1])
         corr= np.array(corr)
         return corr
     
