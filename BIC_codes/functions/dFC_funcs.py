@@ -76,6 +76,7 @@ def normalizeAdjacency(W):
 
 # test
 def normalized_euc_dist(x, y):
+    # https://stats.stackexchange.com/questions/136232/definition-of-normalized-euclidean-distance#:~:text=The%20normalized%20squared%20euclidean%20distance,not%20related%20to%20Mahalanobis%20distance.
 
     if np.linalg.norm(x-np.mean(x))**2==0 and np.linalg.norm(y-np.mean(y))**2==0:
         return 0
@@ -156,18 +157,20 @@ def unzip_name(name):
 def dFC_mat2vec(C_t):
     '''
     C_t must be an array of matrices or a single matrix
+    diagonal values not included. if you want to include 
+    them set k=0
     '''
     if len(C_t.shape)==2:
         assert C_t.shape[0]==C_t.shape[1],\
             'C is not a square matrix'
-        return C_t[np.triu_indices(C_t.shape[1])]
+        return C_t[np.triu_indices(C_t.shape[1], k=1)]
 
     F = list()
     for t in range(C_t.shape[0]):
         C = C_t[t, : , :]
         assert C.shape[0]==C.shape[1],\
             'C is not a square matrix'
-        F.append(C[np.triu_indices(C_t.shape[1])])
+        F.append(C[np.triu_indices(C_t.shape[1], k=1)])
 
     F = np.array(F)
     return F
@@ -175,7 +178,7 @@ def dFC_mat2vec(C_t):
 #test
 def dFC_vec2mat(F, N):
     C = list()
-    iu = np.triu_indices(N)
+    iu = np.triu_indices(N, k=1)
     for i in range(F.shape[0]):
         K = np.zeros((N, N))
         K[iu] = F[i,:]

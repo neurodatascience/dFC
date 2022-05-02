@@ -46,7 +46,7 @@ subj_id = data_loader.SUBJECTS[task_id-1] # SGE_TASK_ID starts from 1 not 0
 
 BOLD = data_loader.load(subj_id2load=subj_id)
 
-################################# SIMILARITY ASSESSMENT #################################
+################################# dFC ASSESSMENT #################################
 
 tic = time.time()
 print('Measurement Started ...')
