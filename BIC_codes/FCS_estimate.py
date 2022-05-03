@@ -50,8 +50,8 @@ params_methods = { \
     'session': 'Rest1_LR', \
     # Hyper Parameters
     'normalization': True, \
-    'num_subj': 100, \
-    'num_select_nodes': 100, \
+    'num_subj': 395, \
+    'num_select_nodes': 333, \
     'num_time_point': 1200, \
     'Fs_ratio': 1.00, \
     'noise_ratio': 0.00, \

@@ -2566,7 +2566,7 @@ class TIME_SERIES():
         self.locs_ = locs
         self.nodes_info_ = nodes_info
 
-        self.interval_ = np.arange(0, self.n_time_)
+        self.interval_ = np.arange(0, self.n_time_, dtype=int)
         self.nodes_selection_ = list(range(self.n_regions_))
 
     @property
@@ -2740,7 +2740,7 @@ class TIME_SERIES():
             start = max(start, 0)
             end = min(end, self.n_time)
 
-            self.interval_ = np.arange(start, end)
+            self.interval_ = np.arange(start, end, dtype=int)
             
             for subj in self.data_dict_:
                 self.data_dict_[subj]['data'] = self.data_dict_[subj]['data'][:, self.interval]
@@ -2791,7 +2791,7 @@ class TIME_SERIES():
 
             start = np.argwhere(self.time_array_>=start_time)[0,0]
             end = np.argwhere(self.time_array_<=end_time)[-1,0] + 1
-            self.interval_ = np.arange(start, end)
+            self.interval_ = np.arange(start, end, dtype=int)
 
             self.data_ = None
 
@@ -2825,7 +2825,7 @@ class TIME_SERIES():
         # if nodes_idx is not sorted, it can be used to reorder the nodes
 
         if nodes_idx is None:
-            self.nodes_selection_ = np.arange(0, self.n_regions_, 1)
+            self.nodes_selection_ = np.arange(0, self.n_regions_, 1, dtype=int)
         else:
             self.nodes_selection_ = nodes_idx  
 
@@ -3081,7 +3081,7 @@ class DFCM():
             FCSs = np.expand_dims(FCSs, axis=0)
 
         if FCS_idx is None:
-            FCS_idx = np.arange(start=0, stop=FCSs.shape[0], step=1)
+            FCS_idx = np.arange(start=0, stop=FCSs.shape[0], step=1, dtype=int)
 
         if type(FCS_idx) is list:
             FCS_idx = np.array(FCS_idx)
@@ -3096,7 +3096,7 @@ class DFCM():
             'why n_time is not -1 ?'
         
         if TR_array is None:
-            TR_array = np.arange(start=self.n_time+1, stop=self.n_time+len(FCS_idx)+1, step=1)
+            TR_array = np.arange(start=self.n_time+1, stop=self.n_time+len(FCS_idx)+1, step=1, dtype=int)
 
         assert np.sum(np.abs(np.sort(TR_array)-TR_array))==0.0, \
             'TRs not sorted !'
