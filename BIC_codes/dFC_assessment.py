@@ -69,10 +69,12 @@ dFCM_lst = dFCM_dict['dFCM_lst']
 common_TRs = TR_intersection(dFCM_lst)
 dFCM_sample_dict = {}
 dFCM_sample_dict['common_TRs'] = common_TRs
-dFCM_sample_dict['dFC'] = {}
+dFCM_sample_dict['dFCM'] = {}
 for i, dFCM in enumerate(dFCM_lst):
     dFCM_sample = dFCM.get_dFC_mat(TRs=common_TRs)
-    dFCM_sample_dict['dFC'][str(i)] = dFCM_sample
+    dFCM_sample_dict['dFCM'][str(i)] = {}
+    dFCM_sample_dict['dFCM'][str(i)]['mat'] = dFCM_sample
+    dFCM_sample_dict['dFCM'][str(i)]['info'] = dFCM.measure.info
 np.save('./dFC_samples/SUBJ_'+str(subj_id)+'_dFC.npy', dFCM_sample_dict) 
 
 ########################## DEFAULT VALUES #######################
