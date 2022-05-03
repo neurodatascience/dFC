@@ -65,6 +65,16 @@ SUBJ_output = {}
 
 dFCM_lst = dFCM_dict['dFCM_lst']
 
+# Save dFC samples
+common_TRs = TR_intersection(dFCM_lst)
+dFCM_sample_dict = {}
+dFCM_sample_dict['common_TRs'] = common_TRs
+dFCM_sample_dict['dFC'] = {}
+for i, dFCM in enumerate(dFCM_lst):
+    dFCM_sample = dFCM.get_dFC_mat(TRs=common_TRs)
+    dFCM_sample_dict['dFC'][str(i)] = dFCM_sample
+np.save('./dFC_samples/SUBJ_'+str(subj_id)+'_dFC.npy', dFCM_sample_dict) 
+
 ########################## DEFAULT VALUES #######################
 
 param_dict = dFC_analyzer.params_methods
