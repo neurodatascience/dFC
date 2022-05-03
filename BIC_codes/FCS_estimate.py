@@ -77,8 +77,8 @@ alter_hparams = { \
             # 'num_subj': [5], \
             # 'num_select_nodes': [50], \
             # 'num_time_point': [500], \
-            'Fs_ratio': [0.50], \
-            'noise_ratio': [1.00], \
+            'Fs_ratio': [0.40], \
+            'noise_ratio': [2.00], \
             # 'num_realization': [] \
             }
 

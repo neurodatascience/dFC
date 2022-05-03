@@ -177,12 +177,17 @@ def dFC_mat2vec(C_t):
 
 #test
 def dFC_vec2mat(F, N):
+    '''
+    diagonal values are set to 1.0
+    F shape is (observations, features)
+    '''
     C = list()
     iu = np.triu_indices(N, k=1)
     for i in range(F.shape[0]):
         K = np.zeros((N, N))
         K[iu] = F[i,:]
-        K = K + np.multiply(K.T, 1-np.eye(N))
+        K = K + K.T
+        K = K + np.eye(N)
         C.append(K)
     C = np.array(C)
     return C
