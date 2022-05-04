@@ -14,6 +14,7 @@ import networkx as nx
 from scipy.spatial import distance
 from joblib import Parallel, delayed
 import os
+import time
 import hdf5storage
 import scipy.io as sio
 from sklearn.preprocessing import power_transform
@@ -651,8 +652,6 @@ todo:
 - 
 """
 
-import time
-
 class DFC_ANALYZER:
     # if self.n_jobs is None => no parallelization
 
@@ -800,38 +799,6 @@ class DFC_ANALYZER:
         return DD_MEASURES
 
     ##################### MEASURE CHARACTERISTICS ######################
-
-    def time_analyze(self, time_series=None):
-
-        print('Total Time = estimate_FCS Time + estimate_dFCM Time')
-        
-        time_lst = list()
-        estimate_FCS_time_lst = list()
-        for measure in self.MEASURES_lst:
-
-            tic = time.time()
-            if measure.is_state_based:
-                tic_FCS = time.time()
-                measure.estimate_FCS(time_series=time_series)
-                estimate_FCS_time_lst.append(time.time() - tic_FCS)
-            else:
-                estimate_FCS_time_lst.append(0.0)
-
-            measure.estimate_dFCM(time_series=time_series)
-
-            time_lst.append(time.time() - tic)
-
-        for i, measure in enumerate(self.MEASURES_lst):
-            if measure.is_state_based:
-                print('Measure '+measure.measure_name+' time = ' + \
-                    str(time_lst[i]) + ' = ' + \
-                    str(estimate_FCS_time_lst[i]) + ' + ' + \
-                    str(time_lst[i] - estimate_FCS_time_lst[i]) \
-                    )
-            else:
-                print('Measure '+measure.measure_name+' time = ' + \
-                    str(time_lst[i]) \
-                    )
 
     def dFCM_var(self, MEASURES_dFCM):
 
@@ -1611,7 +1578,13 @@ class method_name(dFC):
 
         time_series = self.manipulate_time_series4FCS(time_series)
 
+        # start timing
+        tic = time.time()
+
         # calc FCSs
+
+        # record time
+        self.set_FCS_fit_time(time.time() - tic)
 
         return self
 
@@ -1622,7 +1595,13 @@ class method_name(dFC):
 
         time_series = self.manipulate_time_series4dFC(time_series)
 
+        # start timing
+        tic = time.time()
+
         # calc FCSs and FCS_idx
+
+        # record time
+        self.set_dFC_assess_time(time.time() - tic)
             
         dFCM = DFCM(measure=self)
         dFCM.set_dFC(FCSs=self.FCS_, FCS_idx=FCS_idx, TS_info=time_series.info_dict)
@@ -1651,6 +1630,8 @@ class CAP(dFC):
 
     def __init__(self, **params):
         self.FCS_ = []
+        self.FCS_fit_time_ = None
+        self.dFC_assess_time_ = None
 
         self.params_name_lst = ['measure_name', 'is_state_based', 'n_states', \
             'n_subj_clstrs', 'normalization', 'num_subj', 'num_select_nodes', 'num_time_point', \
@@ -1688,6 +1669,9 @@ class CAP(dFC):
 
         time_series = self.manipulate_time_series4FCS(time_series)
 
+        # start timing
+        tic = time.time()
+
         # 2-level clustering
         SUBJECTs = time_series.subj_id_lst
         act_center_1st_level = None
@@ -1717,6 +1701,9 @@ class CAP(dFC):
             )
         self.FCS_ = self.act_vec2FCS(group_act_centroids)
 
+        # record time
+        self.set_FCS_fit_time(time.time() - tic)
+
         return self
 
     def estimate_dFCM(self, time_series):
@@ -1725,10 +1712,16 @@ class CAP(dFC):
             "time_series must be of TIME_SERIES class."
 
         time_series = self.manipulate_time_series4dFC(time_series)
+
+        # start timing
+        tic = time.time()
                     
         act_vecs = time_series.data.T
 
         Z = self.kmeans_.predict(act_vecs)
+
+        # record time
+        self.set_dFC_assess_time(time.time() - tic)
 
         dFCM = DFCM(measure=self)
         dFCM.set_dFC(FCSs=self.FCS_, \
@@ -1761,6 +1754,8 @@ class HMM_CONT(dFC):
     def __init__(self, **params):
         self.TPM = []
         self.FCS_ = []
+        self.FCS_fit_time_ = None
+        self.dFC_assess_time_ = None
 
         self.params_name_lst = ['measure_name', 'is_state_based', 'n_states', 'hmm_iter', \
             'normalization', 'num_subj', 'num_select_nodes', 'num_time_point', \
@@ -1782,8 +1777,8 @@ class HMM_CONT(dFC):
         assert type(time_series) is TIME_SERIES, \
             "time_series must be of TIME_SERIES class."
 
-        # self.n_regions = time_series.n_regions
-        # self.n_time = time_series.n_time
+        # start timing
+        tic = time.time()
 
         time_series = self.manipulate_time_series4FCS(time_series)
 
@@ -1802,6 +1797,9 @@ class HMM_CONT(dFC):
         self.TPM = self.hmm_model.transmat_
         self.pi = self.hmm_model.startprob_
 
+        # record time
+        self.set_FCS_fit_time(time.time() - tic)
+
         return self
 
     def estimate_dFCM(self, time_series):
@@ -1811,7 +1809,14 @@ class HMM_CONT(dFC):
 
         time_series = self.manipulate_time_series4dFC(time_series)
 
+        # start timing
+        tic = time.time()
+
         Z = self.hmm_model.predict(time_series.data.T)
+
+        # record time
+        self.set_dFC_assess_time(time.time() - tic)
+
         dFCM = DFCM(measure=self)
         dFCM.set_dFC(FCSs=self.FCS_, FCS_idx=Z, TS_info=time_series.info_dict)
 
@@ -1842,6 +1847,8 @@ class WINDOWLESS(dFC):
     def __init__(self, **params):
         self.TPM = []
         self.FCS_ = []
+        self.FCS_fit_time_ = None
+        self.dFC_assess_time_ = None
 
         self.params_name_lst = ['measure_name', 'is_state_based', 'n_states', \
             'normalization', 'num_subj', 'num_select_nodes', 'num_time_point', \
@@ -1865,8 +1872,8 @@ class WINDOWLESS(dFC):
 
         time_series = self.manipulate_time_series4FCS(time_series)
 
-        # self.n_regions = time_series.n_regions
-        # self.n_time = time_series.n_time
+        # start timing
+        tic = time.time()
 
         # time_series ~ gamma.dot(dictionary)
         self.aksvd = ApproximateKSVD(n_components=self.params['n_states'], transform_n_nonzero_coefs=1)
@@ -1881,6 +1888,9 @@ class WINDOWLESS(dFC):
         for i in range(time_series.n_time):
             self.Z.append(np.argwhere(self.gamma[i, :] != 0)[0,0])
 
+        # record time
+        self.set_FCS_fit_time(time.time() - tic)
+
         return self
 
     def estimate_dFCM(self, time_series):
@@ -1890,11 +1900,17 @@ class WINDOWLESS(dFC):
 
         time_series = self.manipulate_time_series4dFC(time_series)
 
+        # start timing
+        tic = time.time()
+
         gamma = self.aksvd.transform(time_series.data.T)
 
         Z = list()
         for i in range(time_series.n_time):
             Z.append(np.argwhere(gamma[i, :] != 0)[0,0])
+
+        # record time
+        self.set_dFC_assess_time(time.time() - tic)
             
         dFCM = DFCM(measure=self)
         dFCM.set_dFC(FCSs=self.FCS_, FCS_idx=Z, TS_info=time_series.info_dict)
@@ -1962,6 +1978,8 @@ class TIME_FREQ(dFC):
 
         self.TPM = []
         self.FCS_ = []
+        self.FCS_fit_time_ = None
+        self.dFC_assess_time_ = None
 
         self.params_name_lst = ['measure_name', 'is_state_based', 'TF_method', 'coi_correction', \
             'n_jobs', 'verbose', 'backend', \
@@ -2042,8 +2060,8 @@ class TIME_FREQ(dFC):
 
         time_series = self.manipulate_time_series4dFC(time_series)
 
-        # self.n_regions = time_series.n_regions
-        # self.n_time = time_series.n_time
+        # start timing
+        tic = time.time()
 
         WT = np.zeros((time_series.n_time, \
             time_series.n_regions, time_series.n_regions))
@@ -2068,6 +2086,9 @@ class TIME_FREQ(dFC):
                                     for j in range(time_series.n_regions) \
                                                                 )
             WT[:, i, :] = np.array(Q).T
+
+        # record time
+        self.set_dFC_assess_time(time.time() - tic)
 
         dFCM = DFCM(measure=self)
         dFCM.set_dFC(FCSs=WT, TS_info=time_series.info_dict)
@@ -2095,6 +2116,8 @@ class SLIDING_WINDOW(dFC):
 
         self.TPM = []
         self.FCS_ = []
+        self.FCS_fit_time_ = None
+        self.dFC_assess_time_ = None
 
         self.params_name_lst = ['measure_name', 'is_state_based', 'sw_method', 'tapered_window', \
             'W', 'n_overlap', 'normalization', \
@@ -2208,8 +2231,8 @@ class SLIDING_WINDOW(dFC):
 
         time_series = self.manipulate_time_series4dFC(time_series)
 
-        # self.n_regions = time_series.n_regions
-        # self.n_time = time_series.n_time
+        # start timing
+        tic = time.time()
 
         # W is converted from sec to samples
         FCSs, TR_array = self.dFC(time_series=time_series.data, \
@@ -2217,6 +2240,9 @@ class SLIDING_WINDOW(dFC):
             n_overlap=self.params['n_overlap'], \
             tapered_window=self.params['tapered_window'] \
             )
+
+        # record time
+        self.set_dFC_assess_time(time.time() - tic)
 
         dFCM = DFCM(measure=self)
         dFCM.set_dFC(FCSs=FCSs, TR_array=TR_array, TS_info=time_series.info_dict)
@@ -2260,6 +2286,8 @@ class SLIDING_WINDOW_CLUSTR(dFC):
     
         self.TPM = []
         self.FCS_ = []
+        self.FCS_fit_time_ = None
+        self.dFC_assess_time_ = None
 
         self.params_name_lst = ['measure_name', 'is_state_based', 'clstr_base_measure', 'sw_method', 'tapered_window', \
             'clstr_distance', 'coi_correction', \
@@ -2353,8 +2381,8 @@ class SLIDING_WINDOW_CLUSTR(dFC):
 
         time_series = self.manipulate_time_series4FCS(time_series)
 
-        # self.n_regions = time_series.n_regions
-        # self.n_time = time_series.n_time
+        # start timing
+        tic = time.time()
 
         base_dFC = None
         if self.params['clstr_base_measure']=='Time-Freq':
@@ -2403,6 +2431,9 @@ class SLIDING_WINDOW_CLUSTR(dFC):
             n_regions = dFCM_raw.n_regions \
             )
 
+        # record time
+        self.set_FCS_fit_time(time.time() - tic)
+
         return self
 
     def estimate_dFCM(self, time_series):
@@ -2411,6 +2442,9 @@ class SLIDING_WINDOW_CLUSTR(dFC):
             "time_series must be of TIME_SERIES class."
 
         time_series = self.manipulate_time_series4dFC(time_series)
+
+        # start timing
+        tic = time.time()
 
         base_dFC = None
         if self.params['clstr_base_measure']=='Time-Freq':
@@ -2430,6 +2464,9 @@ class SLIDING_WINDOW_CLUSTR(dFC):
         else:
             ########### Euclidean Clustering ##############
             Z = self.kmeans_.predict(F)
+
+        # record time
+        self.set_dFC_assess_time(time.time() - tic)
 
         dFCM = DFCM(measure=self)
         dFCM.set_dFC(FCSs=self.FCS_, \
@@ -2471,6 +2508,8 @@ class HMM_DISC(dFC):
         self.TPM = []
         self.FCS_ = []
         self.swc = None
+        self.FCS_fit_time_ = None
+        self.dFC_assess_time_ = None
         
         self.params_name_lst = ['measure_name', 'is_state_based', 'clstr_base_measure', 'sw_method', 'tapered_window', \
             'n_hid_states', 'coi_correction', 'hmm_iter', \
@@ -2500,8 +2539,8 @@ class HMM_DISC(dFC):
 
         time_series = self.manipulate_time_series4FCS(time_series)
 
-        # self.n_regions = time_series.n_regions
-        # self.n_time = time_series.n_time
+        # start timing
+        tic = time.time()
 
         # params = {'W': self.W, 'n_overlap': self.n_overlap, \
         #     'n_subj_clstrs': self.n_subj_clstrs, 'n_states': self.n_states, \
@@ -2538,6 +2577,9 @@ class HMM_DISC(dFC):
                     TRs=self.FCC_.TR_array[np.squeeze(np.argwhere(self.Z==i))]\
                         ), axis=0)  # III
 
+        # record time
+        self.set_FCS_fit_time(time.time() - tic)
+
         return self
 
     def estimate_dFCM(self, time_series):
@@ -2547,9 +2589,15 @@ class HMM_DISC(dFC):
 
         time_series = self.manipulate_time_series4dFC(time_series)
 
+        # start timing
+        tic = time.time()
+
         FCC = self.swc.estimate_dFCM(time_series=time_series)
 
         Z = self.hmm_model.predict(FCC.FCS_idx_array.reshape(-1, 1))
+
+        # record time
+        self.set_dFC_assess_time(time.time() - tic)
 
         dFCM = DFCM(measure=self)
         dFCM.set_dFC(FCSs=self.FCS_, \
