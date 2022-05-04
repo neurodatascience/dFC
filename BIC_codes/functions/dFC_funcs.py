@@ -2269,9 +2269,32 @@ class SLIDING_WINDOW_CLUSTR(dFC):
 
     def dFC_mat2vec(self, C_t):
         return dFC_mat2vec(C_t)
+        # if len(C_t.shape)==2:
+        #     assert C_t.shape[0]==C_t.shape[1],\
+        #         'C is not a square matrix'
+        #     return C_t[np.triu_indices(C_t.shape[1], k=0)]
+
+        # F = list()
+        # for t in range(C_t.shape[0]):
+        #     C = C_t[t, : , :]
+        #     assert C.shape[0]==C.shape[1],\
+        #         'C is not a square matrix'
+        #     F.append(C[np.triu_indices(C_t.shape[1], k=0)])
+
+        # F = np.array(F)
+        # return F
 
     def dFC_vec2mat(self, F, N):
         return dFC_vec2mat(F=F, N=N)
+        # C = list()
+        # iu = np.triu_indices(N, k=0)
+        # for i in range(F.shape[0]):
+        #     K = np.zeros((N, N))
+        #     K[iu] = F[i,:]
+        #     K = K + np.multiply(K.T, 1-np.eye(N))
+        #     C.append(K)
+        # C = np.array(C)
+        # return C
 
     def clusters_lst2idx(self, clusters):
         Z = np.zeros((self.F.shape[0],))
