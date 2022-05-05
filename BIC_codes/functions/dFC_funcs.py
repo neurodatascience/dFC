@@ -899,7 +899,7 @@ class DFC_ANALYZER:
 
             # dFC_corr_assess_dict[session] = self.dFC_corr_assess(dFCM_lst=dFCM_lst)
 
-            dFCM_dict['dFCM_lst'] = dFCM_lst
+        dFCM_dict['dFCM_lst'] = dFCM_lst
 
         # SUBJ_output['dFC_corr_assess_dict'] = dFC_corr_assess_dict
 
