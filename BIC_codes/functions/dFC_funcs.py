@@ -209,7 +209,11 @@ def intersection(lst1, lst2): # input is a list
 
 def TR_intersection(dFCM_lst): # input is a list of dFCM objs
     TRs_lst_old = dFCM_lst[0].TR_array
+    common_Fs = dFCM_lst[0].TS_info['Fs']
     for dFCM in dFCM_lst:
+        assert dFCM.TS_info['Fs'] == common_Fs, \
+            'Fs mismatch. Cannot find the common TRs'
+            
         TRs_lst_new = intersection(TRs_lst_old, dFCM.TR_array)
         TRs_lst_old = TRs_lst_new
     TRs_lst_old.sort()
@@ -882,26 +886,7 @@ class DFC_ANALYZER:
                 delayed(measure.estimate_dFCM)(time_series=time_series_dict[measure.params['session']]) \
                     for measure in self.MEASURES_fit_lst_)
 
-        # for session in time_series_dict:
-        #     dFCM_dict[session] = {}
-        #     time_series = time_series_dict[session]
-        #     if self.params['n_jobs'] is None:
-        #         dFCM_lst = list()
-        #         for measure in self.MEASURES_fit_lst_[session]:
-        #             dFCM_lst.append( \
-        #                 measure.estimate_dFCM(time_series=time_series) \
-        #             )
-        #     else:
-        #         dFCM_lst = Parallel( \
-        #             n_jobs=self.params['n_jobs'], verbose=self.params['verbose'], backend=self.params['backend'])( \
-        #             delayed(measure.estimate_dFCM)(time_series=time_series) \
-        #                 for measure in self.MEASURES_fit_lst_[session])
-
-            # dFC_corr_assess_dict[session] = self.dFC_corr_assess(dFCM_lst=dFCM_lst)
-
         dFCM_dict['dFCM_lst'] = dFCM_lst
-
-        # SUBJ_output['dFC_corr_assess_dict'] = dFC_corr_assess_dict
 
         return dFCM_dict
 
@@ -1187,6 +1172,22 @@ class DFC_ANALYZER:
 
         common_TRs = TR_intersection(dFCM_lst)
 
+        ########## dFCM samples ##########
+
+        dFCM_samples = {}
+        for i, dFCM in enumerate(dFCM_lst):
+            sample = dFCM.dFC2dict(TRs=common_TRs)
+            dFCM_samples[str(i)] = sample
+
+        ########## time record ##########
+        
+        time_record_dict = {}
+        for i, dFCM in enumerate(dFCM_lst):
+            time_record = {}
+            time_record['FCS_fit'] = dFCM.measure.FCS_fit_time
+            time_record['dFC_assess'] = dFCM.measure.dFC_assess_time
+            time_record_dict[str(i)] = time_record
+
         ########## dFCM corr ##########
         # returns averaged correlation of dFC measures 
 
@@ -1281,6 +1282,7 @@ class DFC_ANALYZER:
         methods_assess['measure_lst'] = measure_lst
         methods_assess['TS_info_lst'] = TS_info_lst
         methods_assess['common_TRs'] = common_TRs
+        methods_assess['dFCM_samples'] = dFCM_samples
         methods_assess['corr_mat'] = corr_mat
         methods_assess['dFC_distance'] = dFC_distance
         methods_assess['dFC_distance_var'] = dFC_distance_var
@@ -1289,6 +1291,7 @@ class DFC_ANALYZER:
         methods_assess['CO'] = CO
         methods_assess['TP'] = TP
         methods_assess['trans_freq'] = trans_freq_lst
+        methods_assess['time_record_dict'] = time_record_dict
 
         return methods_assess
 
@@ -1406,7 +1409,7 @@ class dFC:
 
     @property
     def info(self):
-        print_dict(self.params)
+        self.params
 
     def issame(self, dFC):
         if type(self)==type(dFC):
@@ -1448,7 +1451,7 @@ class dFC:
         # SUBJECTs
         new_time_series.select_subjs(num_subj=self.params['num_subj'])
         # SPATIAL RESOLUTION
-        new_time_series.spatial_downsample(num_select_nodes=self.params['num_select_nodes'], rand_node_slct=True)
+        new_time_series.spatial_downsample(num_select_nodes=self.params['num_select_nodes'], rand_node_slct=False)
         # TEMPORAL RESOLUTION
         new_time_series.Fs_resample(Fs_ratio=self.params['Fs_ratio'])
         # NORMALIZE
@@ -1468,7 +1471,7 @@ class dFC:
         new_time_series = deepcopy(time_series)
 
         # SPATIAL RESOLUTION
-        new_time_series.spatial_downsample(num_select_nodes=self.params['num_select_nodes'], rand_node_slct=True)
+        new_time_series.spatial_downsample(num_select_nodes=self.params['num_select_nodes'], rand_node_slct=False)
         # TEMPORAL RESOLUTION
         new_time_series.Fs_resample(Fs_ratio=self.params['Fs_ratio'])
         # NORMALIZE
@@ -3105,16 +3108,16 @@ class DFCM():
         return state_act_dict
 
     # test
-    def dFC2dict(self, TRs=None, num_samples=None):
+    def dFC2dict(self, TRs=None):
         # return dFC samples as a dictionary
         if TRs is None:
             TRs = self.TR_array
         if type(TRs) is list:
             TRs = np.array(TRs)
         TRs = TRs.astype(int)
-        dFC_mat, TRs_new = self.get_dFC_mat(TRs=TRs, num_samples=num_samples)
+        dFC_mat = self.get_dFC_mat(TRs=TRs)
         dFC_dict = {}
-        for k, TR in enumerate(TRs_new):
+        for k, TR in enumerate(TRs):
             dFC_dict['TR'+str(TR)] = dFC_mat[k, :, :]
         return dFC_dict
 

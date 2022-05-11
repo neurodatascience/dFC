@@ -50,8 +50,8 @@ params_methods = { \
     'session': 'Rest1_LR', \
     # Hyper Parameters
     'normalization': True, \
-    'num_subj': 395, \
-    'num_select_nodes': 333, \
+    'num_subj': 100, \
+    'num_select_nodes': 100, \
     'num_time_point': 1200, \
     'Fs_ratio': 1.00, \
     'noise_ratio': 0.00, \
@@ -75,9 +75,9 @@ alter_hparams = { \
             'n_states': [6], \
             # 'normalization': [], \
             # 'num_subj': [5], \
-            # 'num_select_nodes': [50], \
+            'num_select_nodes': [50], \
             # 'num_time_point': [500], \
-            'Fs_ratio': [0.40], \
+            'Fs_ratio': [0.50], \
             'noise_ratio': [2.00], \
             # 'num_realization': [] \
             }
@@ -88,7 +88,7 @@ params_dFC_analyzer = { \
     # VISUALIZATION
     'vis_TR_idx': list(range(10, 20, 1)),'save_image': True, 'output_root': output_root, \
     # Parallelization Parameters
-    'n_jobs': 8, 'verbose': 0, 'backend': 'loky' \
+    'n_jobs': None, 'verbose': 0, 'backend': 'loky' \
 }
 
 

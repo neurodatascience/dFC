@@ -65,21 +65,6 @@ SUBJ_output = {}
 
 dFCM_lst = dFCM_dict['dFCM_lst']
 
-# Save dFC samples
-common_TRs = TR_intersection(dFCM_lst)
-dFCM_sample_dict = {}
-dFCM_sample_dict['common_TRs'] = common_TRs
-dFCM_sample_dict['dFCM'] = {}
-for i, dFCM in enumerate(dFCM_lst):
-    dFCM_sample = dFCM.get_dFC_mat(TRs=common_TRs)
-    dFCM_sample_dict['dFCM'][str(i)] = {}
-    dFCM_sample_dict['dFCM'][str(i)]['mat'] = dFCM_sample
-    dFCM_sample_dict['dFCM'][str(i)]['info'] = dFCM.measure.info
-np.save('./dFC_samples/SUBJ_'+str(subj_id)+'_dFC.npy', dFCM_sample_dict) 
-
-########################## DEFAULT VALUES #######################
-
-param_dict = dFC_analyzer.params_methods
 analysis_name_lst = [ \
     'corr_mat', \
     'dFC_distance', \
@@ -89,6 +74,10 @@ analysis_name_lst = [ \
     'TP', \
     'trans_freq' \
     ]
+
+########################## DEFAULT VALUES #######################
+
+param_dict = dFC_analyzer.params_methods
 dFCM_lst2check = filter_dFCM_lst(dFCM_lst, **param_dict)
 SUBJ_output['default_values'] = dFC_analyzer.post_analysis( \
     dFCM_lst=dFCM_lst2check, \
@@ -98,35 +87,8 @@ SUBJ_output['default_values'] = dFC_analyzer.post_analysis( \
 ########################## 6_states #######################
 
 param_dict = {'n_states': [6], 'is_state_based': [True]}
-analysis_name_lst = [ \
-    'corr_mat', \
-    'dFC_distance', \
-    'dFC_distance_var', \
-    'FO', \
-    'CO', \
-    'TP', \
-    'trans_freq' \
-    ]
 dFCM_lst2check = filter_dFCM_lst(dFCM_lst, **param_dict)
 SUBJ_output['6_states'] = dFC_analyzer.post_analysis( \
-    dFCM_lst=dFCM_lst2check, \
-    analysis_name_lst=analysis_name_lst \
-    )
-
-########################## SlidingWindow_100_nodes #######################
-
-param_dict = {'measure_name': ['SlidingWindow'], 'num_select_nodes': [100]}
-analysis_name_lst = [ \
-    'corr_mat', \
-    'dFC_distance', \
-    'dFC_distance_var', \
-    'FO', \
-    'CO', \
-    'TP', \
-    'trans_freq' \
-    ]
-dFCM_lst2check = filter_dFCM_lst(dFCM_lst, **param_dict)
-SUBJ_output['SlidingWindow_100_nodes'] = dFC_analyzer.post_analysis( \
     dFCM_lst=dFCM_lst2check, \
     analysis_name_lst=analysis_name_lst \
     )
@@ -134,35 +96,26 @@ SUBJ_output['SlidingWindow_100_nodes'] = dFC_analyzer.post_analysis( \
 ########################## Fs_ratio_0.5 #######################
 
 param_dict = {'Fs_ratio': [0.5]}
-analysis_name_lst = [ \
-    'corr_mat', \
-    'dFC_distance', \
-    'dFC_distance_var', \
-    'FO', \
-    'CO', \
-    'TP', \
-    'trans_freq' \
-    ]
 dFCM_lst2check = filter_dFCM_lst(dFCM_lst, **param_dict)
 SUBJ_output['Fs_ratio_0.5'] = dFC_analyzer.post_analysis( \
     dFCM_lst=dFCM_lst2check, \
     analysis_name_lst=analysis_name_lst \
     )
 
-########################## noise_ratio_1 #######################
+########################## noise_ratio_2 #######################
 
-param_dict = {'noise_ratio': [1.0]}
-analysis_name_lst = [ \
-    'corr_mat', \
-    'dFC_distance', \
-    'dFC_distance_var', \
-    'FO', \
-    'CO', \
-    'TP', \
-    'trans_freq' \
-    ]
+param_dict = {'noise_ratio': [2.0]}
 dFCM_lst2check = filter_dFCM_lst(dFCM_lst, **param_dict)
-SUBJ_output['noise_ratio_1'] = dFC_analyzer.post_analysis( \
+SUBJ_output['noise_ratio_2'] = dFC_analyzer.post_analysis( \
+    dFCM_lst=dFCM_lst2check, \
+    analysis_name_lst=analysis_name_lst \
+    )
+
+########################## num_select_nodes_50 #######################
+
+param_dict = {'num_select_nodes': [50]}
+dFCM_lst2check = filter_dFCM_lst(dFCM_lst, **param_dict)
+SUBJ_output['num_select_nodes_50'] = dFC_analyzer.post_analysis( \
     dFCM_lst=dFCM_lst2check, \
     analysis_name_lst=analysis_name_lst \
     )

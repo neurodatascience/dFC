@@ -1,87 +1,105 @@
+
+import sys
+sys.path.append('./BIC_codes/')
 from functions.dFC_funcs import *
 import numpy as np
-import time
-import hdf5storage
-import scipy.io as sio
+import scipy.spatial.distance as ssd
+import scipy.cluster.hierarchy as shc
+import matplotlib.pyplot as plt
 import os
-os.environ["MKL_NUM_THREADS"] = '64'
-os.environ["NUMEXPR_NUM_THREADS"] = '64'
-os.environ["OMP_NUM_THREADS"] = '64'
 
-################################# Parameters #################################
+################################# LOAD RESULTS #################################
 
-###### DATA PARAMETERS ######
+assessment_results_root = './../../../RESULTs/methods_implementation/server/methods_implementation/'
 
-output_root = './../../../../../RESULTs/methods_implementation/'
-# output_root = '/data/origami/dFC/RESULTs/methods_implementation/'
-# output_root = '/Users/mte/Documents/McGill/Project/dFC/RESULTs/methods_implementation/'
+ALL_RECORDS = os.listdir(assessment_results_root+'dFC_assessed/')
+ALL_RECORDS = [i for i in ALL_RECORDS if 'SUBJ_' in i]
+ALL_RECORDS.sort()
+SUBJs_output_lst = list()
+for s in ALL_RECORDS:
+    output = np.load(assessment_results_root+'dFC_assessed/'+s, allow_pickle='True').item()
+    SUBJs_output_lst.append(output)
 
-# DATA_type is either 'sample' or 'Gordon' or 'simulated' or 'ICA'
-params_data_load = { \
-    'DATA_type': 'Gordon', \
-    'num_subj': 2, \
-    'select_nodes': True, \
-    'rand_node_slct': False, \
-    'num_select_nodes': 50, \
+print('assessed dFCs loaded ...')
 
-    'data_root_simul': './../../../../DATA/TVB data/', \
-    'data_root_sample': './sampleDATA/', \
-    'data_root_gordon': './../../../../DATA/HCP/HCP_Gordon/', \
-    'data_root_ica': './../../../../DATA/HCP/HCP_PTN1200/node_timeseries/3T_HCP1200_MSMAll_d50_ts2/'
-}
 
-###### MEASUREMENT PARAMETERS ######
+################################# dFC SAMPLES #################################
 
-# W is in sec
 
-params_methods = { \
-    # Sliding Parameters
-    'W': 44, 'n_overlap': 0.5, \
-    # State Parameters
-    'n_states': 6, 'n_subj_clstrs': 20, 'n_hid_states': 4, \
-    # Parallelization Parameters
-    'n_jobs': 2, 'verbose': 0, 'backend': 'loky' \
-}
+for filter in ['num_select_nodes_50']:
 
-###### SIMILARITY PARAMETERS ######
+    for SUBJs_output in SUBJs_output_lst[1:2]:
 
-sim_assess_params= { \
-    'run_analysis': True, \
-    'num_samples': 100, \
-    'matching_method': 'score', \
-    'n_jobs': 8, 'backend': 'loky' \
-}
+        for measure_id in SUBJs_output[filter]['dFCM_samples']:
+            TRs = SUBJs_output[filter]['common_TRs'][:10]
+            samples = {}
+            for tr in TRs:
+                samples['TR'+str(tr)] = SUBJs_output[filter]['dFCM_samples'][measure_id]['TR'+str(tr)]
+            visualize_conn_mat(samples, 
+                title=SUBJs_output[filter]['measure_lst'][int(measure_id)].measure_name, 
+                fix_lim=False, 
+                disp_diag=False
+                )
 
-###### SIMILARITY PARAMETERS ######
+################################# dFC SIMILARITY #################################
 
-dyn_conn_det_params = { \
-    'run_analysis': False, \
-    'N': 30, 'L': 1200, 'p': 100, \
-    'n_jobs': 8, 'backend': 'loky' \
-}
 
-###### dFC ANALYZER PARAMETERS ######
+RESULTS = {}
+for filter in ['default_values', '6_states', 'num_select_nodes_50', 'Fs_ratio_0.5', 'noise_ratio_2']:
 
-params_dFC_analyzer = { \
-    # VISUALIZATION
-    'vis_TR_idx': list(range(10, 20, 1)),'save_image': True, 'output_root': output_root, \
-    # Parallelization Parameters
-    'n_jobs': 8, 'verbose': 0, 'backend': 'loky', \
-    # Similarity Assessment Parameters
-    'sim_assess_params': sim_assess_params, \
-    # Dynamic Connection Detector Parameters
-    'dyn_conn_det_params': dyn_conn_det_params \
-}
+    all_subj_avg = list()
+    for SUBJs_output in SUBJs_output_lst:
+        avg_distance_matrix = np.mean(SUBJs_output[filter]['dFC_distance']['euclidean'], axis=0)
+        all_subj_avg.append(avg_distance_matrix)
 
-################################# LOAD DATA #################################
+    all_subj_avg = np.array(all_subj_avg)
+    all_subj_avg = np.mean(all_subj_avg, axis=0)
 
-dFC_analyzer = np.load('./dFC_analyzer.npy',allow_pickle='TRUE').item()
-data_loader = np.load('./data_loader.npy',allow_pickle='TRUE').item()
+    RESULTS[filter] = {}
+    RESULTS[filter]['corr_mat'] = all_subj_avg
+    RESULTS[filter]['name_lst'] = list()
+    for measure in SUBJs_output[filter]['measure_lst']:
+        RESULTS[filter]['name_lst'].append(measure.measure_name)
 
-################################# POST ANALYSIS #################################
+############ Distance Matrices ############
+visualize_conn_mat(RESULTS, title='Euclidean Distance', fix_lim=False, disp_diag=True, cmap='viridis', name_lst_key='name_lst', mat_key='corr_mat')
 
-dFC_analyzer.post_analyze()
+############ Hierarchical Clustering ############
+for filter in RESULTS:
+    # convert the redundant n*n square matrix form into a condensed nC2 array
+    distArray = ssd.squareform(RESULTS[filter]['corr_mat']) 
 
-for subject in data_loader.SUBJECTs:
-    SUBJ_output = np.load('./dFC_assessed/SUBJ_'+str(subject)+'_output.npy', allow_pickle='True').item()
-    FO = SUBJ_output['dFC_corr_assess_dict']['Rest1_LR']['FO']
+    plt.figure(figsize=(25, 5))
+    dend = shc.dendrogram(shc.linkage(distArray, method='single', metric='euclidean'), distance_sort='ascending', no_plot=False, labels=RESULTS[filter]['name_lst'])
+    plt.title('Hierarchical Clustering of Methods ' + filter)
+
+################################# TIME RECORD #################################
+
+for filter in ['default_values', 'num_select_nodes_50']:
+
+    print('********** time record of ' + filter + '**********')
+
+    avg_FCS_fit = {}
+    avg_dFC_assess = {}
+    for SUBJs_output in SUBJs_output_lst:
+        measure_name_lst = list()
+        for measure_id in SUBJs_output[filter]['time_record_dict']:
+            if not measure_id in avg_FCS_fit:
+                avg_FCS_fit[measure_id] = list()
+            if not measure_id in avg_dFC_assess:
+                avg_dFC_assess[measure_id] = list()
+            avg_FCS_fit[measure_id].append(SUBJs_output[filter]['time_record_dict'][measure_id]['FCS_fit'])
+            avg_dFC_assess[measure_id].append(SUBJs_output[filter]['time_record_dict'][measure_id]['dFC_assess'])
+            measure_name_lst.append(SUBJs_output[filter]['measure_lst'][int(measure_id)].measure_name)
+            
+    for measure_id in avg_FCS_fit:
+        if None in avg_FCS_fit[measure_id]:
+            FCS_result = measure_name_lst[int(measure_id)] + ': FCS_fit '+' = None'
+        else:
+            avg_FCS_fit[measure_id] = np.mean(avg_FCS_fit[measure_id])
+            FCS_result = measure_name_lst[int(measure_id)] + ': FCS_fit '+' = %0.3f' % (avg_FCS_fit[measure_id])
+        avg_dFC_assess[measure_id] = np.mean(avg_dFC_assess[measure_id])
+        dFC_result = 'dFC_assess '+' = %0.3f' % (avg_dFC_assess[measure_id])
+        print( FCS_result + ' , ' + dFC_result )
+
+#################################################################################
