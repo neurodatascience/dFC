@@ -258,8 +258,8 @@ def visualize_state_TC(TC_lst, \
             dpi=fig_dpi, bbox_inches=fig_bbox_inches, pad_inches=fig_pad \
         ) 
         plt.close()
-    else:
-        plt.show()
+    # else:
+    #     plt.show()
 
     return
 
@@ -391,8 +391,8 @@ def visualize_conn_mat(data, title='', \
             dpi=fig_dpi, bbox_inches=fig_bbox_inches, pad_inches=fig_pad \
         ) 
         plt.close()
-    else:
-        plt.show()
+    # else:
+    #     plt.show()
 
 '''
 ########## bundled brain graph visualizer ##########
@@ -1393,19 +1393,17 @@ class dFC:
     # test
     @property
     def FCS_dict(self):
-        # returns a dict inclusing each FCS to be fed to similarity assess
+        # returns a dict including FCS matrices
 
         if not self.is_state_based:
             return None
 
         C_A = self.FCS
-        state_act_dict = {}
-        state_act_dict['state_TC'] = {}
+        FCSs = {}
         for k in range(C_A.shape[0]):
-            state_act_dict['state_TC']['FCS'+str(k+1)] = {}
-            state_act_dict['state_TC']['FCS'+str(k+1)]['FCS'] = C_A[k,:,:]
+            FCSs['FCS'+str(k+1)] = C_A[k,:,:]
             
-        return state_act_dict
+        return FCSs
 
     @property
     def info(self):
@@ -1488,25 +1486,22 @@ class dFC:
         pass
 
     # todo : use FCS_dict func in this func
-    def visualize_FCS(self, normalize=True, threshold=0.0, save_image=False, fig_name=None):
+    def visualize_FCS(self, normalize=True, fix_lim=True, save_image=False, fig_name=None):
         
         if self.FCS == []:
             return
 
         if normalize:
-            C = dFC_mat_normalize(C_t=self.FCS, threshold=threshold)
+            D = dFC_dict_normalize(D=self.FCS_dict, global_normalization=False)
         else:
-            C = self.FCS
+            D = self.FCS_dict
 
-        FCS_dict = {}
-        for i in range(C.shape[0]):
-            FCS_dict['FCS '+str(i+1)] = C[i]
-
-        visualize_conn_mat(data=FCS_dict, \
+        visualize_conn_mat(data=D, \
             title=self.measure_name+' FCS', \
-            save_image=save_image, \
-            output_root=fig_name, \
-            fix_lim=True \
+            # save_image=save_image, \
+            # output_root=fig_name, \
+            disp_diag=False, \
+            fix_lim=fix_lim \
         )
 
     def visualize_TPM(self, normalize=True, save_image=False, output_root=None):
