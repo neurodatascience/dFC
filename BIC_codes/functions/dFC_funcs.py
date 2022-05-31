@@ -2510,7 +2510,7 @@ class HMM_DISC(dFC):
         self.dFC_assess_time_ = None
         
         self.params_name_lst = ['measure_name', 'is_state_based', 'clstr_base_measure', 'sw_method', 'tapered_window', \
-            'n_hid_states', 'coi_correction', 'hmm_iter', \
+            'dhmm_obs_state_ratio', 'coi_correction', 'hmm_iter', \
             'n_jobs', 'verbose', 'backend', \
             'n_subj_clstrs', 'W', 'n_overlap', 'n_states', 'normalization', \
             'num_subj', 'num_select_nodes', 'num_time_point', 'Fs_ratio', \
@@ -2540,16 +2540,17 @@ class HMM_DISC(dFC):
         # start timing
         tic = time.time()
 
-        # params = {'W': self.W, 'n_overlap': self.n_overlap, \
-        #     'n_subj_clstrs': self.n_subj_clstrs, 'n_states': self.n_states, \
-        #     'n_jobs': self.params['n_jobs'], 'verbose': self.params['verbose'], 'backend': self.params['backend']}
-        self.swc = SLIDING_WINDOW_CLUSTR(**self.params)
+        # change n_states of swc to n_observations which is dhmm_obs_state_ratio*n_states
+        params = self.params
+        params['n_states'] = int(self.params['dhmm_obs_state_ratio'] * self.params['n_states'])
+
+        self.swc = SLIDING_WINDOW_CLUSTR(**params)
         self.swc.estimate_FCS(time_series=time_series)
         self.FCC_ = self.swc.estimate_dFCM(time_series=time_series)
 
         Models, Scores = [], []
         for i in range(self.params['hmm_iter']):
-            model = hmm.MultinomialHMM(n_components=self.params['n_hid_states'])
+            model = hmm.MultinomialHMM(n_components=self.params['n_states'])
             model.fit(self.FCC_.FCS_idx_array.reshape(-1, 1)) 
             score = model.score(self.FCC_.FCS_idx_array.reshape(-1, 1))
             Models.append(model)
@@ -2560,16 +2561,16 @@ class HMM_DISC(dFC):
         self.TPM = self.hmm_model.transmat_
         self.EPM = self.hmm_model.emissionprob_ 
 
-        # self.hmm_model = hmm.MultinomialHMM(n_components=self.params['n_hid_states'])
+        # self.hmm_model = hmm.MultinomialHMM(n_components=self.params['n_states'])
         # self.hmm_model.fit(self.FCC_.FCS_idx_array.reshape(-1, 1))
 
         # self.Z = self.hmm_model.predict(self.FCC_.FCS_idx_array.reshape(-1, 1))
         # self.TPM = self.hmm_model.transmat_
         # self.EPM = self.hmm_model.emissionprob_ 
 
-        self.FCS_ = np.zeros((self.params['n_hid_states'], \
+        self.FCS_ = np.zeros((self.params['n_states'], \
             time_series.n_regions, time_series.n_regions))
-        for i in range(self.params['n_hid_states']):
+        for i in range(self.params['n_states']):
             if len(np.argwhere(self.Z==i))>0:
                 self.FCS_[i,:,:] = np.mean(self.FCC_.get_dFC_mat(\
                     TRs=self.FCC_.TR_array[np.squeeze(np.argwhere(self.Z==i))]\

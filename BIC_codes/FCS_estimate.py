@@ -41,7 +41,7 @@ params_methods = { \
     # CLUSTERING AND DHMM
     'clstr_base_measure':'SlidingWindow', \
     # HMM
-    'hmm_iter': 50, 'n_hid_states': 24, \
+    'hmm_iter': 50, 'dhmm_obs_state_ratio': 16/24, \
     # State Parameters
     'n_states': 12, 'n_subj_clstrs': 20, \
     # Parallelization Parameters
@@ -72,13 +72,13 @@ MEASURES_name_lst = [ \
 
 alter_hparams = { \
             # 'session': [], \
-            'n_states': [6], \
+            'n_states': [6, 16], \
             # 'normalization': [], \
-            # 'num_subj': [5], \
-            'num_select_nodes': [50], \
-            # 'num_time_point': [500], \
-            'Fs_ratio': [0.50], \
-            'noise_ratio': [2.00], \
+            'num_subj': [10, 50, 80], \
+            'num_select_nodes': [30, 50, 80], \
+            'num_time_point': [100, 500, 700], \
+            'Fs_ratio': [0.1, 0.50, 0.75, 1.5], \
+            'noise_ratio': [1.00, 2.00, 3.00], \
             # 'num_realization': [] \
             }
 
