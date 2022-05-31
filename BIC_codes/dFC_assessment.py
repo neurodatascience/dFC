@@ -67,8 +67,11 @@ dFCM_lst = dFCM_dict['dFCM_lst']
 
 analysis_name_lst = [ \
     'corr_mat', \
+    'across_node_corr_mat', \
+    'dFC_avg', \
+    'dFC_var', \
     'dFC_distance', \
-    'dFC_distance_var', \
+    # 'dFC_distance_var', \
     'FO', \
     'CO', \
     'TP', \

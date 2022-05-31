@@ -929,6 +929,42 @@ class DFC_ANALYZER:
 
         return corr_mat
 
+    def dFC_temporal_corr(self, dFCM_i, dFCM_j, TRs=None):
+
+        # returns correlation of dFC measures across nodes
+
+        if TRs is None:
+            TRs = TR_intersection([dFCM_i, dFCM_j])
+        dFC_mat_i = dFCM_i.get_dFC_mat(TRs=TRs)
+        dFC_mat_j = dFCM_j.get_dFC_mat(TRs=TRs)
+        
+        corr = np.zeros((dFC_mat_i.shape[1], dFC_mat_i.shape[1]))
+        for node_i in range(dFC_mat_i.shape[1]):
+            for node_j in range(dFC_mat_i.shape[1]):
+                corr[node_i, node_j] = np.corrcoef(dFC_mat_i[:,node_i,node_j], dFC_mat_j[:,node_i,node_j])[0,1]
+
+        return corr
+
+    def dFCM_lst_temporal_corr(self, dFCM_lst, common_TRs=None):
+
+        if common_TRs is None:
+            common_TRs = TR_intersection(dFCM_lst)
+
+        corr_mat = None
+        for i in range(len(dFCM_lst)):
+            for j in range(i+1, len(dFCM_lst)):
+
+                corr_ij = self.dFC_temporal_corr( \
+                    dFCM_lst[i], dFCM_lst[j], \
+                    TRs=common_TRs \
+                        )
+                if corr_mat is None:
+                    corr_mat = np.zeros((len(dFCM_lst), len(dFCM_lst), corr_ij.shape[0], corr_ij.shape[1]))
+                corr_mat[i,j,:,:] = corr_ij
+                corr_mat[j,i,:,:] = corr_mat[i,j,:,:] 
+
+        return corr_mat
+
     def FO_calc(self, dFCM_lst, common_TRs=None):
 
         # returns, for each state the Fractional Occupancy (FO)
@@ -1003,6 +1039,30 @@ class DFC_ANALYZER:
 
         return CO
 
+
+    def dFC_avg(self, dFCM_lst, common_TRs=None):
+
+        if common_TRs is None:
+            common_TRs = TR_intersection(dFCM_lst)
+        
+        dFC_avg_lst = list()
+        for i, dFCM_i in enumerate(dFCM_lst):
+            dFC_mat_i = dFCM_i.get_dFC_mat(TRs=common_TRs)
+            dFC_avg_lst(np.mean(dFC_mat_i, axis=0))
+            
+        return dFC_avg_lst
+
+    def dFC_var(self, dFCM_lst, common_TRs=None):
+
+        if common_TRs is None:
+            common_TRs = TR_intersection(dFCM_lst)
+        
+        dFC_var_lst = list()
+        for i, dFCM_i in enumerate(dFCM_lst):
+            dFC_mat_i = dFCM_i.get_dFC_mat(TRs=common_TRs)
+            dFC_var_lst(np.var(dFC_mat_i, axis=0))
+            
+        return dFC_var_lst
 
     def transition_freq(self, dFCM_lst, common_TRs=None):
         # returns the number of total state transition within common_TRs -> trans_freq
@@ -1155,6 +1215,9 @@ class DFC_ANALYZER:
         '''
         analysis_name_lst = [ \
             'corr_mat', \
+            'across_node_corr_mat', \
+            'dFC_avg', \
+            'dFC_var', \
             'dFC_distance', \
             'dFC_distance_var', \
             'FO', \
@@ -1198,6 +1261,23 @@ class DFC_ANALYZER:
                 a=0.1 \
                 )
 
+        ########## dFCM corr ##########
+        # returns averaged correlation of dFC measures 
+
+        across_node_corr_mat = []
+        if 'across_node_corr_mat' in analysis_name_lst:
+            across_node_corr_mat = self.dFCM_lst_temporal_corr(dFCM_lst, \
+                common_TRs=common_TRs \
+                )
+
+        ########## dFC temporal average and variance ##########
+
+        if 'dFC_avg' in analysis_name_lst:
+            dFC_avg_lst = self.dFC_avg(dFCM_lst, common_TRs=common_TRs)
+
+        if 'dFC_var' in analysis_name_lst:
+            dFC_var_lst = self.dFC_var(dFCM_lst, common_TRs=common_TRs)
+        
         ########## distance calc ##########
 
         dFC_distance = {}
@@ -1284,6 +1364,9 @@ class DFC_ANALYZER:
         methods_assess['common_TRs'] = common_TRs
         methods_assess['dFCM_samples'] = dFCM_samples
         methods_assess['corr_mat'] = corr_mat
+        methods_assess['across_node_corr_mat'] = across_node_corr_mat
+        methods_assess['dFC_avg'] = dFC_avg_lst
+        methods_assess['dFC_var'] = dFC_var_lst
         methods_assess['dFC_distance'] = dFC_distance
         methods_assess['dFC_distance_var'] = dFC_distance_var
         # methods_assess['state_match'] = state_match
