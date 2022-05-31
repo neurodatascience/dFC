@@ -682,6 +682,7 @@ class DFC_ANALYZER:
         self.MEASURES_name_lst = []
         self.params_methods = {}
         self.alter_hparams = {}
+        self.hyper_param_info = {}
 
     @property
     def MEASURES_lst(self):
@@ -736,9 +737,12 @@ class DFC_ANALYZER:
         MEASURES_lst = self.create_measure_obj(MEASURES_name_lst=MEASURES_name_lst, **params_methods)
 
         # adding MEASURES with alternative parameter values
+        hyper_param_info = {}
+        hyper_param_info['default_values'] = params_methods
         for hyper_param in alter_hparams:
             params = deepcopy(params_methods)
             for value in alter_hparams[hyper_param]:
+                hyper_param_info[hyper_param+'_'+str(value)] = {hyper_param: [value]}
                 params[hyper_param] = value
                 new_MEASURES = self.create_measure_obj(MEASURES_name_lst=MEASURES_name_lst, **params)
                 for new_measure in new_MEASURES:
@@ -748,6 +752,8 @@ class DFC_ANALYZER:
                             flag=1
                     if flag==0:
                         MEASURES_lst.append(new_measure)
+
+        self.hyper_param_info = hyper_param_info
 
         return MEASURES_lst
 

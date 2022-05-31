@@ -78,77 +78,86 @@ analysis_name_lst = [ \
     'trans_freq' \
     ]
 
-########################## DEFAULT VALUES #######################
+for filter in dFC_analyzer.hyper_param_info:
+    param_dict = dFC_analyzer.hyper_param_info[filter]
+    dFCM_lst2check = filter_dFCM_lst(dFCM_lst, **param_dict)
+    SUBJ_output[filter] = dFC_analyzer.post_analysis( \
+        dFCM_lst=dFCM_lst2check, \
+        analysis_name_lst=analysis_name_lst \
+        )
 
-param_dict = dFC_analyzer.params_methods
-dFCM_lst2check = filter_dFCM_lst(dFCM_lst, **param_dict)
-SUBJ_output['default_values'] = dFC_analyzer.post_analysis( \
-    dFCM_lst=dFCM_lst2check, \
-    analysis_name_lst=analysis_name_lst \
-    )
 
-########################## 6_states #######################
+# ########################## DEFAULT VALUES #######################
 
-param_dict = {'n_states': [6]}
-dFCM_lst2check = filter_dFCM_lst(dFCM_lst, **param_dict)
-SUBJ_output['6_states'] = dFC_analyzer.post_analysis( \
-    dFCM_lst=dFCM_lst2check, \
-    analysis_name_lst=analysis_name_lst \
-    )
+# param_dict = dFC_analyzer.params_methods
+# dFCM_lst2check = filter_dFCM_lst(dFCM_lst, **param_dict)
+# SUBJ_output['default_values'] = dFC_analyzer.post_analysis( \
+#     dFCM_lst=dFCM_lst2check, \
+#     analysis_name_lst=analysis_name_lst \
+#     )
 
-########################## 16_states #######################
+# ########################## 6_states #######################
 
-param_dict = {'n_states': [16]}
-dFCM_lst2check = filter_dFCM_lst(dFCM_lst, **param_dict)
-SUBJ_output['16_states'] = dFC_analyzer.post_analysis( \
-    dFCM_lst=dFCM_lst2check, \
-    analysis_name_lst=analysis_name_lst \
-    )
+# param_dict = {'n_states': [6]}
+# dFCM_lst2check = filter_dFCM_lst(dFCM_lst, **param_dict)
+# SUBJ_output['6_states'] = dFC_analyzer.post_analysis( \
+#     dFCM_lst=dFCM_lst2check, \
+#     analysis_name_lst=analysis_name_lst \
+#     )
 
-########################## Fs_ratio_0.5 #######################
+# ########################## 16_states #######################
 
-param_dict = {'Fs_ratio': [0.5]}
-dFCM_lst2check = filter_dFCM_lst(dFCM_lst, **param_dict)
-SUBJ_output['Fs_ratio_0.5'] = dFC_analyzer.post_analysis( \
-    dFCM_lst=dFCM_lst2check, \
-    analysis_name_lst=analysis_name_lst \
-    )
+# param_dict = {'n_states': [16]}
+# dFCM_lst2check = filter_dFCM_lst(dFCM_lst, **param_dict)
+# SUBJ_output['16_states'] = dFC_analyzer.post_analysis( \
+#     dFCM_lst=dFCM_lst2check, \
+#     analysis_name_lst=analysis_name_lst \
+#     )
 
-########################## noise_ratio_2 #######################
+# ########################## Fs_ratio_0.5 #######################
 
-param_dict = {'noise_ratio': [2.0]}
-dFCM_lst2check = filter_dFCM_lst(dFCM_lst, **param_dict)
-SUBJ_output['noise_ratio_2'] = dFC_analyzer.post_analysis( \
-    dFCM_lst=dFCM_lst2check, \
-    analysis_name_lst=analysis_name_lst \
-    )
+# param_dict = {'Fs_ratio': [0.5]}
+# dFCM_lst2check = filter_dFCM_lst(dFCM_lst, **param_dict)
+# SUBJ_output['Fs_ratio_0.5'] = dFC_analyzer.post_analysis( \
+#     dFCM_lst=dFCM_lst2check, \
+#     analysis_name_lst=analysis_name_lst \
+#     )
 
-########################## noise_ratio_3 #######################
+# ########################## noise_ratio_2 #######################
 
-param_dict = {'noise_ratio': [3.0]}
-dFCM_lst2check = filter_dFCM_lst(dFCM_lst, **param_dict)
-SUBJ_output['noise_ratio_3'] = dFC_analyzer.post_analysis( \
-    dFCM_lst=dFCM_lst2check, \
-    analysis_name_lst=analysis_name_lst \
-    )
+# param_dict = {'noise_ratio': [2.0]}
+# dFCM_lst2check = filter_dFCM_lst(dFCM_lst, **param_dict)
+# SUBJ_output['noise_ratio_2'] = dFC_analyzer.post_analysis( \
+#     dFCM_lst=dFCM_lst2check, \
+#     analysis_name_lst=analysis_name_lst \
+#     )
 
-########################## num_select_nodes_50 #######################
+# ########################## noise_ratio_3 #######################
 
-param_dict = {'num_select_nodes': [50]}
-dFCM_lst2check = filter_dFCM_lst(dFCM_lst, **param_dict)
-SUBJ_output['num_select_nodes_50'] = dFC_analyzer.post_analysis( \
-    dFCM_lst=dFCM_lst2check, \
-    analysis_name_lst=analysis_name_lst \
-    )
+# param_dict = {'noise_ratio': [3.0]}
+# dFCM_lst2check = filter_dFCM_lst(dFCM_lst, **param_dict)
+# SUBJ_output['noise_ratio_3'] = dFC_analyzer.post_analysis( \
+#     dFCM_lst=dFCM_lst2check, \
+#     analysis_name_lst=analysis_name_lst \
+#     )
 
-########################## num_select_nodes_100 #######################
+# ########################## num_select_nodes_50 #######################
 
-param_dict = {'num_select_nodes': [100]}
-dFCM_lst2check = filter_dFCM_lst(dFCM_lst, **param_dict)
-SUBJ_output['num_select_nodes_100'] = dFC_analyzer.post_analysis( \
-    dFCM_lst=dFCM_lst2check, \
-    analysis_name_lst=analysis_name_lst \
-    )
+# param_dict = {'num_select_nodes': [50]}
+# dFCM_lst2check = filter_dFCM_lst(dFCM_lst, **param_dict)
+# SUBJ_output['num_select_nodes_50'] = dFC_analyzer.post_analysis( \
+#     dFCM_lst=dFCM_lst2check, \
+#     analysis_name_lst=analysis_name_lst \
+#     )
+
+# ########################## num_select_nodes_100 #######################
+
+# param_dict = {'num_select_nodes': [100]}
+# dFCM_lst2check = filter_dFCM_lst(dFCM_lst, **param_dict)
+# SUBJ_output['num_select_nodes_100'] = dFC_analyzer.post_analysis( \
+#     dFCM_lst=dFCM_lst2check, \
+#     analysis_name_lst=analysis_name_lst \
+#     )
 
 # Save
 np.save('./dFC_assessed/SUBJ_'+str(subj_id)+'_output.npy', SUBJ_output) 
