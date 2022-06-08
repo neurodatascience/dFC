@@ -3,28 +3,29 @@ import sys
 sys.path.append('./BIC_codes/')
 from functions.dFC_funcs import *
 import numpy as np
-import scipy.spatial.distance as ssd
-import scipy.cluster.hierarchy as shc
 import matplotlib.pyplot as plt
 import os
 
 ################################# LOAD RESULTS #################################
 
-assessment_results_root = './../../../../RESULTs/methods_implementation/server/methods_implementation_100nodes/'
+assessment_results_root = './../../../../RESULTs/methods_implementation/server/methods_implementation/'
+output_root = './../../../../RESULTs/methods_implementation/server/methods_implementation/output/'
+save_image = True
 
 ALL_RECORDS = os.listdir(assessment_results_root+'dFC_assessed/')
 ALL_RECORDS = [i for i in ALL_RECORDS if 'SUBJ_' in i]
 ALL_RECORDS.sort()
-# SUBJs_output_lst = list()
-# for s in ALL_RECORDS:
-#     output = np.load(assessment_results_root+'dFC_assessed/'+s, allow_pickle='True').item()
-#     SUBJs_output_lst.append(output)
+for s in ALL_RECORDS[:1]:
+    output = np.load(assessment_results_root+'dFC_assessed/'+s, allow_pickle='True').item()
 
-# print('assessed dFCs loaded ...')
+FILTERS = [key for key in output]
+print(FILTERS)
 
-# FILTERS = [key for key in SUBJs_output_lst[0]]
-# print(FILTERS)
-
+FILTERS_new = list()
+for filter in FILTERS:
+    if 'Fs' in filter:
+        FILTERS_new.append(filter)
+FILTERS = FILTERS_new
 
 ################################# dFC SAMPLES #################################
 
@@ -41,12 +42,12 @@ for filter in ['default_values']:
             for tr in TRs:
                 samples['TR'+str(tr)] = SUBJs_output[filter]['dFCM_samples'][measure_id]['TR'+str(tr)]
             visualize_conn_mat(samples, 
-                title=SUBJs_output[filter]['measure_lst'][int(measure_id)].measure_name, 
+                title=SUBJs_output[filter]['measure_lst'][int(measure_id)].measure_name+'_'+filter, 
                 fix_lim=False, 
-                disp_diag=False
+                disp_diag=False,
+                save_image=save_image, output_root=output_root
                 )
 
-# plt.show()
 ################################# FCS visualization #################################
 
 for filter in ['default_values']:
@@ -64,7 +65,7 @@ for filter in ['default_values']:
 distance_metric = 'correlation'
 
 RESULTS = {}
-for filter in ['default_values', '6_states', 'num_select_nodes_50', 'Fs_ratio_0.5', 'noise_ratio_2']:
+for filter in FILTERS:
 
     all_subj_dist_mat = list()
     all_subj_var_dist_mat = list()
@@ -92,21 +93,16 @@ for filter in ['default_values', '6_states', 'num_select_nodes_50', 'Fs_ratio_0.
         RESULTS[filter]['name_lst'].append(measure.measure_name)
 
 ############ Distance Matrices ############
-visualize_conn_mat(RESULTS, title=distance_metric+' distance average', fix_lim=False, disp_diag=True, cmap='viridis', name_lst_key='name_lst', mat_key='avg_corr_mat')
-visualize_conn_mat(RESULTS, title=distance_metric+' distance across subj var', fix_lim=False, disp_diag=True, cmap='viridis', name_lst_key='name_lst', mat_key='var_mat')
-visualize_conn_mat(RESULTS, title=distance_metric+' distance temporal var', fix_lim=False, disp_diag=True, cmap='viridis', name_lst_key='name_lst', mat_key='temporal_var')
+visualize_conn_mat(RESULTS, title=distance_metric+' distance average', fix_lim=False, disp_diag=True, cmap='viridis', name_lst_key='name_lst', mat_key='avg_corr_mat',
+                    save_image=save_image, output_root=output_root)
+visualize_conn_mat(RESULTS, title=distance_metric+' distance across subj var', fix_lim=False, disp_diag=True, cmap='viridis', name_lst_key='name_lst', mat_key='var_mat',
+                    save_image=save_image, output_root=output_root)
+visualize_conn_mat(RESULTS, title=distance_metric+' distance temporal var', fix_lim=False, disp_diag=True, cmap='viridis', name_lst_key='name_lst', mat_key='temporal_var',
+                    save_image=save_image, output_root=output_root)
 
 ############ Hierarchical Clustering ############
 for filter in RESULTS:
-    # convert the redundant n*n square matrix form into a condensed nC2 array
-    distArray = ssd.squareform(RESULTS[filter]['avg_corr_mat']) 
-
-    fig = plt.figure(figsize=(25, 5))
-    ax = fig.add_subplot(1, 1, 1)    
-    dend = shc.dendrogram(shc.linkage(distArray, method='single', metric='euclidean'), distance_sort='ascending', no_plot=False, labels=RESULTS[filter]['name_lst'])
-    plt.title('Hierarchical Clustering of Methods ' + filter)
-    ax.tick_params(axis='x', which='major', labelsize=15)
-    ax.tick_params(axis='y', which='major', labelsize=15)    
+    dist_mat_dendo(dist_mat=RESULTS[filter]['avg_corr_mat'], labels=RESULTS[filter]['name_lst'], title='Hierarchical Clustering of Methods ' + filter, save_image=save_image, output_root=output_root)
 
 ################################# TIME RECORD #################################
 
@@ -140,5 +136,6 @@ for filter in ['default_values', 'num_select_nodes_50']:
         dFC_result = 'dFC_assess '+' = %0.3f' % (avg_dFC_assess[measure_id])
         print( FCS_result + ' , ' + dFC_result )
 
-plt.show()
+if not save_image:
+    plt.show()
 #################################################################################

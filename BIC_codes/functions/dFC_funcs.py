@@ -8,6 +8,8 @@ Created on Sun Jun 13 22:34:49 2021
 
 import numpy as np
 from scipy import signal
+import scipy.spatial.distance as ssd
+import scipy.cluster.hierarchy as shc
 from copy import deepcopy
 import matplotlib.pyplot as plt
 import networkx as nx
@@ -387,12 +389,35 @@ def visualize_conn_mat(data, title='', \
         folder = output_root[:output_root.rfind('/')]
         if not os.path.exists(folder):
             os.makedirs(folder)
-        plt.savefig(output_root+'.png', \
+        plt.savefig(output_root+title+'.png', \
             dpi=fig_dpi, bbox_inches=fig_bbox_inches, pad_inches=fig_pad \
         ) 
         plt.close()
     # else:
     #     plt.show()
+
+def dist_mat_dendo(dist_mat, labels, title='', \
+    save_image=False, output_root=None, \
+    ):
+
+    # convert the redundant n*n square matrix form into a condensed nC2 array
+    distArray = ssd.squareform(dist_mat) 
+
+
+    fig = plt.figure(figsize=(25, 5))
+    ax = fig.add_subplot(1, 1, 1)    
+    dend = shc.dendrogram(shc.linkage(distArray, method='single', metric='euclidean'), distance_sort='ascending', no_plot=False, labels=labels)
+    plt.title(title)
+    ax.tick_params(axis='x', which='major', labelsize=15)
+    ax.tick_params(axis='y', which='major', labelsize=15)    
+    if save_image:
+        folder = output_root[:output_root.rfind('/')]
+        if not os.path.exists(folder):
+            os.makedirs(folder)
+        plt.savefig(output_root+title+'.png', \
+            dpi=fig_dpi, bbox_inches=fig_bbox_inches, pad_inches=fig_pad \
+        ) 
+        plt.close()
 
 '''
 ########## bundled brain graph visualizer ##########
@@ -742,8 +767,8 @@ class DFC_ANALYZER:
         for hyper_param in alter_hparams:
             params = deepcopy(params_methods)
             for value in alter_hparams[hyper_param]:
-                hyper_param_info[hyper_param+'_'+str(value)] = {hyper_param: [value]}
                 params[hyper_param] = value
+                hyper_param_info[hyper_param+'_'+str(value)] = params
                 new_MEASURES = self.create_measure_obj(MEASURES_name_lst=MEASURES_name_lst, **params)
                 for new_measure in new_MEASURES:
                     flag=0
@@ -1054,7 +1079,7 @@ class DFC_ANALYZER:
         dFC_avg_lst = list()
         for i, dFCM_i in enumerate(dFCM_lst):
             dFC_mat_i = dFCM_i.get_dFC_mat(TRs=common_TRs)
-            dFC_avg_lst(np.mean(dFC_mat_i, axis=0))
+            dFC_avg_lst.append(np.mean(dFC_mat_i, axis=0))
             
         return dFC_avg_lst
 
@@ -1066,7 +1091,7 @@ class DFC_ANALYZER:
         dFC_var_lst = list()
         for i, dFCM_i in enumerate(dFCM_lst):
             dFC_mat_i = dFCM_i.get_dFC_mat(TRs=common_TRs)
-            dFC_var_lst(np.var(dFC_mat_i, axis=0))
+            dFC_var_lst.append(np.var(dFC_mat_i, axis=0))
             
         return dFC_var_lst
 
@@ -2630,7 +2655,7 @@ class HMM_DISC(dFC):
         tic = time.time()
 
         # change n_states of swc to n_observations which is dhmm_obs_state_ratio*n_states
-        params = self.params
+        params = deepcopy(self.params)
         params['n_states'] = int(self.params['dhmm_obs_state_ratio'] * self.params['n_states'])
 
         self.swc = SLIDING_WINDOW_CLUSTR(**params)
