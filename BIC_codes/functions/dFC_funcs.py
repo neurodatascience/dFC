@@ -765,10 +765,10 @@ class DFC_ANALYZER:
         hyper_param_info = {}
         hyper_param_info['default_values'] = params_methods
         for hyper_param in alter_hparams:
-            params = deepcopy(params_methods)
             for value in alter_hparams[hyper_param]:
+                params = deepcopy(params_methods)
                 params[hyper_param] = value
-                hyper_param_info[hyper_param+'_'+str(value)] = params
+                hyper_param_info[hyper_param+'_'+str(value)] = deepcopy(params)
                 new_MEASURES = self.create_measure_obj(MEASURES_name_lst=MEASURES_name_lst, **params)
                 for new_measure in new_MEASURES:
                     flag=0

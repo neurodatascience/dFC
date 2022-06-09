@@ -21,16 +21,16 @@ for s in ALL_RECORDS[:1]:
 FILTERS = [key for key in output]
 print(FILTERS)
 
-FILTERS_new = list()
-for filter in FILTERS:
-    if 'Fs' in filter:
-        FILTERS_new.append(filter)
-FILTERS = FILTERS_new
+# FILTERS_new = list()
+# for filter in FILTERS:
+#     if 'Fs' in filter:
+#         FILTERS_new.append(filter)
+# FILTERS = FILTERS_new
 
 ################################# dFC SAMPLES #################################
 
 
-for filter in ['default_values']:
+for filter in FILTERS:
 
     # for SUBJs_output in SUBJs_output_lst:
     for s in ALL_RECORDS[:1]:
