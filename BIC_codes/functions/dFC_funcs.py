@@ -109,26 +109,23 @@ def calc_ECM(A):
     return centrality
 
 # test
-def zip_name(name_lst):
+def zip_name(name):
     # zip measure names
-    new_name_lst = list()
-    for name in name_lst:
-        if 'Clustering' in name:
-            new_name = 'SWC' + name[name.rfind('_'):]
-        if 'CAP' in name:
-            new_name = 'CAP' + name[name.rfind('_'):]
-        if 'ContinuousHMM' in name:
-            new_name = 'CHMM' + name[name.rfind('_'):]
-        if 'Windowless' in name:
-            new_name = 'WL' + name[name.rfind('_'):]
-        if 'DiscreteHMM' in name:
-            new_name = 'DHMM' + name[name.rfind('_'):]
-        if 'Time-Freq' in name:
-            new_name = 'TF' + name[name.rfind('_'):]
-        if 'SlidingWindow' in name:
-            new_name = 'SW' + name[name.rfind('_'):]
-        new_name_lst.append(new_name)
-    return new_name_lst
+    if 'Clustering' in name:
+        new_name = 'SWC' 
+    if 'CAP' in name:
+        new_name = 'CAP' 
+    if 'ContinuousHMM' in name:
+        new_name = 'CHMM' 
+    if 'Windowless' in name:
+        new_name = 'WL' 
+    if 'DiscreteHMM' in name:
+        new_name = 'DHMM' 
+    if 'Time-Freq' in name:
+        new_name = 'TF' 
+    if 'SlidingWindow' in name:
+        new_name = 'SW'
+    return new_name
 
 # test
 # pear_corr problem

@@ -98,6 +98,27 @@ for filter in ['default_values']:
     visualize_conn_mat(RESULTS, title='dFC avg ' + filter, fix_lim=False, disp_diag=True, cmap='viridis', normalize=True,
                         save_image=save_image, output_root=output_root)
 
+################################# Across Node Temporal Correlation #################################
+
+for filter in ['default_values']:
+    RESULTS = {}
+    for s in ALL_RECORDS:
+        SUBJs_output = np.load(assessment_results_root+'dFC_assessed/'+s, allow_pickle='True').item()
+
+        for i in range(SUBJs_output[filter]['across_node_corr_mat'].shape[0]):
+            for j in range(i):
+                title = zip_name(SUBJs_output[filter]['measure_lst'][i].measure_name) + ' and ' + zip_name(SUBJs_output[filter]['measure_lst'][j].measure_name)
+                if not title in RESULTS:
+                    RESULTS[title] = list()
+                RESULTS[title].append(SUBJs_output[filter]['across_node_corr_mat'][i,j,:,:])
+
+    for key in RESULTS:
+        RESULTS[key] = np.array(RESULTS[key])
+        RESULTS[key] = np.mean(RESULTS[key], axis=0)
+    visualize_conn_mat(RESULTS, title='across node temporal corr ' + filter, fix_lim=False, disp_diag=False, cmap='viridis', normalize=True,
+                            save_image=save_image, output_root=output_root)
+
+
 ################################# dFC SIMILARITY #################################
 
 distance_metric = 'correlation'
