@@ -972,7 +972,10 @@ class DFC_ANALYZER:
         corr = np.zeros((dFC_mat_i.shape[1], dFC_mat_i.shape[1]))
         for node_i in range(dFC_mat_i.shape[1]):
             for node_j in range(dFC_mat_i.shape[1]):
-                corr[node_i, node_j] = np.corrcoef(dFC_mat_i[:,node_i,node_j], dFC_mat_j[:,node_i,node_j])[0,1]
+                if np.sum(dFC_mat_i[:,node_i,node_j])==0 and np.sum(dFC_mat_j[:,node_i,node_j])==0:
+                    corr[node_i, node_j] = 0
+                else:
+                    corr[node_i, node_j] = np.corrcoef(dFC_mat_i[:,node_i,node_j], dFC_mat_j[:,node_i,node_j])[0,1]                    
 
         return corr
 

@@ -30,7 +30,7 @@ print(FILTERS)
 ################################# dFC SAMPLES #################################
 
 
-for filter in FILTERS:
+for filter in ['default_values']:
 
     # for SUBJs_output in SUBJs_output_lst:
     for s in ALL_RECORDS[:1]:
@@ -59,6 +59,44 @@ for filter in ['default_values']:
         for measure in SUBJs_output[filter]['measure_lst']:
 
             measure.visualize_FCS(normalize=False, fix_lim=False)
+
+################################# dFC var #################################
+
+for filter in ['default_values']:
+    RESULTS = {}
+    for s in ALL_RECORDS:
+        SUBJs_output = np.load(assessment_results_root+'dFC_assessed/'+s, allow_pickle='True').item()
+
+        for i, measure in enumerate(SUBJs_output[filter]['measure_lst']):
+            if not measure.measure_name in RESULTS:
+                RESULTS[measure.measure_name] = list()
+            RESULTS[measure.measure_name].append(SUBJs_output[filter]['dFC_var'][i])
+
+    for key in RESULTS:
+        RESULTS[key] = np.array(RESULTS[key])
+        RESULTS[key] = np.mean(RESULTS[key], axis=0)
+
+    visualize_conn_mat(RESULTS, title='dFC var ' + filter, fix_lim=False, disp_diag=True, cmap='viridis', normalize=True,
+                        save_image=save_image, output_root=output_root)
+
+################################# dFC avg #################################
+
+for filter in ['default_values']:
+    RESULTS = {}
+    for s in ALL_RECORDS:
+        SUBJs_output = np.load(assessment_results_root+'dFC_assessed/'+s, allow_pickle='True').item()
+
+        for i, measure in enumerate(SUBJs_output[filter]['measure_lst']):
+            if not measure.measure_name in RESULTS:
+                RESULTS[measure.measure_name] = list()
+            RESULTS[measure.measure_name].append(SUBJs_output[filter]['dFC_avg'][i])
+
+    for key in RESULTS:
+        RESULTS[key] = np.array(RESULTS[key])
+        RESULTS[key] = np.mean(RESULTS[key], axis=0)
+
+    visualize_conn_mat(RESULTS, title='dFC avg ' + filter, fix_lim=False, disp_diag=True, cmap='viridis', normalize=True,
+                        save_image=save_image, output_root=output_root)
 
 ################################# dFC SIMILARITY #################################
 
