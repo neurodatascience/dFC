@@ -11,14 +11,9 @@ os.environ["OMP_NUM_THREADS"] = '64'
 print('################################# subject-level dFC assessment CODE started running ... #################################')
 
 ################################# Parameters #################################
-
-# subj_id = '100206'
-
 ###### DATA PARAMETERS ######
 
 output_root = './../../../../../RESULTs/methods_implementation/'
-# output_root = '/data/origami/dFC/RESULTs/methods_implementation/'
-# output_root = '/Users/mte/Documents/McGill/Project/dFC/RESULTs/methods_implementation/'
 
 ################################# LOAD #################################
 
@@ -53,7 +48,6 @@ print('Measurement Started ...')
 
 print("dFCM estimation started...")
 dFCM_dict = dFC_analyzer.subj_lvl_dFC_assess(time_series_dict=BOLD)
-# SUBJ_output = dFC_analyzer.group_dFCM_assess(time_series_dict=BOLD)
 print("dFCM estimation done.")
 
 print('Measurement required %0.3f seconds.' % (time.time() - tic, ))
@@ -61,103 +55,20 @@ print('Measurement required %0.3f seconds.' % (time.time() - tic, ))
 
 ################################# POST ANALYSIS #################################
 
-SUBJ_output = {}
-
-dFCM_lst = dFCM_dict['dFCM_lst']
-
 analysis_name_lst = [ \
     'corr_mat', \
     'across_node_corr_mat', \
     'dFC_avg', \
     'dFC_var', \
     'dFC_distance', \
-    # 'dFC_distance_var', \
     'FO', \
     'CO', \
     'TP', \
     'trans_freq' \
     ]
 
-for filter in dFC_analyzer.hyper_param_info:
-    param_dict = dFC_analyzer.hyper_param_info[filter]
-    dFCM_lst2check = filter_dFCM_lst(dFCM_lst, **param_dict)
-    SUBJ_output[filter] = dFC_analyzer.post_analysis( \
-        dFCM_lst=dFCM_lst2check, \
-        analysis_name_lst=analysis_name_lst \
-        )
-
-
-# ########################## DEFAULT VALUES #######################
-
-# param_dict = dFC_analyzer.params_methods
-# dFCM_lst2check = filter_dFCM_lst(dFCM_lst, **param_dict)
-# SUBJ_output['default_values'] = dFC_analyzer.post_analysis( \
-#     dFCM_lst=dFCM_lst2check, \
-#     analysis_name_lst=analysis_name_lst \
-#     )
-
-# ########################## 6_states #######################
-
-# param_dict = {'n_states': [6]}
-# dFCM_lst2check = filter_dFCM_lst(dFCM_lst, **param_dict)
-# SUBJ_output['6_states'] = dFC_analyzer.post_analysis( \
-#     dFCM_lst=dFCM_lst2check, \
-#     analysis_name_lst=analysis_name_lst \
-#     )
-
-# ########################## 16_states #######################
-
-# param_dict = {'n_states': [16]}
-# dFCM_lst2check = filter_dFCM_lst(dFCM_lst, **param_dict)
-# SUBJ_output['16_states'] = dFC_analyzer.post_analysis( \
-#     dFCM_lst=dFCM_lst2check, \
-#     analysis_name_lst=analysis_name_lst \
-#     )
-
-# ########################## Fs_ratio_0.5 #######################
-
-# param_dict = {'Fs_ratio': [0.5]}
-# dFCM_lst2check = filter_dFCM_lst(dFCM_lst, **param_dict)
-# SUBJ_output['Fs_ratio_0.5'] = dFC_analyzer.post_analysis( \
-#     dFCM_lst=dFCM_lst2check, \
-#     analysis_name_lst=analysis_name_lst \
-#     )
-
-# ########################## noise_ratio_2 #######################
-
-# param_dict = {'noise_ratio': [2.0]}
-# dFCM_lst2check = filter_dFCM_lst(dFCM_lst, **param_dict)
-# SUBJ_output['noise_ratio_2'] = dFC_analyzer.post_analysis( \
-#     dFCM_lst=dFCM_lst2check, \
-#     analysis_name_lst=analysis_name_lst \
-#     )
-
-# ########################## noise_ratio_3 #######################
-
-# param_dict = {'noise_ratio': [3.0]}
-# dFCM_lst2check = filter_dFCM_lst(dFCM_lst, **param_dict)
-# SUBJ_output['noise_ratio_3'] = dFC_analyzer.post_analysis( \
-#     dFCM_lst=dFCM_lst2check, \
-#     analysis_name_lst=analysis_name_lst \
-#     )
-
-# ########################## num_select_nodes_50 #######################
-
-# param_dict = {'num_select_nodes': [50]}
-# dFCM_lst2check = filter_dFCM_lst(dFCM_lst, **param_dict)
-# SUBJ_output['num_select_nodes_50'] = dFC_analyzer.post_analysis( \
-#     dFCM_lst=dFCM_lst2check, \
-#     analysis_name_lst=analysis_name_lst \
-#     )
-
-# ########################## num_select_nodes_100 #######################
-
-# param_dict = {'num_select_nodes': [100]}
-# dFCM_lst2check = filter_dFCM_lst(dFCM_lst, **param_dict)
-# SUBJ_output['num_select_nodes_100'] = dFC_analyzer.post_analysis( \
-#     dFCM_lst=dFCM_lst2check, \
-#     analysis_name_lst=analysis_name_lst \
-#     )
+similarity_assessment = SIMILARITY_ASSESSMENT(dFCM_lst=dFCM_dict['dFCM_lst'], analysis_name_lst=analysis_name_lst)
+SUBJ_output = similarity_assessment.run(hyper_param_info=dFC_analyzer.hyper_param_info)
 
 # Save
 np.save('./dFC_assessed/SUBJ_'+str(subj_id)+'_output.npy', SUBJ_output) 

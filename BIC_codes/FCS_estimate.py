@@ -41,7 +41,7 @@ params_methods = { \
     # CLUSTERING AND DHMM
     'clstr_base_measure':'SlidingWindow', \
     # HMM
-    'hmm_iter': 50, 'dhmm_obs_state_ratio': 16/24, \
+    'hmm_iter': 30, 'dhmm_obs_state_ratio': 16/24, \
     # State Parameters
     'n_states': 12, 'n_subj_clstrs': 20, \
     # Parallelization Parameters
@@ -50,7 +50,7 @@ params_methods = { \
     'session': 'Rest1_LR', \
     # Hyper Parameters
     'normalization': True, \
-    'num_subj': 100, \
+    'num_subj': 395, \
     'num_select_nodes': 100, \
     'num_time_point': 1200, \
     'Fs_ratio': 1.00, \
@@ -71,13 +71,13 @@ MEASURES_name_lst = [ \
                 ]
 
 alter_hparams = { \
-            # 'session': [], \
+            'session': ['Rest1_RL', 'Rest2_LR', 'Rest2_RL'], \
             'n_states': [6, 16], \
             # 'normalization': [], \
-            'num_subj': [10, 50, 80], \
-            'num_select_nodes': [30, 50, 80], \
-            'num_time_point': [100, 500, 700], \
-            'Fs_ratio': [0.1, 0.50, 0.75, 1.5], \
+            'num_subj': [50, 100, 200], \
+            'num_select_nodes': [30, 50, 333], \
+            'num_time_point': [800, 1000], \
+            'Fs_ratio': [0.50, 0.75, 1.5], \
             'noise_ratio': [1.00, 2.00, 3.00], \
             # 'num_realization': [] \
             }

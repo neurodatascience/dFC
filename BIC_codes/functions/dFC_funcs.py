@@ -85,28 +85,45 @@ def normalized_euc_dist(x, y):
         return 0
     return 0.5*((np.linalg.norm((x-np.mean(x)) - (y-np.mean(y)))**2)/(np.linalg.norm(x-np.mean(x))**2 + np.linalg.norm(y-np.mean(y))**2))
 
-def calc_ECM(A):
+def calc_graph_propoerty(A, property):
     """
-    calc_ECM: Computes Eigenvector Centrality Mapping (ECM) 
+    calc_graph_propoerty: Computes Graph-based properties 
     of adjacency matrix A
+    ECM: Computes Eigenvector Centrality Mapping (ECM) 
+    shortest_path:
+    degree:
+    clustering_coef:
 
     Input:
 
-        A (np.array): adjacency matrix
+        A (np.array): adjacency matrix (must be >0)
 
     Output:
 
-        centrality (np.array): ECM vector
+        graph-property (np.array): a vector
     """
     G = nx.from_numpy_matrix(A) 
     G.remove_edges_from(nx.selfloop_edges(G))
     # G = G.to_undirected()
-    centrality = nx.eigenvector_centrality(G, weight='weight')
-    # centrality = nx.pagerank(G, alpha=0.85)
 
-    centrality = [centrality[node] for node in centrality]
+    if property=='ECM':
+        graph_property = nx.eigenvector_centrality(G, weight='weight')
+        graph_property = [graph_property[node] for node in graph_property]
+    if property=='shortest_path':
+        graph_property = [
+                                [nx.shortest_path_length(G, source=node_i, weight='weight')[node_j] 
+                                    for node_i in G.nodes
+                                ] for node_j in G.nodes
+                            ]
+        graph_property = np.array(graph_property).flatten()
+    if property=='degree':
+        graph_property = nx.degree_centrality(G)
+        graph_property = [graph_property[node] for node in graph_property]
+    if property=='clustering_coef':
+        graph_property = nx.clustering(G, weight='weight')
+        graph_property = [graph_property[node] for node in graph_property]
 
-    return centrality
+    return graph_property
 
 # test
 def zip_name(name):
@@ -830,19 +847,6 @@ class DFC_ANALYZER:
                 DD_MEASURES.append(measure)
         return DD_MEASURES
 
-    ##################### MEASURE CHARACTERISTICS ######################
-
-    def dFCM_var(self, MEASURES_dFCM):
-
-        MEASURES_dFC_var = {}
-        for measure in MEASURES_dFCM:
-            dFC_mat = MEASURES_dFCM[measure].get_dFC_mat(TRs = MEASURES_dFCM[measure].TR_array)
-            V = np.var(dFC_mat, axis=0)
-            MEASURES_dFC_var[measure] = V
-        return MEASURES_dFC_var
-
-    ##################### POST ANALYSIS ######################
-
     ##################### FCS ESTIMATION ######################
 
     def estimate_group_FCS(self, time_series_dict):
@@ -918,6 +922,64 @@ class DFC_ANALYZER:
 
         return dFCM_dict
 
+    def visualize_dFCMs(self, dFCM_lst=None, TR_idx=None, normalize=True, threshold=0.0, \
+                            fix_lim=True, subj_id=''):
+        
+        # TR_idx is not TR values, but their indices!
+
+        TRs = TR_intersection(dFCM_lst)
+        if not TR_idx is None:
+            assert not np.any(np.array(TR_idx)>=len(TRs)), \
+                'TR_idx out of range.'
+            TRs = [TRs[i] for i in TR_idx]
+
+        for dFCM in dFCM_lst:
+            if self.params['save_image']:
+                output_root = self.params['output_root']+'dFC/'
+                dFCM.visualize_dFC(TRs=TRs, normalize=normalize, threshold=threshold, \
+                    fix_lim=fix_lim, \
+                    save_image=self.params['save_image'], \
+                    fig_name= output_root+'subject'+subj_id+'_'+dFCM.measure.measure_name+'_dFC')
+            else:
+                dFCM.visualize_dFC(TRs=TRs, normalize=normalize, threshold=threshold, fix_lim=fix_lim)
+
+    def visualize_FCS(self, normalize=True, threshold=0.0):
+
+        for session in self.MEASURES_fit_lst:
+            for measure in self.MEASURES_fit_lst[session]:  
+                if self.params['save_image']:
+                    output_root = self.params['output_root'] + 'FCS/'
+                    measure.visualize_FCS(normalize=normalize, threshold=threshold, save_image=True, \
+                        fig_name= output_root + measure.measure_name+'_FCS_'+session)
+                    # measure.visualize_TPM(normalize=normalize)
+                else:
+                    measure.visualize_FCS(normalize=normalize, threshold=threshold) # normalize?
+                    # measure.visualize_TPM(normalize=normalize)
+
+################################# Similarity_Assessment class ####################################
+
+class SIMILARITY_ASSESSMENT:
+
+    def __init__(self, dFCM_lst, analysis_name_lst):
+        '''
+            analysis_name_lst = [ \
+                'corr_mat', \
+                'across_node_corr_mat', \
+                'dFC_avg', \
+                'dFC_var', \
+                'dFC_distance', \
+                'FO', \
+                'CO', \
+                'TP', \
+                'trans_freq' \
+                ]
+            '''
+        self.analysis_name_lst = analysis_name_lst
+        self.dFCM_lst = dFCM_lst
+
+    @property
+    def common_TRs(self):
+        return TR_intersection(self.dFCM_lst)
 
     ##################### dFC CHARACTERISTICS ######################
 
@@ -969,7 +1031,7 @@ class DFC_ANALYZER:
         corr = np.zeros((dFC_mat_i.shape[1], dFC_mat_i.shape[1]))
         for node_i in range(dFC_mat_i.shape[1]):
             for node_j in range(dFC_mat_i.shape[1]):
-                if np.sum(dFC_mat_i[:,node_i,node_j])==0 and np.sum(dFC_mat_j[:,node_i,node_j])==0:
+                if np.sum(dFC_mat_i[:,node_i,node_j])==0 or np.sum(dFC_mat_j[:,node_i,node_j])==0:
                     corr[node_i, node_j] = 0
                 else:
                     corr[node_i, node_j] = np.corrcoef(dFC_mat_i[:,node_i,node_j], dFC_mat_j[:,node_i,node_j])[0,1]                    
@@ -1144,10 +1206,11 @@ class DFC_ANALYZER:
         '''
         FC_t_i and FC_t_j must be an 
         array of FC matrices = (n_time, n_regions, n_regions)
-        metric options: correlation, euclidean, ECM (Eigenvector Centrality Mapping)
-        normalize option is for ECM and euclidean metrics since correlation is already 
+        metric options: correlation, euclidean, or graph properties
+        ECM (Eigenvector Centrality Mapping), degree, shortest_path, clustering_coef
+        normalize option is for graph properties and euclidean metrics since correlation is already 
         normalized.
-        for ECM, the input can be an array of ECM_vecs and of shape (n_time, n_regions) 
+        for graph properties, the input can be an array of vecs and of shape (n_time, n_regions) 
         or array of FC matrices = (n_time, n_regions, n_regions)
         '''
         assert len(FC_t_i)==len(FC_t_j),\
@@ -1175,21 +1238,21 @@ class DFC_ANALYZER:
                 else:
                     distance_out.append(distance.euclidean(FC_vec_i, FC_vec_j))
 
-            if metric=='ECM':
+            if metric=='ECM' or metric=='degree' or metric=='shortest_path' or metric=='clustering_coef':
                 if len(FC_t_i[t].shape)==2:
                     assert FC_t_i[t].shape[0]==FC_t_i[t].shape[1],\
                         'Matrices are not square'
                     assert FC_t_j[t].shape[0]==FC_t_j[t].shape[1],\
                         'Matrices are not square'
-                    ECM_i = calc_ECM(np.abs(FC_t_i[t]))
-                    ECM_j = calc_ECM(np.abs(FC_t_j[t]))
+                    graph_prop_i = calc_graph_propoerty(np.abs(FC_t_i[t]), metric=metric)
+                    graph_prop_j = calc_graph_propoerty(np.abs(FC_t_j[t]), metric=metric)
                 else:
-                    ECM_i = FC_t_i[t]
-                    ECM_j = FC_t_j[t]
+                    graph_prop_i = FC_t_i[t]
+                    graph_prop_j = FC_t_j[t]
                 if normalize:
-                    distance_out.append(normalized_euc_dist(ECM_i, ECM_j))
+                    distance_out.append(normalized_euc_dist(graph_prop_i, graph_prop_j))
                 else:
-                    distance_out.append(distance.euclidean(ECM_i, ECM_j))
+                    distance_out.append(distance.euclidean(graph_prop_i, graph_prop_j))
 
         return np.array(distance_out)
 
@@ -1217,66 +1280,25 @@ class DFC_ANALYZER:
                         )
         return distance_mat
 
-    def dFCM_lst_var(self, dFCM_lst, metric, common_TRs=None, normalize=True):
-
-        if common_TRs is None:
-            common_TRs = TR_intersection(dFCM_lst)
-
-        dFC_mat_avg = None
-        for i, dFCM_i in enumerate(dFCM_lst):
-            dFC_mat_i = dFCM_i.get_dFC_mat(TRs=common_TRs)
-            if dFC_mat_avg is None:
-                dFC_mat_avg = dFC_mat_normalize(C_t=dFC_mat_i, global_normalization=True) 
-            else:
-                dFC_mat_avg += dFC_mat_normalize(C_t=dFC_mat_i, global_normalization=True) 
-        dFC_mat_avg = np.divide(dFC_mat_avg, len(dFCM_lst))
-
-        distance_var_mat = np.zeros((len(common_TRs), len(dFCM_lst)))
-        for i, dFCM_i in enumerate(dFCM_lst):
-            dFC_mat_i = dFCM_i.get_dFC_mat(TRs=common_TRs)
-            distance_var_mat[:, i] = self.dFC_distance(\
-                FC_t_i=dFC_mat_i, \
-                FC_t_j=dFC_mat_avg, \
-                metric=metric, \
-                normalize=normalize\
-                    )
-        return distance_var_mat
-
-    def post_analysis(self, dFCM_lst, analysis_name_lst):
-        '''
-        analysis_name_lst = [ \
-            'corr_mat', \
-            'across_node_corr_mat', \
-            'dFC_avg', \
-            'dFC_var', \
-            'dFC_distance', \
-            'dFC_distance_var', \
-            'FO', \
-            'CO', \
-            'TP', \
-            'trans_freq' \
-            ]
-        '''
-        
+    def assess_similarity(self):
+            
         measure_lst = list()
         TS_info_lst = list()
-        for dFCM in dFCM_lst:
+        for dFCM in self.dFCM_lst:
             measure_lst.append(dFCM.measure)
             TS_info_lst.append(dFCM.TS_info)
-
-        common_TRs = TR_intersection(dFCM_lst)
 
         ########## dFCM samples ##########
 
         dFCM_samples = {}
-        for i, dFCM in enumerate(dFCM_lst):
-            sample = dFCM.dFC2dict(TRs=common_TRs)
+        for i, dFCM in enumerate(self.dFCM_lst):
+            sample = dFCM.dFC2dict(TRs=self.common_TRs)
             dFCM_samples[str(i)] = sample
 
         ########## time record ##########
         
         time_record_dict = {}
-        for i, dFCM in enumerate(dFCM_lst):
+        for i, dFCM in enumerate(self.dFCM_lst):
             time_record = {}
             time_record['FCS_fit'] = dFCM.measure.FCS_fit_time
             time_record['dFC_assess'] = dFCM.measure.dFC_assess_time
@@ -1286,9 +1308,9 @@ class DFC_ANALYZER:
         # returns averaged correlation of dFC measures 
 
         corr_mat = []
-        if 'corr_mat' in analysis_name_lst:
-            corr_mat = self.dFCM_lst_corr(dFCM_lst, \
-                common_TRs=common_TRs, \
+        if 'corr_mat' in self.analysis_name_lst:
+            corr_mat = self.dFCM_lst_corr(self.dFCM_lst, \
+                common_TRs=self.common_TRs, \
                 a=0.1 \
                 )
 
@@ -1296,95 +1318,90 @@ class DFC_ANALYZER:
         # returns averaged correlation of dFC measures 
 
         across_node_corr_mat = []
-        if 'across_node_corr_mat' in analysis_name_lst:
-            across_node_corr_mat = self.dFCM_lst_temporal_corr(dFCM_lst, \
-                common_TRs=common_TRs \
+        if 'across_node_corr_mat' in self.analysis_name_lst:
+            across_node_corr_mat = self.dFCM_lst_temporal_corr(self.dFCM_lst, \
+                common_TRs=self.common_TRs \
                 )
 
         ########## dFC temporal average and variance ##########
 
-        if 'dFC_avg' in analysis_name_lst:
-            dFC_avg_lst = self.dFC_avg(dFCM_lst, common_TRs=common_TRs)
+        if 'dFC_avg' in self.analysis_name_lst:
+            dFC_avg_lst = self.dFC_avg(self.dFCM_lst, common_TRs=self.common_TRs)
 
-        if 'dFC_var' in analysis_name_lst:
-            dFC_var_lst = self.dFC_var(dFCM_lst, common_TRs=common_TRs)
+        if 'dFC_var' in self.analysis_name_lst:
+            dFC_var_lst = self.dFC_var(self.dFCM_lst, common_TRs=self.common_TRs)
         
         ########## distance calc ##########
 
         dFC_distance = {}
-        if 'dFC_distance' in analysis_name_lst:
+        if 'dFC_distance' in self.analysis_name_lst:
             dFC_distance['euclidean'] = self.dFCM_lst_distance(\
-                dFCM_lst, \
+                self.dFCM_lst, \
                 metric='euclidean', \
-                common_TRs=common_TRs, \
+                common_TRs=self.common_TRs, \
                 normalize=True \
                 )
             dFC_distance['correlation'] = self.dFCM_lst_distance(\
-                dFCM_lst, \
+                self.dFCM_lst, \
                 metric='correlation', \
-                common_TRs=common_TRs, \
+                common_TRs=self.common_TRs, \
                 normalize=True \
                 )
             dFC_distance['ECM'] = self.dFCM_lst_distance(\
-                dFCM_lst, \
+                self.dFCM_lst, \
                 metric='ECM', \
-                common_TRs=common_TRs, \
+                common_TRs=self.common_TRs, \
                 normalize=True \
                 )
-
-        ########## distance var calc ##########
-
-        dFC_distance_var = {}
-        if 'dFC_distance_var' in analysis_name_lst:
-            dFC_distance_var['euclidean'] = self.dFCM_lst_var(\
-                dFCM_lst, \
-                metric='euclidean', \
-                common_TRs=common_TRs, \
+            dFC_distance['degree'] = self.dFCM_lst_distance(\
+                self.dFCM_lst, \
+                metric='degree', \
+                common_TRs=self.common_TRs, \
                 normalize=True \
                 )
-            dFC_distance_var['correlation'] = self.dFCM_lst_var(\
-                dFCM_lst, \
-                metric='correlation', \
-                common_TRs=common_TRs, \
+            dFC_distance['shortest_path'] = self.dFCM_lst_distance(\
+                self.dFCM_lst, \
+                metric='shortest_path', \
+                common_TRs=self.common_TRs, \
                 normalize=True \
                 )
-            dFC_distance_var['ECM'] = self.dFCM_lst_var(\
-                dFCM_lst, \
-                metric='ECM', \
-                common_TRs=common_TRs, \
+            dFC_distance['clustering_coef'] = self.dFCM_lst_distance(\
+                self.dFCM_lst, \
+                metric='clustering_coef', \
+                common_TRs=self.common_TRs, \
                 normalize=True \
                 )
 
         ########## Fractional Occupancy ##########
 
         FO_lst = []
-        if 'FO' in analysis_name_lst:
-            FO_lst = self.FO_calc(dFCM_lst, \
-                common_TRs=common_TRs \
+        if 'FO' in self.analysis_name_lst:
+            FO_lst = self.FO_calc(self.dFCM_lst, \
+                common_TRs=self.common_TRs \
                 )
 
         ########## Co-Occurance Matrix and Transition Probability Matrix ##########
 
         CO = {}
-        if 'CO' in analysis_name_lst:
-            CO = self.COM_calc(dFCM_lst, \
-                common_TRs=common_TRs, \
+        if 'CO' in self.analysis_name_lst:
+            CO = self.COM_calc(self.dFCM_lst, \
+                common_TRs=self.common_TRs, \
                 lag=0 \
                 )
 
         TP = {}
-        if 'TP' in analysis_name_lst:
-            TP = self.COM_calc(dFCM_lst, \
-                common_TRs=common_TRs, \
+        if 'TP' in self.analysis_name_lst:
+            TP = self.COM_calc(self.dFCM_lst, \
+                common_TRs=self.common_TRs, \
                 lag=1 \
                 )
 
         ########## transition frequency ##########
 
         trans_freq_lst = []
-        if 'trans_freq' in analysis_name_lst:
-            trans_freq_lst = self.transition_freq(dFCM_lst, \
-                common_TRs=common_TRs \
+        if 'trans_freq' in self.analysis_name_lst:
+            trans_freq_lst = self.transition_freq(self.dFCM_lst, \
+                common_TRs=self.common_TRs \
                 )
                 
         ##############################################
@@ -1392,15 +1409,13 @@ class DFC_ANALYZER:
         methods_assess = {}
         methods_assess['measure_lst'] = measure_lst
         methods_assess['TS_info_lst'] = TS_info_lst
-        methods_assess['common_TRs'] = common_TRs
+        methods_assess['common_TRs'] = self.common_TRs
         methods_assess['dFCM_samples'] = dFCM_samples
         methods_assess['corr_mat'] = corr_mat
         methods_assess['across_node_corr_mat'] = across_node_corr_mat
         methods_assess['dFC_avg'] = dFC_avg_lst
         methods_assess['dFC_var'] = dFC_var_lst
         methods_assess['dFC_distance'] = dFC_distance
-        methods_assess['dFC_distance_var'] = dFC_distance_var
-        # methods_assess['state_match'] = state_match
         methods_assess['FO'] = FO_lst
         methods_assess['CO'] = CO
         methods_assess['TP'] = TP
@@ -1409,51 +1424,23 @@ class DFC_ANALYZER:
 
         return methods_assess
 
-    def visualize_dFCMs(self, dFCM_lst=None, TR_idx=None, normalize=True, threshold=0.0, \
-                            fix_lim=True, subj_id=''):
-        
-        # TR_idx is not TR values, but their indices!
+    def run(self, hyper_param_info):
+        output = {}
+        for filter in hyper_param_info:
+            param_dict = hyper_param_info[filter]
+            dFCM_lst2check = filter_dFCM_lst(self.dFCM_lst, **param_dict)
+            output[filter] = self.assess_similarity( \
+                dFCM_lst=dFCM_lst2check, \
+                analysis_name_lst=self.analysis_name_lst \
+                )
 
-        TRs = TR_intersection(dFCM_lst)
-        if not TR_idx is None:
-            assert not np.any(np.array(TR_idx)>=len(TRs)), \
-                'TR_idx out of range.'
-            TRs = [TRs[i] for i in TR_idx]
-
-        for dFCM in dFCM_lst:
-            if self.params['save_image']:
-                output_root = self.params['output_root']+'dFC/'
-                dFCM.visualize_dFC(TRs=TRs, normalize=normalize, threshold=threshold, \
-                    fix_lim=fix_lim, \
-                    save_image=self.params['save_image'], \
-                    fig_name= output_root+'subject'+subj_id+'_'+dFCM.measure.measure_name+'_dFC')
-            else:
-                dFCM.visualize_dFC(TRs=TRs, normalize=normalize, threshold=threshold, fix_lim=fix_lim)
-
-    def visualize_FCS(self, normalize=True, threshold=0.0):
-
-        for session in self.MEASURES_fit_lst:
-            for measure in self.MEASURES_fit_lst[session]:  
-                if self.params['save_image']:
-                    output_root = self.params['output_root'] + 'FCS/'
-                    measure.visualize_FCS(normalize=normalize, threshold=threshold, save_image=True, \
-                        fig_name= output_root + measure.measure_name+'_FCS_'+session)
-                    # measure.visualize_TPM(normalize=normalize)
-                else:
-                    measure.visualize_FCS(normalize=normalize, threshold=threshold) # normalize?
-                    # measure.visualize_TPM(normalize=normalize)
+        return output
 
 ################################# dFC class ####################################
 
 """
-
 todo:
-- separate the matrix visualizing function
-- brain or brain graph class
-- add an updating behavior -> we can segment subjects and time_series and update the model gradually ?
 - type annotation
-- remove sliding window type dFC visualization 
-- normalization: C_t_z[:, i, i] = np.mean(C_t_z) # ?????????????????
 """
 
 class dFC:
@@ -2220,7 +2207,7 @@ Parameters
 todo:
 """
 
-from sklearn.covariance import GraphicalLassoCV
+from sklearn.covariance import GraphicalLassoCV, graphical_lasso
 
 class SLIDING_WINDOW(dFC):
 
