@@ -6,10 +6,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 
+print('################################# POST ANALYSIS STARTED RUNNING ... #################################')
+
 ################################# LOAD RESULTS #################################
 
 assessment_results_root = './../../../../RESULTs/methods_implementation/server/methods_implementation/'
+assessment_results_root = './'
 output_root = './../../../../RESULTs/methods_implementation/server/methods_implementation/output/'
+output_root = './output/'
 save_image = True
 
 ALL_RECORDS = os.listdir(assessment_results_root+'dFC_assessed/')
@@ -20,7 +24,6 @@ for s in ALL_RECORDS[:1]:
 
 FILTERS = [key for key in output]
 print(FILTERS)
-FILTERS.remove('num_select_nodes_80') # remove
 
 # FILTERS_new = list()
 # for filter in FILTERS:
@@ -146,7 +149,7 @@ for filter in ['default_values']:
         RESULTS[key] = np.array(RESULTS[key])
         RESULTS[key] = np.mean(RESULTS[key], axis=0)
     visualize_conn_mat(RESULTS, title='across node temporal corr ' + filter, fix_lim=False, 
-    disp_diag=False, cmap='viridis', normalize=True,
+    disp_diag=False, cmap='viridis', normalize=False,
                             save_image=save_image, output_root=output_root)
 
 
