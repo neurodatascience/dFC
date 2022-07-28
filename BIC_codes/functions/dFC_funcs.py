@@ -60,6 +60,26 @@ def filter_dFCM_lst(dFCM_lst, **param_dict):
             dFCM_lst2check.append(dFCM) 
     return dFCM_lst2check
 
+def mutual_information(X, Y, N_bins=100):
+    """ Mutual information for joint histogram
+    https://matthew-brett.github.io/teaching/mutual_information.html#:~:text=Mutual%20information%20is%20a%20measure,signal%20intensity%20in%20the%20first.
+    """
+
+    # 2D histogram
+    hist_2d, x_edges, y_edges = np.histogram2d(
+                                                X,
+                                                Y,
+                                                bins=N_bins)
+    
+    # Convert bins counts to probability values
+    pxy = hist_2d / float(np.sum(hist_2d))
+    px = np.sum(pxy, axis=1) # marginal for x over y
+    py = np.sum(pxy, axis=0) # marginal for y over x
+    px_py = px[:, None] * py[None, :] # Broadcast to multiply marginals
+    # Now we can do the calculation using the pxy, px_py 2D arrays
+    nzs = pxy > 0 # Only non-zero pxy values contribute to the sum
+    return np.sum(pxy[nzs] * np.log(pxy[nzs] / px_py[nzs]))
+
 # test
 def normalizeAdjacency(W):
     """
@@ -950,7 +970,7 @@ class SIMILARITY_ASSESSMENT:
     def __init__(self, dFCM_lst, analysis_name_lst):
         '''
             analysis_name_lst = [ \
-                'corr_mat', \
+                'subj_dFC_sim', \
                 'across_node_corr_mat', \
                 'dFC_avg', \
                 'dFC_var', \
@@ -970,41 +990,30 @@ class SIMILARITY_ASSESSMENT:
 
     ##################### dFC CHARACTERISTICS ######################
 
-    def dFC_corr(self, dFCM_i, dFCM_j, TRs=None):
-
-        # returns correlation of dFC measures over time
-
-        if TRs is None:
-            TRs = TR_intersection([dFCM_i, dFCM_j])
-        dFC_mat_i = dFCM_i.get_dFC_mat(TRs=TRs)
-        dFC_mat_j = dFCM_j.get_dFC_mat(TRs=TRs)
-        corr = list()
-        for t in range(len(TRs)):
-            corr.append(np.corrcoef(dFC_mat2vec(dFC_mat_i[t,:,:]), dFC_mat2vec(dFC_mat_j[t,:,:]))[0,1])
-        corr= np.array(corr)
-        return corr
-    
-    def dFCM_lst_corr(self, dFCM_lst, common_TRs=None, a=0.1):
-        # a is portion of the dFCs to ignore from 
-        # the beginning and the end
-
+    def subj_lvl_dFC_similarity(self, dFCM_lst, metric='MI', common_TRs=None):
+        # computes correlation/MI similarity over all dFCs of a subject 
+        # metric can be 'MI' or 'corr' 
+        
         if common_TRs is None:
             common_TRs = TR_intersection(dFCM_lst)
 
-        corr_mat = np.zeros((len(dFCM_lst), len(dFCM_lst)))
+        sim_mat = np.zeros((len(dFCM_lst), len(dFCM_lst)))
         for i in range(len(dFCM_lst)):
-            for j in range(i+1, len(dFCM_lst)):
+            for j in range(i, len(dFCM_lst)):
 
-                corr_ij = self.dFC_corr( \
-                    dFCM_lst[i], dFCM_lst[j], \
-                    TRs=common_TRs \
-                        )
-                corr_mat[i,j] = np.mean(corr_ij[ \
-                    int(len(corr_ij)*a) : int(len(corr_ij)*(1-a)) \
-                        ])
-                corr_mat[j,i] = corr_mat[i,j] 
+                dFC_mat_i = dFCM_lst[i].get_dFC_mat(TRs=common_TRs)
+                dFC_mat_j = dFCM_lst[j].get_dFC_mat(TRs=common_TRs)
 
-        return corr_mat
+                dFC_vec_i = dFC_mat2vec(dFC_mat_i).flatten()
+                dFC_vec_j = dFC_mat2vec(dFC_mat_j).flatten()
+
+                if metric=='corr':
+                    sim_mat[i, j] = np.corrcoef(dFC_vec_i, dFC_vec_j)[0,1]
+                else:
+                    sim_mat[i, j] = mutual_information(X=dFC_vec_i, Y=dFC_vec_j, N_bins=100)
+                sim_mat[j, i] = sim_mat[i, j]
+
+        return sim_mat
 
     def dFC_temporal_corr(self, dFCM_i, dFCM_j, TRs=None):
 
@@ -1299,16 +1308,24 @@ class SIMILARITY_ASSESSMENT:
             time_record_dict[str(i)] = time_record
         methods_assess['time_record_dict'] = time_record_dict
 
-        ########## dFCM corr ##########
-        # returns averaged correlation of dFC measures 
+        ########## subj_dFC_sim ##########
+        # returns correlation/MI between results of dFC 
+        # measures over a whole subject
 
-        corr_mat = []
-        if 'corr_mat' in self.analysis_name_lst:
-            corr_mat = self.dFCM_lst_corr(dFCM_lst, \
-                common_TRs=self.common_TRs, \
-                a=0.1 \
-                )
-        methods_assess['corr_mat'] = corr_mat
+        subj_dFC_sim = {}
+        if 'subj_dFC_sim' in self.analysis_name_lst:
+            subj_dFC_sim['MI'] = self.subj_lvl_dFC_similarity(
+                                    dFCM_lst, 
+                                    metric='MI', 
+                                    common_TRs=self.common_TRs
+                                )
+            subj_dFC_sim['corr'] = self.subj_lvl_dFC_similarity(
+                                    dFCM_lst, 
+                                    metric='corr', 
+                                    common_TRs=self.common_TRs
+                                )
+        
+        methods_assess['subj_dFC_sim'] = subj_dFC_sim
 
         ########## dFCM corr ##########
         # returns averaged correlation of dFC measures 
@@ -1497,7 +1514,7 @@ class dFC:
 
     @property
     def info(self):
-        self.params
+        return self.params
 
     def issame(self, dFC):
         if type(self)==type(dFC):

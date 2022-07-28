@@ -72,7 +72,7 @@ MEASURES_name_lst = [ \
 
 alter_hparams = { \
             'session': ['Rest1_RL', 'Rest2_LR', 'Rest2_RL'], \
-            'n_overlap': [0, 0.25, 0.75, 1], \
+            # 'n_overlap': [0, 0.25, 0.75, 1], \
             # 'n_states': [6, 16], \
             # # 'normalization': [], \
             # 'num_subj': [50, 100, 200], \

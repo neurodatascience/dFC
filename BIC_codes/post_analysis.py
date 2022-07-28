@@ -90,11 +90,11 @@ for filter in ['default_values']:
             corr['dFC_var_similarity']['corr_mat'][i, j] = np.corrcoef(dFC_mat2vec(RESULTS[measure_i]), dFC_mat2vec(RESULTS[measure_j]))[0,1]
 
 
-    visualize_conn_mat(RESULTS, title='dFC var ' + filter, fix_lim=False, disp_diag=True, cmap='viridis', normalize=True, 
+    visualize_conn_mat(RESULTS, title='dFC var ' + filter, fix_lim=False, disp_diag=True, cmap='viridis', normalize=False, 
                         save_image=save_image, output_root=output_root)
     
     visualize_conn_mat(corr, title='dFC var similarity ' + filter, fix_lim=False, 
-        disp_diag=True, cmap='viridis', normalize=True, name_lst_key='name_lst', mat_key='corr_mat',
+        disp_diag=True, cmap='viridis', normalize=False, name_lst_key='name_lst', mat_key='corr_mat',
                         save_image=save_image, output_root=output_root)
 
 ################################# dFC avg #################################
@@ -122,11 +122,11 @@ for filter in ['default_values']:
         for j, measure_j in enumerate(RESULTS):
             corr['dFC_avg_similarity']['corr_mat'][i, j] = np.corrcoef(dFC_mat2vec(RESULTS[measure_i]), dFC_mat2vec(RESULTS[measure_j]))[0,1]
 
-    visualize_conn_mat(RESULTS, title='dFC avg ' + filter, fix_lim=False, disp_diag=True, cmap='viridis', normalize=True,
+    visualize_conn_mat(RESULTS, title='dFC avg ' + filter, fix_lim=False, disp_diag=True, cmap='viridis', normalize=False,
                         save_image=save_image, output_root=output_root)
 
     visualize_conn_mat(corr, title='dFC avg similarity ' + filter, fix_lim=False, 
-        disp_diag=True, cmap='viridis', normalize=True, name_lst_key='name_lst', mat_key='corr_mat',
+        disp_diag=True, cmap='viridis', normalize=False, name_lst_key='name_lst', mat_key='corr_mat',
                         save_image=save_image, output_root=output_root)
 
 ################################# Across Node Temporal Correlation #################################
@@ -149,7 +149,7 @@ for filter in ['default_values']:
         RESULTS[key] = np.array(RESULTS[key])
         RESULTS[key] = np.mean(RESULTS[key], axis=0)
     visualize_conn_mat(RESULTS, title='across node temporal corr ' + filter, fix_lim=False, 
-    disp_diag=False, cmap='viridis', normalize=False,
+        disp_diag=False, cmap='viridis', normalize=False,
                             save_image=save_image, output_root=output_root)
 
 
@@ -205,7 +205,7 @@ for distance_metric in ['correlation', 'euclidean', 'ECM', 'degree', 'shortest_p
 
 ################################# TIME RECORD #################################
 
-for filter in ['default_values', 'num_select_nodes_50']:
+for filter in ['default_values']:
 
     print('********** time record of ' + filter + '**********')
 

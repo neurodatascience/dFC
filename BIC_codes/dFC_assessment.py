@@ -56,7 +56,7 @@ print('Measurement required %0.3f seconds.' % (time.time() - tic, ))
 ################################# POST ANALYSIS #################################
 
 analysis_name_lst = [ \
-    'corr_mat', \
+    'subj_dFC_sim', \
     'across_node_corr_mat', \
     'dFC_avg', \
     'dFC_var', \
