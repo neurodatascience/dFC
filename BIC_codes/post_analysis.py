@@ -25,6 +25,17 @@ for s in ALL_RECORDS[:1]:
 FILTERS = [key for key in output]
 print(FILTERS)
 
+for filter in FILTERS:
+    measure_name_lst = None
+    for s in ALL_RECORDS:
+        SUBJs_output = np.load(assessment_results_root+'dFC_assessed/'+s, allow_pickle='True').item()
+        # check measures order
+        if measure_name_lst is None:
+            measure_name_lst = [measure.measure_name for measure in SUBJs_output[filter]['measure_lst']]
+        else:
+            assert measure_name_lst==[measure.measure_name for measure in SUBJs_output[filter]['measure_lst']], \
+                'measures order mismatch'
+
 # FILTERS_new = list()
 # for filter in FILTERS:
 #     if 'Fs' in filter:
@@ -45,7 +56,7 @@ for filter in ['default_values']:
             samples = {}
             for tr in TRs:
                 samples['TR'+str(tr)] = SUBJs_output[filter]['dFCM_samples'][measure_id]['TR'+str(tr)]
-            visualize_conn_mat(samples, 
+            visualize_conn_mat_dict(samples, 
                 title=SUBJs_output[filter]['measure_lst'][int(measure_id)].measure_name+'_'+filter, 
                 fix_lim=False, 
                 disp_diag=False,
@@ -64,8 +75,58 @@ for filter in ['default_values']:
 
             measure.visualize_FCS(normalize=False, fix_lim=False)
 
+################################# dFC Similarity #################################
+
+'''
+    - MI((all dFC timepoints of one Subj using method_i), (all dFC timepoints of one Subj using method_j)) -> avg(MI) and var(MI)
+    - corr((all dFC timepoints of one Subj using method_i), (all dFC timepoints of one Subj using method_j)) -> avg(corr) and var(corr)
+    - dendogram based on avg(corr)
+'''
+for similarity_metric in ['corr', 'MI']:
+
+    RESULTS = {}
+    for filter in FILTERS:
+
+        all_subj_dist_mat = list()
+        for s in ALL_RECORDS:
+            SUBJs_output = np.load(assessment_results_root+'dFC_assessed/'+s, allow_pickle='True').item()
+                
+            all_subj_dist_mat.append(SUBJs_output[filter]['subj_dFC_sim'][similarity_metric])
+
+        measure_name_lst = [measure.measure_name for measure in SUBJs_output[filter]['measure_lst']]
+        all_subj_dist_mat = np.array(all_subj_dist_mat)
+        all_subj_avg = np.mean(all_subj_dist_mat, axis=0)
+        across_subj_var = np.var(all_subj_dist_mat, axis=0)
+
+        RESULTS[filter] = {}
+        RESULTS[filter]['avg_distance_mat'] = all_subj_avg
+        RESULTS[filter]['var_mat'] = across_subj_var
+        RESULTS[filter]['name_lst'] = measure_name_lst
+
+    ############ Distance Matrices ############
+    visualize_conn_mat_dict(RESULTS, title=similarity_metric+' average', fix_lim=False, 
+    disp_diag=False, cmap='viridis', name_lst_key='name_lst', mat_key='avg_distance_mat',
+                        save_image=save_image, output_root=output_root)
+
+    visualize_conn_mat_dict(RESULTS, title=similarity_metric+' across subj var', fix_lim=False, 
+    disp_diag=False, cmap='viridis', name_lst_key='name_lst', mat_key='var_mat',
+                        save_image=save_image, output_root=output_root)
+
+    ############ Hierarchical Clustering ############
+    if similarity_metric == 'corr':
+        for filter in RESULTS:
+            dist_mat = 1 - np.abs(RESULTS[filter]['avg_distance_mat'])
+            dist_mat_dendo(dist_mat=dist_mat, labels=RESULTS[filter]['name_lst'], 
+            title='Hierarchical Clustering of Methods ' + filter+' using '+similarity_metric, 
+            save_image=save_image, output_root=output_root
+            )
+
 ################################# dFC var #################################
 
+'''
+    - avg(variance/fluctuations of dFC in one Subj)
+    - similarity(avg(variance/fluctuations of dFC in one Subj using method_i), avg(variance/fluctuations of dFC in one Subj using method_j))
+'''
 for filter in ['default_values']:
     RESULTS = {}
     for s in ALL_RECORDS:
@@ -90,14 +151,19 @@ for filter in ['default_values']:
             corr['dFC_var_similarity']['corr_mat'][i, j] = np.corrcoef(dFC_mat2vec(RESULTS[measure_i]), dFC_mat2vec(RESULTS[measure_j]))[0,1]
 
 
-    visualize_conn_mat(RESULTS, title='dFC var ' + filter, fix_lim=False, disp_diag=True, cmap='viridis', normalize=False, 
+    visualize_conn_mat_dict(RESULTS, title='dFC var ' + filter, fix_lim=False, disp_diag=True, cmap='viridis', normalize=False, 
                         save_image=save_image, output_root=output_root)
     
-    visualize_conn_mat(corr, title='dFC var similarity ' + filter, fix_lim=False, 
+    visualize_conn_mat_dict(corr, title='dFC var similarity ' + filter, fix_lim=False, 
         disp_diag=True, cmap='viridis', normalize=False, name_lst_key='name_lst', mat_key='corr_mat',
                         save_image=save_image, output_root=output_root)
 
 ################################# dFC avg #################################
+
+'''
+    - avg(avg of dFC -static FC- in one Subj)
+    - similarity(avg(avg of dFC -static FC- in one Subj using method_i), avg(avg of dFC -static FC- in one Subj using method_j))
+'''
 
 for filter in ['default_values']:
     RESULTS = {}
@@ -122,15 +188,18 @@ for filter in ['default_values']:
         for j, measure_j in enumerate(RESULTS):
             corr['dFC_avg_similarity']['corr_mat'][i, j] = np.corrcoef(dFC_mat2vec(RESULTS[measure_i]), dFC_mat2vec(RESULTS[measure_j]))[0,1]
 
-    visualize_conn_mat(RESULTS, title='dFC avg ' + filter, fix_lim=False, disp_diag=True, cmap='viridis', normalize=False,
+    visualize_conn_mat_dict(RESULTS, title='dFC avg ' + filter, fix_lim=False, disp_diag=True, cmap='viridis', normalize=False,
                         save_image=save_image, output_root=output_root)
 
-    visualize_conn_mat(corr, title='dFC avg similarity ' + filter, fix_lim=False, 
+    visualize_conn_mat_dict(corr, title='dFC avg similarity ' + filter, fix_lim=False, 
         disp_diag=True, cmap='viridis', normalize=False, name_lst_key='name_lst', mat_key='corr_mat',
                         save_image=save_image, output_root=output_root)
 
 ################################# Across Node Temporal Correlation #################################
 
+'''
+    - corr((dFConnection(node_i, node_j) timecourse using method m), (dFConnection(node_i, node_j) timecourse using method n))
+'''
 for filter in ['default_values']:
     RESULTS = {}
     for s in ALL_RECORDS:
@@ -148,57 +217,64 @@ for filter in ['default_values']:
     for key in RESULTS:
         RESULTS[key] = np.array(RESULTS[key])
         RESULTS[key] = np.mean(RESULTS[key], axis=0)
-    visualize_conn_mat(RESULTS, title='across node temporal corr ' + filter, fix_lim=False, 
+    visualize_conn_mat_dict(RESULTS, title='across node temporal corr ' + filter, fix_lim=False, 
         disp_diag=False, cmap='viridis', normalize=False,
                             save_image=save_image, output_root=output_root)
 
 
-################################# dFC SIMILARITY #################################
+################################# dFC Distance #################################
 
+'''
+    - distance((dFC_t using method_i), (dFC_t using method_j)) over time -> avg(distance) in one Subj, var(distance) in one Subj
+    - avg(avg(distance) in one Subj) -> avg_distance_mat
+    - var(avg(distance) in one Subj) -> across_subj_var_distance_mat
+    - avg(var(distance) in one Subj) -> across_time_var_distance_mat
+    - dendogram based on avg_distance_mat
+'''
 for distance_metric in ['correlation', 'euclidean', 'ECM', 'degree', 'shortest_path', 'clustering_coef']:
 
     RESULTS = {}
     for filter in FILTERS:
 
-        all_subj_dist_mat = list()
+        all_subj_avg_dist_mat = list()
         all_subj_var_dist_mat = list()
-        # for SUBJs_output in SUBJs_output_lst:
         for s in ALL_RECORDS:
             SUBJs_output = np.load(assessment_results_root+'dFC_assessed/'+s, allow_pickle='True').item()
 
             avg_distance_matrix = np.mean(SUBJs_output[filter]['dFC_distance'][distance_metric], axis=0)
             var_distance_matrix = np.var(SUBJs_output[filter]['dFC_distance'][distance_metric], axis=0)
-            all_subj_dist_mat.append(avg_distance_matrix)
+            all_subj_avg_dist_mat.append(avg_distance_matrix)
             all_subj_var_dist_mat.append(var_distance_matrix)
 
-        all_subj_dist_mat = np.array(all_subj_dist_mat)
+        measure_name_lst = [measure.measure_name for measure in SUBJs_output[filter]['measure_lst']]
+        all_subj_avg_dist_mat = np.array(all_subj_avg_dist_mat)
         all_subj_var_dist_mat = np.array(all_subj_var_dist_mat)
-        all_subj_avg = np.mean(all_subj_dist_mat, axis=0)
-        across_subj_var = np.var(all_subj_dist_mat, axis=0)
-        across_time_var = np.mean(all_subj_var_dist_mat, axis=0)
+        all_subj_avg = np.mean(all_subj_avg_dist_mat, axis=0)
+        across_subj_var = np.var(all_subj_avg_dist_mat, axis=0)
+        avg_across_time_var = np.mean(all_subj_var_dist_mat, axis=0)
 
         RESULTS[filter] = {}
-        RESULTS[filter]['avg_corr_mat'] = all_subj_avg
-        RESULTS[filter]['var_mat'] = across_subj_var
-        RESULTS[filter]['temporal_var'] = across_time_var
-        RESULTS[filter]['name_lst'] = list()
-        for measure in SUBJs_output[filter]['measure_lst']:
-            RESULTS[filter]['name_lst'].append(measure.measure_name)
+        RESULTS[filter]['avg_distance_mat'] = all_subj_avg
+        RESULTS[filter]['across_subj_var_distance_mat'] = across_subj_var
+        RESULTS[filter]['across_time_var_distance_mat'] = avg_across_time_var 
+        RESULTS[filter]['name_lst'] = measure_name_lst
 
     ############ Distance Matrices ############
-    visualize_conn_mat(RESULTS, title=distance_metric+' distance average', fix_lim=False, 
-    disp_diag=True, cmap='viridis', name_lst_key='name_lst', mat_key='avg_corr_mat',
+    visualize_conn_mat_dict(RESULTS, title=distance_metric+' distance average', fix_lim=False, 
+    disp_diag=True, cmap='viridis', name_lst_key='name_lst', mat_key='avg_distance_mat',
                         save_image=save_image, output_root=output_root)
-    visualize_conn_mat(RESULTS, title=distance_metric+' distance across subj var', fix_lim=False, 
-    disp_diag=True, cmap='viridis', name_lst_key='name_lst', mat_key='var_mat',
+
+    visualize_conn_mat_dict(RESULTS, title=distance_metric+' distance across subj var', fix_lim=False, 
+    disp_diag=True, cmap='viridis', name_lst_key='name_lst', mat_key='across_subj_var_distance_mat',
                         save_image=save_image, output_root=output_root)
-    visualize_conn_mat(RESULTS, title=distance_metric+' distance temporal var', fix_lim=False, 
-    disp_diag=True, cmap='viridis', name_lst_key='name_lst', mat_key='temporal_var',
+
+    visualize_conn_mat_dict(RESULTS, title=distance_metric+' distance temporal var', fix_lim=False, 
+    disp_diag=True, cmap='viridis', name_lst_key='name_lst', mat_key='across_time_var_distance_mat',
                         save_image=save_image, output_root=output_root)
 
     ############ Hierarchical Clustering ############
     for filter in RESULTS:
-        dist_mat_dendo(dist_mat=RESULTS[filter]['avg_corr_mat'], labels=RESULTS[filter]['name_lst'], 
+        dist_mat_dendo(dist_mat=RESULTS[filter]['avg_distance_mat'], labels=RESULTS[filter]['name_lst'], 
         title='Hierarchical Clustering of Methods ' + filter+' using '+distance_metric, 
         save_image=save_image, output_root=output_root
         )

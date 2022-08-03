@@ -342,8 +342,51 @@ def visualize_state_TC(TC_lst, \
     #     plt.show()
 
     return
+def visualize_conn_mat(C, axis, title='', \
+    name_lst=None, \
+    cmap='viridis',\
+    normalize=False,\
+    disp_diag=True,\
+    fix_lim=True, lim_val=1.0 \
+    ):
+    '''
+    C is (regions, regions)
+    '''
 
-def visualize_conn_mat(data, title='', \
+    if normalize:
+        C = dFC_mat_normalize(C[None,:,:], global_normalization=False, threshold=0.0)[0]
+
+    if not disp_diag:
+        C = np.multiply(C, 1-np.eye(len(C)))
+        C = C + np.mean(C.flatten()) * np.eye(len(C))
+
+    if np.any(C<0): # ?????? should we do this?
+        V_MIN = -1
+        V_MAX = 1
+    else: # ?????? should we do this?
+        V_MIN = 0
+        V_MAX = lim_val
+
+    if not fix_lim:
+        V_MAX = np.max(C)
+        V_MIN = np.min(C)
+
+    if name_lst is None:
+        axis.set_axis_off()
+
+    im = axis.imshow(C, interpolation='nearest', aspect='equal', cmap=cmap,    # 'viridis' or 'jet'
+        vmin=V_MIN, vmax=V_MAX)
+    
+    if not name_lst is None:
+        axis.set_xticks(np.arange(len(name_lst)))
+        axis.set_yticks(np.arange(len(name_lst)))
+        axis.set_xticklabels(name_lst, rotation=90, fontsize=9)
+        axis.set_yticklabels(name_lst, fontsize=9)
+    axis.set_title(title)
+
+    return im
+
+def visualize_conn_mat_dict(data, title='', \
     name_lst_key=None, mat_key=None, \
     cmap='viridis',\
     normalize=False,\
@@ -353,7 +396,7 @@ def visualize_conn_mat(data, title='', \
     ):
 
     '''
-    - name_lst_key can be a list of names or the key to list of names
+    - name_lst_key is the key to list of names
     - data must be a dict of correlation/connectivity matrices
     sample:
     Suptitle1
@@ -394,50 +437,23 @@ def visualize_conn_mat(data, title='', \
 
     for i, key in enumerate(data):
 
-        name_lst = None
-        if not name_lst_key is None:
-            if type(name_lst_key) is str:
-                name_lst = data[key][name_lst_key]
-            if type(name_lst_key) is list:
-                name_lst = name_lst_key
-
         if mat_key is None:
             C = data[key]
         else:
             C = data[key][mat_key]
 
-        # C = np.abs(C) # ?????? should we do this?
+        name_lst = None
+        if not name_lst_key is None:
+            if type(name_lst_key) is str:
+                name_lst = data[key][name_lst_key]
 
-        if normalize:
-            C = dFC_mat_normalize(C[None,:,:], global_normalization=False, threshold=0.0)[0]
-
-        if not disp_diag:
-            C = np.multiply(C, 1-np.eye(len(C)))
-            C = C + np.mean(C.flatten()) * np.eye(len(C))
-
-        if np.any(C<0): # ?????? should we do this?
-            V_MIN = -1
-            V_MAX = 1
-        else: # ?????? should we do this?
-            V_MIN = 0
-            V_MAX = lim_val
-
-        if not fix_lim:
-            V_MAX = np.max(C)
-            V_MIN = np.min(C)
-
-        if name_lst is None:
-            axs[i].set_axis_off()
-
-        im = axs[i].imshow(C, interpolation='nearest', aspect='equal', cmap=cmap,    # 'viridis' or 'jet'
-            vmin=V_MIN, vmax=V_MAX)
-        
-        if not name_lst is None:
-            axs[i].set_xticks(np.arange(len(name_lst)))
-            axs[i].set_yticks(np.arange(len(name_lst)))
-            axs[i].set_xticklabels(name_lst, rotation=90, fontsize=9)
-            axs[i].set_yticklabels(name_lst, fontsize=9)
-        axs[i].set_title(key)
+        im = visualize_conn_mat(C, axis=axs[i], title=key, \
+            name_lst=name_lst, \
+            cmap=cmap,\
+            normalize=normalize,\
+            disp_diag=disp_diag,\
+            fix_lim=fix_lim, lim_val=lim_val \
+            )
 
     fig.subplots_adjust(
         bottom=0.1, \
@@ -473,6 +489,7 @@ def visualize_conn_mat(data, title='', \
         plt.close()
     # else:
     #     plt.show()
+
 
 def dist_mat_dendo(dist_mat, labels, title='', \
     save_image=False, output_root=None, \
@@ -1007,10 +1024,6 @@ class SIMILARITY_ASSESSMENT:
         self.analysis_name_lst = analysis_name_lst
         self.dFCM_lst = dFCM_lst
 
-    @property
-    def common_TRs(self):
-        return TR_intersection(self.dFCM_lst)
-
     ##################### dFC CHARACTERISTICS ######################
 
     def subj_lvl_dFC_similarity(self, dFCM_lst, metric='MI', common_TRs=None):
@@ -1306,21 +1319,32 @@ class SIMILARITY_ASSESSMENT:
     def assess_similarity(self, dFCM_lst):
             
         methods_assess = {}
+
+        # sort dFCM_lst according to methods names
+        old_list = [dFCM.measure.measure_name for dFCM in dFCM_lst]
+        new_list = deepcopy(old_list)
+        new_list.sort()
+
+        new_order = find_new_order(old_list, new_list)
+        dFCM_lst = [dFCM_lst[i] for i in new_order]
+
         measure_lst = list()
         TS_info_lst = list()
         for dFCM in dFCM_lst:
             measure_lst.append(dFCM.measure)
             TS_info_lst.append(dFCM.TS_info)
 
+        common_TRs = TR_intersection(dFCM_lst)
+
         methods_assess['measure_lst'] = measure_lst
         methods_assess['TS_info_lst'] = TS_info_lst
-        methods_assess['common_TRs'] = self.common_TRs
+        methods_assess['common_TRs'] = common_TRs
 
         ########## dFCM samples ##########
 
         dFCM_samples = {}
         for i, dFCM in enumerate(dFCM_lst):
-            sample = dFCM.dFC2dict(TRs=self.common_TRs)
+            sample = dFCM.dFC2dict(TRs=common_TRs)
             dFCM_samples[str(i)] = sample
         methods_assess['dFCM_samples'] = dFCM_samples
 
@@ -1343,12 +1367,12 @@ class SIMILARITY_ASSESSMENT:
             subj_dFC_sim['MI'] = self.subj_lvl_dFC_similarity(
                                     dFCM_lst, 
                                     metric='MI', 
-                                    common_TRs=self.common_TRs
+                                    common_TRs=common_TRs
                                 )
             subj_dFC_sim['corr'] = self.subj_lvl_dFC_similarity(
                                     dFCM_lst, 
                                     metric='corr', 
-                                    common_TRs=self.common_TRs
+                                    common_TRs=common_TRs
                                 )
         
         methods_assess['subj_dFC_sim'] = subj_dFC_sim
@@ -1359,7 +1383,7 @@ class SIMILARITY_ASSESSMENT:
         across_node_corr_mat = []
         if 'across_node_corr_mat' in self.analysis_name_lst:
             across_node_corr_mat = self.dFCM_lst_temporal_corr(dFCM_lst, \
-                common_TRs=self.common_TRs \
+                common_TRs=common_TRs \
                 )
         methods_assess['across_node_corr_mat'] = across_node_corr_mat
 
@@ -1367,12 +1391,12 @@ class SIMILARITY_ASSESSMENT:
 
         dFC_avg_lst = []
         if 'dFC_avg' in self.analysis_name_lst:
-            dFC_avg_lst = self.dFC_avg(dFCM_lst, common_TRs=self.common_TRs)
+            dFC_avg_lst = self.dFC_avg(dFCM_lst, common_TRs=common_TRs)
         methods_assess['dFC_avg'] = dFC_avg_lst
 
         dFC_var_lst = []
         if 'dFC_var' in self.analysis_name_lst:
-            dFC_var_lst = self.dFC_var(dFCM_lst, common_TRs=self.common_TRs)
+            dFC_var_lst = self.dFC_var(dFCM_lst, common_TRs=common_TRs)
         methods_assess['dFC_var'] = dFC_var_lst
         
         ########## distance calc ##########
@@ -1382,37 +1406,37 @@ class SIMILARITY_ASSESSMENT:
             dFC_distance['euclidean'] = self.dFCM_lst_distance(\
                 dFCM_lst, \
                 metric='euclidean', \
-                common_TRs=self.common_TRs, \
+                common_TRs=common_TRs, \
                 normalize=True \
                 )
             dFC_distance['correlation'] = self.dFCM_lst_distance(\
                 dFCM_lst, \
                 metric='correlation', \
-                common_TRs=self.common_TRs, \
+                common_TRs=common_TRs, \
                 normalize=True \
                 )
             dFC_distance['ECM'] = self.dFCM_lst_distance(\
                 dFCM_lst, \
                 metric='ECM', \
-                common_TRs=self.common_TRs, \
+                common_TRs=common_TRs, \
                 normalize=True \
                 )
             dFC_distance['degree'] = self.dFCM_lst_distance(\
                 dFCM_lst, \
                 metric='degree', \
-                common_TRs=self.common_TRs, \
+                common_TRs=common_TRs, \
                 normalize=True \
                 )
             dFC_distance['shortest_path'] = self.dFCM_lst_distance(\
                 dFCM_lst, \
                 metric='shortest_path', \
-                common_TRs=self.common_TRs, \
+                common_TRs=common_TRs, \
                 normalize=True \
                 )
             dFC_distance['clustering_coef'] = self.dFCM_lst_distance(\
                 dFCM_lst, \
                 metric='clustering_coef', \
-                common_TRs=self.common_TRs, \
+                common_TRs=common_TRs, \
                 normalize=True \
                 )
         
@@ -1423,7 +1447,7 @@ class SIMILARITY_ASSESSMENT:
         FO_lst = []
         if 'FO' in self.analysis_name_lst:
             FO_lst = self.FO_calc(dFCM_lst, \
-                common_TRs=self.common_TRs \
+                common_TRs=common_TRs \
                 )
         methods_assess['FO'] = FO_lst
 
@@ -1432,7 +1456,7 @@ class SIMILARITY_ASSESSMENT:
         CO = {}
         if 'CO' in self.analysis_name_lst:
             CO = self.COM_calc(dFCM_lst, \
-                common_TRs=self.common_TRs, \
+                common_TRs=common_TRs, \
                 lag=0 \
                 )
         methods_assess['CO'] = CO
@@ -1440,7 +1464,7 @@ class SIMILARITY_ASSESSMENT:
         TP = {}
         if 'TP' in self.analysis_name_lst:
             TP = self.COM_calc(dFCM_lst, \
-                common_TRs=self.common_TRs, \
+                common_TRs=common_TRs, \
                 lag=1 \
                 )
         methods_assess['TP'] = TP
@@ -1450,7 +1474,7 @@ class SIMILARITY_ASSESSMENT:
         trans_freq_lst = []
         if 'trans_freq' in self.analysis_name_lst:
             trans_freq_lst = self.transition_freq(dFCM_lst, \
-                common_TRs=self.common_TRs \
+                common_TRs=common_TRs \
                 )
         methods_assess['trans_freq'] = trans_freq_lst
                 
