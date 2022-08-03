@@ -207,17 +207,22 @@ for filter in ['default_values']:
 
         for i in range(SUBJs_output[filter]['across_node_corr_mat'].shape[0]):
             for j in range(i):
-                title = zip_name(SUBJs_output[filter]['measure_lst'][i].measure_name) + ' and ' + zip_name(SUBJs_output[filter]['measure_lst'][j].measure_name)
-                if not title in RESULTS:
-                    RESULTS[title] = list()
+                measure_name_i = zip_name(SUBJs_output[filter]['measure_lst'][i].measure_name)
+                measure_name_j = zip_name(SUBJs_output[filter]['measure_lst'][j].measure_name)
+                if not measure_name_i in RESULTS:
+                    RESULTS[measure_name_i] = {}
+                if not measure_name_j in RESULTS[measure_name_i]:
+                    RESULTS[measure_name_i][measure_name_j] = list()
                 mat = SUBJs_output[filter]['across_node_corr_mat'][i,j,:,:]
                 mat = np.nan_to_num(mat)
-                RESULTS[title].append(mat)
+                RESULTS[measure_name_i][measure_name_j].append(mat)
 
-    for key in RESULTS:
-        RESULTS[key] = np.array(RESULTS[key])
-        RESULTS[key] = np.mean(RESULTS[key], axis=0)
-    visualize_conn_mat_dict(RESULTS, title='across node temporal corr ' + filter, fix_lim=False, 
+    for key_i in RESULTS:
+        for key_j in RESULTS[key_i]:
+            RESULTS[key_i][key_j] = np.array(RESULTS[key_i][key_j])
+            RESULTS[key_i][key_j] = np.mean(RESULTS[key_i][key_j], axis=0)
+            
+    visualize_conn_mat_2D_dict(RESULTS, title='across node temporal corr ' + filter, fix_lim=False, 
         disp_diag=False, cmap='viridis', normalize=False,
                             save_image=save_image, output_root=output_root)
 
