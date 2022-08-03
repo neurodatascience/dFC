@@ -45,6 +45,29 @@ fig_pad = 0.1
 
 ################################# Other Functions ####################################
 
+def find_new_order(old_list, new_list):
+    '''
+    new_order is a list of indices
+    old_list = ['E', 'B', 'A', 'C', 'D']
+    new_list = ['A', 'B', 'C', 'D', 'E']
+    '''
+    new_order = [old_list.index(a) for a in new_list]  
+    return new_order
+
+def mat_reorder(A, new_order):
+    '''
+    new_order must be a list of indices:
+    old_list = ['E', 'B', 'A', 'C', 'D']
+    new_list = ['A', 'B', 'C', 'D', 'E']
+    new_order = find_new_order(old_list, new_list)
+    A_sorted is a copy of A
+    '''
+    A_sorted = deepcopy(A)
+
+    A_sorted = [[A_sorted[i][j] for j in new_order] for i in new_order]
+    A_sorted = np.array(A_sorted)
+    return A_sorted
+
 # test
 def get_subj_ts_dict(time_series_dict, subjs_id):
     subj_ts_dict = {}
@@ -1008,7 +1031,10 @@ class SIMILARITY_ASSESSMENT:
                 dFC_vec_j = dFC_mat2vec(dFC_mat_j).flatten()
 
                 if metric=='corr':
-                    sim_mat[i, j] = np.corrcoef(dFC_vec_i, dFC_vec_j)[0,1]
+                    if np.var(dFC_vec_i)==0 or np.var(dFC_vec_j)==0:
+                        sim_mat[i, j] = 0
+                    else:
+                        sim_mat[i, j] = np.corrcoef(dFC_vec_i, dFC_vec_j)[0,1]
                 else:
                     sim_mat[i, j] = mutual_information(X=dFC_vec_i, Y=dFC_vec_j, N_bins=100)
                 sim_mat[j, i] = sim_mat[i, j]
@@ -1027,7 +1053,7 @@ class SIMILARITY_ASSESSMENT:
         corr = np.zeros((dFC_mat_i.shape[1], dFC_mat_i.shape[1]))
         for node_i in range(dFC_mat_i.shape[1]):
             for node_j in range(dFC_mat_i.shape[1]):
-                if np.sum(dFC_mat_i[:,node_i,node_j])==0 or np.sum(dFC_mat_j[:,node_i,node_j])==0:
+                if np.var(dFC_mat_i[:,node_i,node_j])==0 or np.var(dFC_mat_j[:,node_i,node_j])==0:
                     corr[node_i, node_j] = 0
                 else:
                     corr[node_i, node_j] = np.corrcoef(dFC_mat_i[:,node_i,node_j], dFC_mat_j[:,node_i,node_j])[0,1]                    
@@ -2284,7 +2310,10 @@ class SLIDING_WINDOW(dFC):
                         C[j, i] = self.calc_MI(X, Y)
                     else:
                         ########### Pearson Correlation ##############
-                        C[j, i] = np.corrcoef(X, Y)[0, 1]
+                        if np.var(X)==0 or np.var(Y)==0:
+                            C[j, i] = 0
+                        else:
+                            C[j, i] = np.corrcoef(X, Y)[0, 1]
 
                     C[i, j] = C[j, i]   
                 
