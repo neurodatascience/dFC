@@ -342,6 +342,8 @@ def visualize_state_TC(TC_lst, \
     #     plt.show()
 
     return
+
+    
 def visualize_conn_mat(C, axis, title='', \
     name_lst=None, \
     cmap='viridis',\
@@ -473,6 +475,133 @@ def visualize_conn_mat_dict(data, title='', \
         cb_ax = fig.add_axes([0.91, 0.75, 0.007, 0.1])
     else:
         cb_ax = fig.add_axes([0.91, 0.75, 0.02, 0.1])
+    cbar = fig.colorbar(im, cax=cb_ax, shrink=0.8) # shrink=0.8??
+
+    # # set the colorbar ticks and tick labels
+    # cbar.set_ticks(np.arange(0, 1.1, 0.5))
+    # cbar.set_ticklabels(['0', '0.5', '1'])
+
+    if save_image:
+        folder = output_root[:output_root.rfind('/')]
+        if not os.path.exists(folder):
+            os.makedirs(folder)
+        plt.savefig(output_root+title+'.png', \
+            dpi=fig_dpi, bbox_inches=fig_bbox_inches, pad_inches=fig_pad \
+        ) 
+        plt.close()
+    # else:
+    #     plt.show()
+
+
+def visualize_conn_mat_2D_dict(data, title='', \
+    name_lst_key=None, mat_key=None, \
+    cmap='viridis',\
+    normalize=False,\
+    disp_diag=True,\
+    save_image=False, output_root=None, \
+        fix_lim=True, lim_val=1.0 \
+    ):
+
+    '''
+    - name_lst_key is the key to list of names
+    - data must be a 2D dict of correlation/connectivity matrices
+    sample:
+    ROW1 (method_1)
+        COLUMN1 (method_1)
+            corr_mat (data[method_1][method_1]['mat_key'])
+                0.00 0.31 0.76 
+                0.31 0.00 0.43 
+                0.76 0.43 0.00 
+            node_lst (data[method_1][method_1]['name_lst_key'])
+                node_1
+                node_2
+                node_3
+        COLUMN2 (method_2)
+            corr_mat (data[method_1][method_2]['mat_key'])
+                0.00 0.31 0.76 
+                0.31 0.00 0.43 
+                0.76 0.43 0.00 
+            node_lst (data[method_1][method_2]['name_lst_key'])
+                node_1
+                node_2
+                node_3
+    ROW2 (method_2)
+        COLUMN1 (method_1)
+            corr_mat (data[method_2][method_1]['mat_key'])
+                0.00 0.31 0.76 
+                0.31 0.00 0.43 
+                0.76 0.43 0.00 
+            node_lst (data[method_2][method_1]['name_lst_key'])
+                node_1
+                node_2
+                node_3
+    '''
+
+    if name_lst_key is None:
+        fig_width = 25*(len(data)/10)
+    else:
+        fig_width = 25*(len(data)/10) + 4
+    fig_height = fig_width * 0.60
+
+    fig, axs = plt.subplots(len(data), len(data), figsize=(fig_width, fig_height), \
+        facecolor='w', edgecolor='k')
+
+    if not type(axs) is np.ndarray:
+        axs = np.array([axs])
+
+    fig.suptitle(title) #, fontsize=20, size=20
+
+    # axs = axs.ravel()
+
+    axs_plotted = list()
+    for i, key_i in enumerate(data):
+
+        for j, key_j in enumerate(data[key_i]):
+
+            if mat_key is None:
+                C = data[key_i][key_j]
+            else:
+                C = data[key_i][key_j][mat_key]
+
+            name_lst = None
+            if not name_lst_key is None:
+                if type(name_lst_key) is str:
+                    name_lst = data[key_i][key_j][name_lst_key]
+
+            im = visualize_conn_mat(C, axis=axs[i][j], title=key_i + ' and ' + key_j, \
+                name_lst=name_lst, \
+                cmap=cmap,\
+                normalize=normalize,\
+                disp_diag=disp_diag,\
+                fix_lim=fix_lim, lim_val=lim_val \
+                )
+
+            axs_plotted.append(axs[i][j])
+
+    # remove extra subplots
+    for ax in axs.ravel():
+        if not ax in axs_plotted:
+            ax.set_axis_off()
+            ax.xaxis.set_tick_params(which='both', labelbottom=True)
+
+    fig.subplots_adjust(
+        # bottom=0.1, \
+        # top=1.5, \
+        # left=0.1, \
+        # right=0.9,
+        wspace=0.001, \
+        hspace=0.4\
+    )
+
+    if not name_lst is None:
+        fig.subplots_adjust(
+            wspace=0.85 
+        )
+        
+    if name_lst is None:
+        cb_ax = fig.add_axes([0.91, 0.5, 0.007, 0.1])
+    else:
+        cb_ax = fig.add_axes([0.91, 0.5, 0.02, 0.1])
     cbar = fig.colorbar(im, cax=cb_ax, shrink=0.8) # shrink=0.8??
 
     # # set the colorbar ticks and tick labels
