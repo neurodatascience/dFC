@@ -1782,7 +1782,7 @@ class dFC:
         else:
             D = self.FCS_dict
 
-        visualize_conn_mat(data=D, \
+        visualize_conn_mat_dict(data=D, \
             title=self.measure_name+' FCS', \
             save_image=save_image, \
             output_root=output_root, \

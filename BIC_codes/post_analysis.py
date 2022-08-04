@@ -73,7 +73,7 @@ for filter in ['default_values']:
 
         for measure in SUBJs_output[filter]['measure_lst']:
 
-            measure.visualize_FCS(normalize=False, fix_lim=False)
+            measure.visualize_FCS(normalize=False, fix_lim=False, save_image=save_image, output_root=output_root)
 
 ################################# dFC Similarity #################################
 
