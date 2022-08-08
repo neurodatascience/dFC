@@ -344,12 +344,13 @@ def visualize_state_TC(TC_lst, \
     return
 
     
-def visualize_conn_mat(C, axis, title='', \
+def visualize_conn_mat(C, axis=None, title='', \
     name_lst=None, \
     cmap='viridis',\
     normalize=False,\
     disp_diag=True,\
-    fix_lim=True, lim_val=1.0 \
+    fix_lim=True, lim_val=1.0, \
+    node_networks=None \
     ):
     '''
     C is (regions, regions)
@@ -373,13 +374,44 @@ def visualize_conn_mat(C, axis, title='', \
         V_MAX = np.max(C)
         V_MIN = np.min(C)
 
-    if name_lst is None:
+    if axis is None:
+        fig, axis = plt.subplots(1, 1, figsize=(5, 5))
+
+    if name_lst is None and node_networks is None:
         axis.set_axis_off()
 
     im = axis.imshow(C, interpolation='nearest', aspect='equal', cmap=cmap,    # 'viridis' or 'jet'
         vmin=V_MIN, vmax=V_MAX)
     
-    if not name_lst is None:
+    # cluster node networks
+    if not node_networks is None:
+        
+        # finding unique network names wrt order
+        network_names = []
+        for node in node_networks:
+            if not node in network_names:
+                network_names.append(node)
+        network_labels = [network_names.index(node) for node in node_networks]
+
+        network_borders = np.argwhere(np.diff(network_labels)!=0)
+        ticks_position = []
+        last_line_position = 0
+        for i in network_borders:
+            # 0.5 is the visualization offset of imshow
+            line_position = i[0]+1-0.5
+            axis.axvline(x=line_position, color='red')
+            axis.axhline(y=line_position, color='red')
+            ticks_position.append((line_position+last_line_position)/2)
+            last_line_position = line_position
+        line_position = len(node_networks)+1-0.5
+        ticks_position.append((line_position+last_line_position)/2)
+
+        axis.set_xticks(ticks_position)
+        axis.set_yticks(ticks_position)
+        axis.set_xticklabels(network_names, rotation=90, fontsize=9)
+        axis.set_yticklabels(network_names, fontsize=9)
+    
+    if not name_lst is None and node_networks is None:
         axis.set_xticks(np.arange(len(name_lst)))
         axis.set_yticks(np.arange(len(name_lst)))
         axis.set_xticklabels(name_lst, rotation=90, fontsize=9)
@@ -394,7 +426,8 @@ def visualize_conn_mat_dict(data, title='', \
     normalize=False,\
     disp_diag=True,\
     save_image=False, output_root=None, \
-        fix_lim=True, lim_val=1.0 \
+    fix_lim=True, lim_val=1.0, \
+    node_networks=None \
     ):
 
     '''
@@ -454,7 +487,8 @@ def visualize_conn_mat_dict(data, title='', \
             cmap=cmap,\
             normalize=normalize,\
             disp_diag=disp_diag,\
-            fix_lim=fix_lim, lim_val=lim_val \
+            fix_lim=fix_lim, lim_val=lim_val, \
+            node_networks=node_networks \
             )
 
     fig.subplots_adjust(
@@ -499,7 +533,8 @@ def visualize_conn_mat_2D_dict(data, title='', \
     normalize=False,\
     disp_diag=True,\
     save_image=False, output_root=None, \
-        fix_lim=True, lim_val=1.0 \
+    fix_lim=True, lim_val=1.0, \
+    node_networks=None \
     ):
 
     '''
@@ -573,7 +608,8 @@ def visualize_conn_mat_2D_dict(data, title='', \
                 cmap=cmap,\
                 normalize=normalize,\
                 disp_diag=disp_diag,\
-                fix_lim=fix_lim, lim_val=lim_val \
+                fix_lim=fix_lim, lim_val=lim_val, \
+                node_networks=node_networks \
                 )
 
             axs_plotted.append(axs[i][j])
