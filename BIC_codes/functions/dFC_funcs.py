@@ -353,7 +353,7 @@ def node_info2network(nodes_info):
 
 def visualize_conn_mat(C, axis=None, title='', \
     name_lst=None, \
-    cmap='viridis',\
+    cmap='jet',\
     normalize=False,\
     disp_diag=True,\
     fix_lim=True, lim_val=1.0, \
@@ -378,8 +378,10 @@ def visualize_conn_mat(C, axis=None, title='', \
         V_MAX = lim_val
 
     if not fix_lim:
-        V_MAX = np.max(C)
-        V_MIN = np.min(C)
+        # V_MAX = np.max(C)
+        # V_MIN = np.min(C)
+        V_MAX = np.max(np.abs(C))
+        V_MIN = -1 * V_MAX
 
     if axis is None:
         fig, axis = plt.subplots(1, 1, figsize=(5, 5))
@@ -429,7 +431,7 @@ def visualize_conn_mat(C, axis=None, title='', \
 
 def visualize_conn_mat_dict(data, title='', \
     name_lst_key=None, mat_key=None, \
-    cmap='viridis',\
+    cmap='jet',\
     normalize=False,\
     disp_diag=True,\
     save_image=False, output_root=None, \
@@ -542,7 +544,7 @@ def visualize_conn_mat_dict(data, title='', \
 
 def visualize_conn_mat_2D_dict(data, title='', \
     name_lst_key=None, mat_key=None, \
-    cmap='viridis',\
+    cmap='jet',\
     normalize=False,\
     disp_diag=True,\
     save_image=False, output_root=None, \
