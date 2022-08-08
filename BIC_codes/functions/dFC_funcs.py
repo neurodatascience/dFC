@@ -343,7 +343,14 @@ def visualize_state_TC(TC_lst, \
 
     return
 
-    
+def node_info2network(nodes_info):
+    node_networks = []
+    for info in nodes_info:
+        if info[3]=='Network':
+            continue
+        node_networks.append(info[3])    
+    return node_networks
+
 def visualize_conn_mat(C, axis=None, title='', \
     name_lst=None, \
     cmap='viridis',\
@@ -399,8 +406,8 @@ def visualize_conn_mat(C, axis=None, title='', \
         for i in network_borders:
             # 0.5 is the visualization offset of imshow
             line_position = i[0]+1-0.5
-            axis.axvline(x=line_position, color='red')
-            axis.axhline(y=line_position, color='red')
+            axis.axvline(x=line_position, color='red', linewidth=1)
+            axis.axhline(y=line_position, color='red', linewidth=1)
             ticks_position.append((line_position+last_line_position)/2)
             last_line_position = line_position
         line_position = len(node_networks)+1-0.5
@@ -408,15 +415,15 @@ def visualize_conn_mat(C, axis=None, title='', \
 
         axis.set_xticks(ticks_position)
         axis.set_yticks(ticks_position)
-        axis.set_xticklabels(network_names, rotation=90, fontsize=9)
-        axis.set_yticklabels(network_names, fontsize=9)
+        axis.set_xticklabels(network_names, rotation=90, fontsize=11)
+        axis.set_yticklabels(network_names, fontsize=11)
     
     if not name_lst is None and node_networks is None:
         axis.set_xticks(np.arange(len(name_lst)))
         axis.set_yticks(np.arange(len(name_lst)))
         axis.set_xticklabels(name_lst, rotation=90, fontsize=9)
         axis.set_yticklabels(name_lst, fontsize=9)
-    axis.set_title(title)
+    axis.set_title(title, fontsize=18)
 
     return im
 
@@ -454,11 +461,13 @@ def visualize_conn_mat_dict(data, title='', \
             Clustering_pear_corr
     '''
 
-    if name_lst_key is None:
+    if name_lst_key is None and node_networks is None:
         fig_width = 25*(len(data)/10)
-    else:
+    elif not name_lst_key is None:
         fig_width = 35*(len(data)/10) + 4
-    fig_height = 10
+    else:
+        fig_width = 55*(len(data)/10) + 4
+    fig_height = 15
 
     fig, axs = plt.subplots(1, len(data), figsize=(fig_width, fig_height), \
         facecolor='w', edgecolor='k')
@@ -466,7 +475,7 @@ def visualize_conn_mat_dict(data, title='', \
     if not type(axs) is np.ndarray:
         axs = np.array([axs])
 
-    fig.suptitle(title) #, fontsize=20, size=20
+    fig.suptitle(title, fontsize=20) #, fontsize=20, size=20
 
     axs = axs.ravel()
 
@@ -500,7 +509,11 @@ def visualize_conn_mat_dict(data, title='', \
         # hspace=0.02\
     )
 
-    if not name_lst is None:
+    if not node_networks is None:
+        fig.subplots_adjust(
+            wspace=0.55 
+        )
+    elif not name_lst is None:
         fig.subplots_adjust(
             wspace=0.85 
         )
@@ -572,10 +585,12 @@ def visualize_conn_mat_2D_dict(data, title='', \
                 node_3
     '''
 
-    if name_lst_key is None:
+    if name_lst_key is None and node_networks is None:
         fig_width = 25*(len(data)/10)
-    else:
+    elif not name_lst_key is None:
         fig_width = 25*(len(data)/10) + 4
+    else:
+        fig_width = 35*(len(data)/10) + 4
     fig_height = fig_width * 0.60
 
     fig, axs = plt.subplots(len(data), len(data), figsize=(fig_width, fig_height), \
@@ -629,7 +644,11 @@ def visualize_conn_mat_2D_dict(data, title='', \
         hspace=0.4\
     )
 
-    if not name_lst is None:
+    if not node_networks is None:
+        fig.subplots_adjust(
+            wspace=0.55 
+        )
+    elif not name_lst is None:
         fig.subplots_adjust(
             wspace=0.85 
         )
