@@ -155,7 +155,7 @@ for filter in ['default_values']:
                         save_image=save_image, output_root=output_root)
     
     visualize_conn_mat_dict(corr, title='dFC var similarity ' + filter, fix_lim=False, 
-        disp_diag=True, cmap='viridis', normalize=False, name_lst_key='name_lst', mat_key='corr_mat',
+        disp_diag=False, cmap='viridis', normalize=False, name_lst_key='name_lst', mat_key='corr_mat',
                         save_image=save_image, output_root=output_root)
 
 ################################# dFC avg #################################
@@ -192,7 +192,7 @@ for filter in ['default_values']:
                         save_image=save_image, output_root=output_root)
 
     visualize_conn_mat_dict(corr, title='dFC avg similarity ' + filter, fix_lim=False, 
-        disp_diag=True, cmap='viridis', normalize=False, name_lst_key='name_lst', mat_key='corr_mat',
+        disp_diag=False, cmap='viridis', normalize=False, name_lst_key='name_lst', mat_key='corr_mat',
                         save_image=save_image, output_root=output_root)
 
 ################################# Across Node Temporal Correlation #################################

@@ -3410,10 +3410,13 @@ class DFCM():
     def get_dFC_mat(self, TRs=None, num_samples=None):
         # get dFC matrices corresponding to 
         # the specified TRs 
-        # TRs should be list not necessarily in order ?
+        # TRs should be list/ndarray not necessarily in order ?
         # if num_samples specified, it will downsample 
         # TRs to reach that number of samples
         # if num_samples > len(TRs) -> picks all TRs
+
+        if TRs is None:
+            TRs = self.TR_array
 
         if type(TRs) is np.int32 or type(TRs) is np.int64 or type(TRs) is int:
             TRs = [TRs]
