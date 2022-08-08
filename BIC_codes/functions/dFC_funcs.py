@@ -643,6 +643,28 @@ def dist_mat_dendo(dist_mat, labels, title='', \
         ) 
         plt.close()
 
+def plot_brain_act(act_vec, locs):
+    X = []
+    Y = []
+    Z = []
+    for loc in locs:
+        X.append(loc[0])
+        Y.append(loc[1])
+        Z.append(loc[2])
+    X = np.array(X)
+    Y = np.array(Y)
+    Z = np.array(Z)
+
+    # plt.figure()
+    # for mean_act in measure.means_:
+    mean_act = act_vec
+    fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+    ax.view_init(0, 0)
+    ax.scatter(X, Y, Z, c=act_vec, linewidths=5, cmap='hot')
+    ax.axis("off")
+
+    # plt.show()
+
 '''
 ########## bundled brain graph visualizer ##########
 
