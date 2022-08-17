@@ -354,37 +354,12 @@ def node_info2network(nodes_info):
 def visualize_conn_mat(C, axis=None, title='', \
     name_lst=None, \
     cmap='jet',\
-    normalize=False,\
-    disp_diag=True,\
-    fix_lim=True, lim_val=1.0, \
+    V_MIN=-1, V_MAX=1, \
     node_networks=None \
     ):
     '''
     C is (regions, regions)
     '''
-
-    if normalize:
-        C = dFC_mat_normalize(C[None,:,:], global_normalization=False, threshold=0.0)[0]
-
-    if not disp_diag:
-        C = np.multiply(C, 1-np.eye(len(C)))
-        C = C + np.mean(C.flatten()) * np.eye(len(C))
-
-    if np.any(C<0): # ?????? should we do this?
-        V_MIN = -1
-        V_MAX = 1
-    else: # ?????? should we do this?
-        V_MIN = 0
-        V_MAX = lim_val
-
-    if not fix_lim:
-        # V_MAX = np.max(C)
-        # V_MIN = np.min(C)
-        V_MAX = np.max(np.abs(C))
-        if np.any(C<0):
-            V_MIN = -1 * V_MAX
-        else:
-            V_MIN = 0
 
     if axis is None:
         fig, axis = plt.subplots(1, 1, figsize=(5, 5))
@@ -484,12 +459,52 @@ def visualize_conn_mat_dict(data, title='', \
 
     axs = axs.ravel()
 
+    # normalizing and scale
+    conn_mats = list()
+    V_MIN_all = None
+    V_MAX_all = None
     for i, key in enumerate(data):
-
         if mat_key is None:
             C = data[key]
         else:
             C = data[key][mat_key]
+
+        if normalize:
+            C = dFC_mat_normalize(C[None,:,:], global_normalization=False, threshold=0.0)
+
+        if not disp_diag:
+            C = np.multiply(C, 1-np.eye(len(C)))
+            C = C + np.mean(C.flatten()) * np.eye(len(C))
+
+        if np.any(C<0): # ?????? should we do this?
+            v_min = -1
+            v_max = 1
+        else: # ?????? should we do this?
+            v_min = 0
+            v_max = 1
+
+        if not fix_lim:
+            v_max = np.max(np.abs(C))
+            if np.any(C<0):
+                v_min = -1 * v_max
+            else:
+                v_min = 0
+
+        if V_MAX_all is None:
+            V_MAX_all = v_max
+        else:
+            V_MAX_all = max(V_MAX_all, v_max)
+        if V_MIN_all is None:
+            V_MIN_all = v_min
+        else:
+            V_MIN_all = min(V_MIN_all, v_min)
+        conn_mats.append(C)
+    conn_mats = np.array(conn_mats)
+
+    # plot
+    for i, key in enumerate(data):
+
+        C = conn_mats[i,:,:]
 
         name_lst = None
         if not name_lst_key is None:
@@ -499,9 +514,7 @@ def visualize_conn_mat_dict(data, title='', \
         im = visualize_conn_mat(C, axis=axs[i], title=key, \
             name_lst=name_lst, \
             cmap=cmap,\
-            normalize=normalize,\
-            disp_diag=disp_diag,\
-            fix_lim=fix_lim, lim_val=lim_val, \
+            V_MIN=V_MIN_all, V_MAX=V_MAX_all, \
             node_networks=node_networks \
             )
 
@@ -1862,7 +1875,10 @@ class dFC:
         pass
 
     # todo : use FCS_dict func in this func
-    def visualize_FCS(self, normalize=True, fix_lim=True, save_image=False, output_root=None):
+    def visualize_FCS(self, node_networks=None, 
+                normalize=True, fix_lim=True, 
+                save_image=False, output_root=None
+                ):
         
         if self.FCS == []:
             return
@@ -1873,6 +1889,7 @@ class dFC:
             D = self.FCS_dict
 
         visualize_conn_mat_dict(data=D, \
+            node_networks=node_networks, \
             title=self.measure_name+' FCS', \
             save_image=save_image, \
             output_root=output_root, \

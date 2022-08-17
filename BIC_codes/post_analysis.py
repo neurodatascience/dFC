@@ -11,9 +11,9 @@ print('################################# POST ANALYSIS STARTED RUNNING ... #####
 ################################# LOAD RESULTS #################################
 
 assessment_results_root = './../../../../RESULTs/methods_implementation/server/methods_implementation/'
-assessment_results_root = './'
-output_root = './../../../../RESULTs/methods_implementation/server/methods_implementation/output/'
-output_root = './output/'
+# assessment_results_root = './'
+output_root = './../../../../RESULTs/methods_implementation/server/methods_implementation/out/'
+# output_root = './output/'
 save_image = True
 
 ALL_RECORDS = os.listdir(assessment_results_root+'dFC_assessed/')
@@ -50,13 +50,14 @@ for filter in ['default_values']:
     # for SUBJs_output in SUBJs_output_lst:
     for s in ALL_RECORDS[:1]:
         SUBJs_output = np.load(assessment_results_root+'dFC_assessed/'+s, allow_pickle='True').item()
+        node_networks = node_info2network(SUBJs_output[filter]['TS_info_lst'][0]['nodes_info'])
 
         for measure_id in SUBJs_output[filter]['dFCM_samples']:
             TRs = SUBJs_output[filter]['common_TRs'][:10]
             samples = {}
             for tr in TRs:
                 samples['TR'+str(tr)] = SUBJs_output[filter]['dFCM_samples'][measure_id]['TR'+str(tr)]
-            visualize_conn_mat_dict(samples, 
+            visualize_conn_mat_dict(samples, node_networks=node_networks, 
                 title=SUBJs_output[filter]['measure_lst'][int(measure_id)].measure_name+'_'+filter, 
                 fix_lim=False, 
                 disp_diag=False,
@@ -70,10 +71,14 @@ for filter in ['default_values']:
     # for SUBJs_output in SUBJs_output_lst:
     for s in ALL_RECORDS[:1]:
         SUBJs_output = np.load(assessment_results_root+'dFC_assessed/'+s, allow_pickle='True').item()
+        node_networks = node_info2network(SUBJs_output[filter]['TS_info_lst'][0]['nodes_info'])
 
         for measure in SUBJs_output[filter]['measure_lst']:
 
-            measure.visualize_FCS(normalize=False, fix_lim=False, save_image=save_image, output_root=output_root)
+            measure.visualize_FCS(node_networks=node_networks,
+                    normalize=True, fix_lim=False, 
+                    save_image=save_image, output_root=output_root
+                    )
 
 ################################# dFC Similarity #################################
 
@@ -131,6 +136,7 @@ for filter in ['default_values']:
     RESULTS = {}
     for s in ALL_RECORDS:
         SUBJs_output = np.load(assessment_results_root+'dFC_assessed/'+s, allow_pickle='True').item()
+        node_networks = node_info2network(SUBJs_output[filter]['TS_info_lst'][0]['nodes_info'])
 
         for i, measure in enumerate(SUBJs_output[filter]['measure_lst']):
             if not measure.measure_name in RESULTS:
@@ -151,8 +157,10 @@ for filter in ['default_values']:
             corr['dFC_var_similarity']['corr_mat'][i, j] = np.corrcoef(dFC_mat2vec(RESULTS[measure_i]), dFC_mat2vec(RESULTS[measure_j]))[0,1]
 
 
-    visualize_conn_mat_dict(RESULTS, title='dFC var ' + filter, fix_lim=False, disp_diag=True, cmap='viridis', normalize=False, 
-                        save_image=save_image, output_root=output_root)
+    visualize_conn_mat_dict(RESULTS, node_networks=node_networks, 
+                title='dFC var ' + filter, 
+                fix_lim=False, disp_diag=True, cmap='jet', normalize=False, 
+                save_image=save_image, output_root=output_root)
     
     visualize_conn_mat_dict(corr, title='dFC var similarity ' + filter, fix_lim=False, 
         disp_diag=False, cmap='viridis', normalize=False, name_lst_key='name_lst', mat_key='corr_mat',
@@ -169,6 +177,7 @@ for filter in ['default_values']:
     RESULTS = {}
     for s in ALL_RECORDS:
         SUBJs_output = np.load(assessment_results_root+'dFC_assessed/'+s, allow_pickle='True').item()
+        node_networks = node_info2network(SUBJs_output[filter]['TS_info_lst'][0]['nodes_info'])
 
         for i, measure in enumerate(SUBJs_output[filter]['measure_lst']):
             if not measure.measure_name in RESULTS:
@@ -188,8 +197,10 @@ for filter in ['default_values']:
         for j, measure_j in enumerate(RESULTS):
             corr['dFC_avg_similarity']['corr_mat'][i, j] = np.corrcoef(dFC_mat2vec(RESULTS[measure_i]), dFC_mat2vec(RESULTS[measure_j]))[0,1]
 
-    visualize_conn_mat_dict(RESULTS, title='dFC avg ' + filter, fix_lim=False, disp_diag=True, cmap='viridis', normalize=False,
-                        save_image=save_image, output_root=output_root)
+    visualize_conn_mat_dict(RESULTS, node_networks=node_networks, 
+            title='dFC avg ' + filter, 
+            fix_lim=False, disp_diag=True, cmap='jet', normalize=False,
+            save_image=save_image, output_root=output_root)
 
     visualize_conn_mat_dict(corr, title='dFC avg similarity ' + filter, fix_lim=False, 
         disp_diag=False, cmap='viridis', normalize=False, name_lst_key='name_lst', mat_key='corr_mat',
@@ -204,6 +215,7 @@ for filter in ['default_values']:
     RESULTS = {}
     for s in ALL_RECORDS:
         SUBJs_output = np.load(assessment_results_root+'dFC_assessed/'+s, allow_pickle='True').item()
+        node_networks = node_info2network(SUBJs_output[filter]['TS_info_lst'][0]['nodes_info'])
 
         for i in range(SUBJs_output[filter]['across_node_corr_mat'].shape[0]):
             for j in range(i):
@@ -222,8 +234,9 @@ for filter in ['default_values']:
             RESULTS[key_i][key_j] = np.array(RESULTS[key_i][key_j])
             RESULTS[key_i][key_j] = np.mean(RESULTS[key_i][key_j], axis=0)
             
-    visualize_conn_mat_2D_dict(RESULTS, title='across node temporal corr ' + filter, fix_lim=False, 
-        disp_diag=False, cmap='viridis', normalize=False,
+    visualize_conn_mat_2D_dict(RESULTS, node_networks=node_networks, 
+        title='across node temporal corr ' + filter, fix_lim=False, 
+        disp_diag=False, cmap='jet', normalize=False,
                             save_image=save_image, output_root=output_root)
 
 
@@ -283,6 +296,18 @@ for distance_metric in ['correlation', 'euclidean', 'ECM', 'degree', 'shortest_p
         title='Hierarchical Clustering of Methods ' + filter+' using '+distance_metric, 
         save_image=save_image, output_root=output_root
         )
+
+################################# Subject Clustering #################################
+'''
+
+'''
+# RESULTS = {}
+#     for filter in FILTERS:
+
+#         all_subj_avg_dist_mat = list()
+#         all_subj_var_dist_mat = list()
+#         for s in ALL_RECORDS:
+#             SUBJs_output = np.load(assessment_results_root+'dFC_assessed/'+s, allow_pickle='True').item()
 
 ################################# TIME RECORD #################################
 
