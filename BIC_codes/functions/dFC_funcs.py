@@ -381,7 +381,10 @@ def visualize_conn_mat(C, axis=None, title='', \
         # V_MAX = np.max(C)
         # V_MIN = np.min(C)
         V_MAX = np.max(np.abs(C))
-        V_MIN = -1 * V_MAX
+        if np.any(C<0):
+            V_MIN = -1 * V_MAX
+        else:
+            V_MIN = 0
 
     if axis is None:
         fig, axis = plt.subplots(1, 1, figsize=(5, 5))
@@ -408,8 +411,8 @@ def visualize_conn_mat(C, axis=None, title='', \
         for i in network_borders:
             # 0.5 is the visualization offset of imshow
             line_position = i[0]+1-0.5
-            axis.axvline(x=line_position, color='red', linewidth=1)
-            axis.axhline(y=line_position, color='red', linewidth=1)
+            axis.axvline(x=line_position, color='k', linewidth=1)
+            axis.axhline(y=line_position, color='k', linewidth=1)
             ticks_position.append((line_position+last_line_position)/2)
             last_line_position = line_position
         line_position = len(node_networks)+1-0.5
@@ -727,20 +730,14 @@ def plot_brain_act(act_vec, locs):
 
 cvsopts = dict(plot_height=400, plot_width=400)
 
-def thresh_G(G, threshold=None):
+def thresh_G(G, threshold):
     
     G_copy = deepcopy(G)
     
-    if threshold==None:
-        sig_edges = find_sig_edges(G_copy, min_num_edge=0)
-        threshold = G.edges()[sig_edges[-1]]['weight']
-    else:
-        if threshold > 1:
-            labels = [d["weight"] for (u, v, d) in G_copy.edges(data=True)]
-            labels.sort()
-            threshold = labels[-1*threshold]
-            # sig_edges = find_sig_edges(G_copy, min_num_edge=threshold)
-            # threshold = G.edges()[sig_edges[-1]]['weight']
+    if threshold > 1:
+        labels = [d["weight"] for (u, v, d) in G_copy.edges(data=True)]
+        labels.sort()
+        threshold = labels[-1*threshold]
     
     ebunch = [(u, v) for u, v, d in G_copy.edges(data=True) if np.abs(d['weight']) < threshold]
     G_copy.remove_edges_from(ebunch)
@@ -847,19 +844,33 @@ def set_locs_G(G, locs):
     pos = nx.circular_layout(G_copy) 
 
     for i, key in enumerate(pos):
-        pos[key] = locs[i][0]
+        pos[key] = locs[i]
         
     nx.set_node_attributes(G_copy, pos, "pos") 
       
     
     return G_copy 
 
-def visulize_brain_graph(FCS, nodes_info, locs, num_edges2show):
+def visulize_brain_graph(FCS, nodes_info, locs, num_edges2show, \
+    title='', save_image=True, output_root=None \
+    ):
+    
+    # EXAMPLE:
+    # visulize_brain_graph(measure.FCS_dict[FCS], measure.TS_info['nodes_info'], \
+    # measure.TS_info['nodes_locs'], num_edges2show=100, \
+    # title=FCS+'_'+measure.measure_name, save_image=save_image, output_root=output_root \
+    # )
+    
     G = batch_Adj2Net(FCS=FCS, nodes_info=nodes_info, is_digraph=False)
     G = set_locs_G(G, locs=locs)   
-    plots = [nx_plot(ng(G, name="dFC"), view_degree=0, threshold=num_edges2show) ]
+    plots = [nx_plot(ng(G, name="dFC"), view_degree=0, threshold=num_edges2show)]
+
+    if save_image:
+        ds.utils.export_image(img=plots[0][2], filename=title+'_bundle_', 
+                        fmt=".png", background='black', 
+                        export_path=output_root)
     
-    return plots[0][0]
+    # return plots[0][0]
 
 
 ##############################
@@ -3487,12 +3498,14 @@ class DFCM():
 
     # test this
     def get_dFC_mat(self, TRs=None, num_samples=None):
-        # get dFC matrices corresponding to 
-        # the specified TRs 
-        # TRs should be list/ndarray not necessarily in order ?
-        # if num_samples specified, it will downsample 
-        # TRs to reach that number of samples
-        # if num_samples > len(TRs) -> picks all TRs
+        '''
+        get dFC matrices corresponding to 
+        the specified TRs 
+        TRs should be list/ndarray not necessarily in order ?
+        if num_samples specified, it will downsample 
+        TRs to reach that number of samples
+        if num_samples > len(TRs) -> picks all TRs
+        '''
 
         if TRs is None:
             TRs = self.TR_array
@@ -3515,27 +3528,42 @@ class DFCM():
         else:
             return dFC_mat, TRs
 
-    # def concat(self, dFCM):
+    def SWed_dFC_mat(self, W=None, n_overlap=None, tapered_window=False):
+        '''
+        the time samples will be picked after 
+        averaging over a window which slides
+        W is in sec
+        '''
+        dFC_mat = self.get_dFC_mat()
+        dFC_mat_new = list()
+        L = self.n_time
+        W = int(W * self.TS_info['Fs']) 
+        step = int((1-n_overlap)*W)
+        if step == 0:
+            step = 1
 
-    #     # test this method
+        window_taper = signal.windows.gaussian(W, std=3*W/22)
 
-    #     assert type(dFCM) is DFCM, \
-    #             "The input must be of DFCM class"
+        TR_array = list()
+        for l in range(0, L-W+1, step):
 
-    #     if self.FCPs_ is None:
-    #         self.FCPs_ = dFCM.FCPs
-    #         self.FCP_idx_ = dFCM.FCP_idx
-    #         self.n_regions_ = dFCM.n_regions
-    #         self.n_time_ = dFCM.n_time
-    #         self.TR_array_ = dFCM.TR_array
-    #     else:
-    #         assert self.n_regions== dFCM.n_regions, \
-    #             "dFCM region numbers missmatch."
-    #         FCP_idx = dFCM.FCP_idx + self.FCPs.shape[0]
-    #         self.FCPs_ = np.concatenate((self.FCPs_, dFCM.FCPs), axis=0)
-    #         self.FCP_idx_ = np.concatenate((self.FCP_idx_, FCP_idx), axis=0)
-    #         self.n_time_ = self.FCP_idx.shape[0]
-    #         self.TR_array_ = np.concatenate((self.TR_array, dFCM.TR_array))
+            ######### creating a rectangel window ############
+            window = np.zeros((L))
+            window[l:l+W] = 1
+            
+            ########### tapering the window ##############
+            if tapered_window:
+                window = signal.convolve(window, window_taper, mode='same') / sum(window_taper)
+
+            # int(l-W/2):int(l+3*W/2) is the nonzero interval after tapering
+            dFC_mat_new.append(np.average(dFC_mat, weights=window, axis=0))
+            
+            TR_array.append(int((l + (l+W)) / 2) )
+            
+        
+        dFC_mat_new = np.array(dFC_mat_new)
+        return dFC_mat_new
+
 
     def set_dFC(self, FCSs, FCS_idx=None, TS_info=None, TR_array=None):
         
