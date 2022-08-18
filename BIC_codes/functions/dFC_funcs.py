@@ -12,6 +12,7 @@ import scipy.spatial.distance as ssd
 import scipy.cluster.hierarchy as shc
 from copy import deepcopy
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 import networkx as nx
 from scipy.spatial import distance
 from joblib import Parallel, delayed
@@ -401,8 +402,8 @@ def visualize_conn_mat(C, axis=None, title='', \
     if not name_lst is None and node_networks is None:
         axis.set_xticks(np.arange(len(name_lst)))
         axis.set_yticks(np.arange(len(name_lst)))
-        axis.set_xticklabels(name_lst, rotation=90, fontsize=9)
-        axis.set_yticklabels(name_lst, fontsize=9)
+        axis.set_xticklabels(name_lst, rotation=90, fontsize=11)
+        axis.set_yticklabels(name_lst, fontsize=11)
     axis.set_title(title, fontsize=18)
 
     return im
@@ -461,7 +462,6 @@ def visualize_conn_mat_dict(data, title='', \
 
     # normalizing and scale
     conn_mats = list()
-    V_MIN_all = None
     V_MAX_all = None
     for i, key in enumerate(data):
         if mat_key is None:
@@ -470,36 +470,33 @@ def visualize_conn_mat_dict(data, title='', \
             C = data[key][mat_key]
 
         if normalize:
-            C = dFC_mat_normalize(C[None,:,:], global_normalization=False, threshold=0.0)
+            C = dFC_mat_normalize(C[None,:,:], global_normalization=False, threshold=0.0)[0]
 
         if not disp_diag:
             C = np.multiply(C, 1-np.eye(len(C)))
             C = C + np.mean(C.flatten()) * np.eye(len(C))
 
-        if np.any(C<0): # ?????? should we do this?
-            v_min = -1
-            v_max = 1
-        else: # ?????? should we do this?
-            v_min = 0
-            v_max = 1
-
-        if not fix_lim:
-            v_max = np.max(np.abs(C))
-            if np.any(C<0):
-                v_min = -1 * v_max
-            else:
-                v_min = 0
-
         if V_MAX_all is None:
-            V_MAX_all = v_max
+            V_MAX_all = np.max(np.abs(C))
         else:
-            V_MAX_all = max(V_MAX_all, v_max)
-        if V_MIN_all is None:
-            V_MIN_all = v_min
-        else:
-            V_MIN_all = min(V_MIN_all, v_min)
+            V_MAX_all = max(V_MAX_all, np.max(np.abs(C)))
+
         conn_mats.append(C)
     conn_mats = np.array(conn_mats)
+
+    if np.any(conn_mats<0) or cmap=='jet': 
+        V_MIN = -1
+        V_MAX = 1
+    else: 
+        V_MIN = 0
+        V_MAX = 1
+
+    if not fix_lim:
+        V_MAX = V_MAX_all
+        if np.any(conn_mats<0) or cmap=='jet':
+            V_MIN = -1 * V_MAX_all
+        else:
+            V_MIN = 0
 
     # plot
     for i, key in enumerate(data):
@@ -514,7 +511,7 @@ def visualize_conn_mat_dict(data, title='', \
         im = visualize_conn_mat(C, axis=axs[i], title=key, \
             name_lst=name_lst, \
             cmap=cmap,\
-            V_MIN=V_MIN_all, V_MAX=V_MAX_all, \
+            V_MIN=V_MIN, V_MAX=V_MAX, \
             node_networks=node_networks \
             )
 
@@ -604,12 +601,12 @@ def visualize_conn_mat_2D_dict(data, title='', \
     '''
 
     if name_lst_key is None and node_networks is None:
-        fig_width = 25*(len(data)/10)
+        fig_width = 30*(len(data)/10)
     elif not name_lst_key is None:
-        fig_width = 25*(len(data)/10) + 4
+        fig_width = 30*(len(data)/10) + 4
     else:
-        fig_width = 35*(len(data)/10) + 4
-    fig_height = fig_width * 0.60
+        fig_width = 40*(len(data)/10) + 4
+    fig_height = fig_width * 1.10
 
     fig, axs = plt.subplots(len(data), len(data), figsize=(fig_width, fig_height), \
         facecolor='w', edgecolor='k')
@@ -617,10 +614,50 @@ def visualize_conn_mat_2D_dict(data, title='', \
     if not type(axs) is np.ndarray:
         axs = np.array([axs])
 
-    fig.suptitle(title) #, fontsize=20, size=20
+    fig.suptitle(title, fontsize=25) #, fontsize=20, size=20
 
     # axs = axs.ravel()
 
+    # normalizing and scale
+    conn_mats = list()
+    V_MAX_all = None
+    for i, key_i in enumerate(data):
+        for j, key_j in enumerate(data[key_i]):
+            if mat_key is None:
+                C = data[key_i][key_j]
+            else:
+                C = data[key_i][key_j][mat_key]
+
+            if normalize:
+                C = dFC_mat_normalize(C[None,:,:], global_normalization=False, threshold=0.0)[0]
+
+            if not disp_diag:
+                C = np.multiply(C, 1-np.eye(len(C)))
+                C = C + np.mean(C.flatten()) * np.eye(len(C))
+
+            if V_MAX_all is None:
+                V_MAX_all = np.max(np.abs(C))
+            else:
+                V_MAX_all = max(V_MAX_all, np.max(np.abs(C)))
+
+            conn_mats.append(C)
+    conn_mats = np.array(conn_mats)
+
+    if np.any(conn_mats<0) or cmap=='jet': 
+        V_MIN = -1
+        V_MAX = 1
+    else: 
+        V_MIN = 0
+        V_MAX = 1
+
+    if not fix_lim:
+        V_MAX = V_MAX_all
+        if np.any(conn_mats<0) or cmap=='jet':
+            V_MIN = -1 * V_MAX_all
+        else:
+            V_MIN = 0
+    
+    # plot
     axs_plotted = list()
     for i, key_i in enumerate(data):
 
@@ -631,6 +668,13 @@ def visualize_conn_mat_2D_dict(data, title='', \
             else:
                 C = data[key_i][key_j][mat_key]
 
+            if normalize:
+                C = dFC_mat_normalize(C[None,:,:], global_normalization=False, threshold=0.0)[0]
+
+            if not disp_diag:
+                C = np.multiply(C, 1-np.eye(len(C)))
+                C = C + np.mean(C.flatten()) * np.eye(len(C))
+
             name_lst = None
             if not name_lst_key is None:
                 if type(name_lst_key) is str:
@@ -639,9 +683,7 @@ def visualize_conn_mat_2D_dict(data, title='', \
             im = visualize_conn_mat(C, axis=axs[i][j], title=key_i + ' and ' + key_j, \
                 name_lst=name_lst, \
                 cmap=cmap,\
-                normalize=normalize,\
-                disp_diag=disp_diag,\
-                fix_lim=fix_lim, lim_val=lim_val, \
+                V_MIN=V_MIN, V_MAX=V_MAX, \
                 node_networks=node_networks \
                 )
 
@@ -664,11 +706,13 @@ def visualize_conn_mat_2D_dict(data, title='', \
 
     if not node_networks is None:
         fig.subplots_adjust(
-            wspace=0.55 
+            wspace=0.55, 
+            hspace=0.55
         )
     elif not name_lst is None:
         fig.subplots_adjust(
-            wspace=0.85 
+            wspace=0.85, 
+            hspace=0.85
         )
         
     if name_lst is None:
@@ -700,11 +744,12 @@ def dist_mat_dendo(dist_mat, labels, title='', \
     # convert the redundant n*n square matrix form into a condensed nC2 array
     distArray = ssd.squareform(dist_mat) 
 
-
-    fig = plt.figure(figsize=(25, 5))
+    width = int(2.5*dist_mat.shape[0])
+    fig = plt.figure(figsize=(width, 5))
     ax = fig.add_subplot(1, 1, 1)    
-    dend = shc.dendrogram(shc.linkage(distArray, method='single', metric='euclidean'), distance_sort='ascending', no_plot=False, labels=labels)
-    plt.title(title)
+    with mpl.rc_context({'lines.linewidth': 3}):
+        dend = shc.dendrogram(shc.linkage(distArray, method='single', metric='euclidean'), distance_sort='ascending', no_plot=False, labels=labels)
+    plt.title(title, fontsize=15)
     ax.tick_params(axis='x', which='major', labelsize=15)
     ax.tick_params(axis='y', which='major', labelsize=15)    
     if save_image:

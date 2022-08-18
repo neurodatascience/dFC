@@ -59,7 +59,7 @@ for filter in ['default_values']:
                 samples['TR'+str(tr)] = SUBJs_output[filter]['dFCM_samples'][measure_id]['TR'+str(tr)]
             visualize_conn_mat_dict(samples, node_networks=node_networks, 
                 title=SUBJs_output[filter]['measure_lst'][int(measure_id)].measure_name+'_'+filter, 
-                fix_lim=False, 
+                normalize=True, fix_lim=False, 
                 disp_diag=False,
                 save_image=save_image, output_root=output_root
                 )
@@ -121,6 +121,9 @@ for similarity_metric in ['corr', 'MI']:
     if similarity_metric == 'corr':
         for filter in RESULTS:
             dist_mat = 1 - np.abs(RESULTS[filter]['avg_distance_mat'])
+            # diagonal values of dist_mat must equal exactly zero
+            if np.all(dist_mat[np.diag_indices(dist_mat.shape[0])]<1e-10):
+                dist_mat[np.diag_indices(dist_mat.shape[0])]=0
             dist_mat_dendo(dist_mat=dist_mat, labels=RESULTS[filter]['name_lst'], 
             title='Hierarchical Clustering of Methods ' + filter+' using '+similarity_metric, 
             save_image=save_image, output_root=output_root
@@ -236,8 +239,9 @@ for filter in ['default_values']:
             
     visualize_conn_mat_2D_dict(RESULTS, node_networks=node_networks, 
         title='across node temporal corr ' + filter, fix_lim=False, 
-        disp_diag=False, cmap='jet', normalize=False,
-                            save_image=save_image, output_root=output_root)
+        disp_diag=False, cmap='jet', normalize=True,
+        save_image=save_image, output_root=output_root
+        )
 
 
 ################################# dFC Distance #################################
