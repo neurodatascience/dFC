@@ -16,6 +16,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import networkx as nx
 from scipy.spatial import distance
+from scipy import stats
 from joblib import Parallel, delayed
 import os
 import time
@@ -190,6 +191,25 @@ def calc_graph_propoerty(A, property):
         graph_property = np.array(graph_property)
 
     return graph_property
+
+def rank_norm(dFC_mat):
+    '''
+    dFC_mat_norm = rank_norm(dFC_mat)
+    '''
+    dFC_mat_new = deepcopy(dFC_mat)
+    flag_dim = False
+    if len(dFC_mat_new.shape)<3:
+        dFC_mat_new = np.expand_dims(dFC_mat_new, axis=0)
+        flag_dim = True
+    assert dFC_mat_new.shape[1]==dFC_mat_new.shape[2], \
+        'dimension mismatch.'
+    n_region = dFC_mat_new.shape[1]
+    for i, mat in enumerate(dFC_mat_new):
+        np.fill_diagonal(mat, 0)
+        dFC_mat_new[i,:,:] = stats.rankdata(mat).reshape(n_region, n_region)
+    if flag_dim:
+        dFC_mat_new = np.squeeze(dFC_mat_new)
+    return dFC_mat_new
 
 # test
 def zip_name(name):
@@ -420,7 +440,7 @@ def visualize_conn_mat_dict(data, title='', \
     normalize=False,\
     disp_diag=True,\
     save_image=False, output_root=None, \
-    fix_lim=True, lim_val=1.0, \
+    fix_lim=True, center_0=True, \
     node_networks=None \
     ):
 
@@ -490,7 +510,7 @@ def visualize_conn_mat_dict(data, title='', \
         conn_mats.append(C)
     conn_mats = np.array(conn_mats)
 
-    if np.any(conn_mats<0) or cmap=='jet': 
+    if np.any(conn_mats<0) or center_0: 
         V_MIN = -1
         V_MAX = 1
     else: 
@@ -499,7 +519,7 @@ def visualize_conn_mat_dict(data, title='', \
 
     if not fix_lim:
         V_MAX = V_MAX_all
-        if np.any(conn_mats<0) or cmap=='jet':
+        if np.any(conn_mats<0) or center_0:
             V_MIN = -1 * V_MAX_all
         else:
             V_MIN = 0
@@ -567,7 +587,7 @@ def visualize_conn_mat_2D_dict(data, title='', \
     normalize=False,\
     disp_diag=True,\
     save_image=False, output_root=None, \
-    fix_lim=True, lim_val=1.0, \
+    fix_lim=True, center_0=1.0, \
     node_networks=None \
     ):
 
@@ -649,7 +669,7 @@ def visualize_conn_mat_2D_dict(data, title='', \
             conn_mats.append(C)
     conn_mats = np.array(conn_mats)
 
-    if np.any(conn_mats<0) or cmap=='jet': 
+    if np.any(conn_mats<0) or center_0: 
         V_MIN = -1
         V_MAX = 1
     else: 
@@ -658,7 +678,7 @@ def visualize_conn_mat_2D_dict(data, title='', \
 
     if not fix_lim:
         V_MAX = V_MAX_all
-        if np.any(conn_mats<0) or cmap=='jet':
+        if np.any(conn_mats<0) or center_0:
             V_MIN = -1 * V_MAX_all
         else:
             V_MIN = 0
@@ -1311,7 +1331,7 @@ class SIMILARITY_ASSESSMENT:
 
     def subj_lvl_dFC_similarity(self, dFCM_lst, metric='MI', common_TRs=None):
         # computes correlation/MI similarity over all dFCs of a subject 
-        # metric can be 'MI' or 'corr' 
+        # metric can be 'MI' or 'corr' or 'spearman'
         
         if common_TRs is None:
             common_TRs = TR_intersection(dFCM_lst)
@@ -1331,6 +1351,9 @@ class SIMILARITY_ASSESSMENT:
                         sim_mat[i, j] = 0
                     else:
                         sim_mat[i, j] = np.corrcoef(dFC_vec_i, dFC_vec_j)[0,1]
+                elif metric=='spearman':
+                    spearman_coef, p = stats.spearmanr(dFC_vec_i, dFC_vec_j)
+                    sim_mat[i, j] = spearman_coef
                 else:
                     sim_mat[i, j] = mutual_information(X=dFC_vec_i, Y=dFC_vec_j, N_bins=100)
                 sim_mat[j, i] = sim_mat[i, j]
@@ -1655,6 +1678,11 @@ class SIMILARITY_ASSESSMENT:
             subj_dFC_sim['corr'] = self.subj_lvl_dFC_similarity(
                                     dFCM_lst, 
                                     metric='corr', 
+                                    common_TRs=common_TRs
+                                )
+            subj_dFC_sim['spearman'] = self.subj_lvl_dFC_similarity(
+                                    dFCM_lst, 
+                                    metric='spearman', 
                                     common_TRs=common_TRs
                                 )
         
@@ -3604,8 +3632,14 @@ class DFCM():
         W is in sec
         '''
         dFC_mat = self.get_dFC_mat()
+
+        # method not applicable to SW-based methods
+        if 'sw_method' in self.measure.info:
+            return dFC_mat
+
         dFC_mat_new = list()
         L = self.n_time
+        # change W to timepoints
         W = int(W * self.TS_info['Fs']) 
         step = int((1-n_overlap)*W)
         if step == 0:
