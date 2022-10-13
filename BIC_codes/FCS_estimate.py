@@ -22,6 +22,9 @@ output_root = './../../../../../RESULTs/methods_implementation/'
 params_data_load = { \
     'DATA_type': 'Gordon', \
     'SESSIONs':['Rest1_LR' , 'Rest1_RL', 'Rest2_LR', 'Rest2_RL'], \
+    'networks2include':['Auditory', 'CinguloOperc', 'Default', 'DorsalAttn', 'FrontoParietal',
+        'MedialParietal', 'ParietoOccip', 'SMhand', 'SMmouth',
+        'Salience', 'VentralAttn', 'Visual'], \
 
     'data_root_simul': './../../../../DATA/TVB data/', \
     'data_root_sample': './sampleDATA/', \

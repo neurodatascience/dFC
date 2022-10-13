@@ -6,6 +6,7 @@ Created on Sun Jun 13 22:34:49 2021
 @author: mte
 """
 
+from tkinter import N
 import numpy as np
 from scipy import signal
 import scipy.spatial.distance as ssd
@@ -355,7 +356,7 @@ def node_info2network(nodes_info):
 def visualize_conn_mat(C, axis=None, title='', \
     name_lst=None, \
     cmap='jet',\
-    V_MIN=-1, V_MAX=1, \
+    V_MIN=None, V_MAX=None, \
     node_networks=None \
     ):
     '''
@@ -367,6 +368,11 @@ def visualize_conn_mat(C, axis=None, title='', \
 
     if name_lst is None and node_networks is None:
         axis.set_axis_off()
+
+    if V_MAX is None:
+        V_MAX = np.max(np.abs(C))
+    if V_MIN is None:
+        V_MIN = -1*V_MAX
 
     im = axis.imshow(C, interpolation='nearest', aspect='equal', cmap=cmap,    # 'viridis' or 'jet'
         vmin=V_MIN, vmax=V_MAX)
@@ -3355,6 +3361,7 @@ class TIME_SERIES():
         # select the nodes indexed by numbers in nodes_idx. nodes_idx is a numpy 1D array
         # if nodes_idx is None -> all the nodes will be considered (resets node selection)
         # if nodes_idx is not sorted, it can be used to reorder the nodes
+        # this function can be used only once (you cannot select the nodes again)
 
         if nodes_idx is None:
             self.nodes_selection_ = np.arange(0, self.n_regions_, 1, dtype=int)
@@ -3829,6 +3836,11 @@ class DATA_LOADER():
             row = line.split()
             atlas_data.append(row)
 
+        # apply networks2include
+        nodes2include = [i-1 for i, x in enumerate(atlas_data) if x[3] in self.params['networks2include']]
+        locs = locs[nodes2include, :]
+        atlas_data = [x for node, x in enumerate(atlas_data) if node-1 in nodes2include]
+
         BOLD = {}
         for session in SESSIONs:
             BOLD[session] = None
@@ -3841,7 +3853,11 @@ class DATA_LOADER():
                 DATA = hdf5storage.loadmat(self.params['data_root_gordon']+subj_fldr+'/ROI_data_Gordon_333_surf.mat')
                 time_series = DATA['ROI_data']
 
+                # change time_series.shape to (nodes, time)
                 time_series = time_series.T
+
+                # apply networks2include
+                time_series = time_series[nodes2include, :]
 
                 if BOLD[session] is None:
                     BOLD[session] = TIME_SERIES(data=time_series, subj_id=subject, \
