@@ -57,13 +57,10 @@ print('Measurement required %0.3f seconds.' % (time.time() - tic, ))
 
 analysis_name_lst = [ \
     'subj_dFC_sim', \
-    'across_node_corr_mat', \
     'dFC_avg', \
     'dFC_var', \
     'dFC_distance', \
     'FO', \
-    'CO', \
-    'TP', \
     'trans_freq' \
     ]
 

@@ -194,6 +194,7 @@ def calc_graph_propoerty(A, property):
 
 def rank_norm(dFC_mat):
     '''
+    dFC_mat = (n_time, n_region, n_region)
     dFC_mat_norm = rank_norm(dFC_mat)
     '''
     dFC_mat_new = deepcopy(dFC_mat)
@@ -1314,13 +1315,10 @@ class SIMILARITY_ASSESSMENT:
         '''
             analysis_name_lst = [ \
                 'subj_dFC_sim', \
-                'across_node_corr_mat', \
                 'dFC_avg', \
                 'dFC_var', \
                 'dFC_distance', \
                 'FO', \
-                'CO', \
-                'TP', \
                 'trans_freq' \
                 ]
             '''
@@ -1329,19 +1327,16 @@ class SIMILARITY_ASSESSMENT:
 
     ##################### dFC CHARACTERISTICS ######################
 
-    def subj_lvl_dFC_similarity(self, dFCM_lst, metric='MI', common_TRs=None):
+    def subj_lvl_dFC_similarity(self, dFC_mat_lst, metric='MI'):
         # computes correlation/MI similarity over all dFCs of a subject 
         # metric can be 'MI' or 'corr' or 'spearman'
-        
-        if common_TRs is None:
-            common_TRs = TR_intersection(dFCM_lst)
 
-        sim_mat = np.zeros((len(dFCM_lst), len(dFCM_lst)))
-        for i in range(len(dFCM_lst)):
-            for j in range(i, len(dFCM_lst)):
+        sim_mat = np.zeros((len(dFC_mat_lst), len(dFC_mat_lst)))
+        for i in range(len(dFC_mat_lst)):
+            for j in range(i, len(dFC_mat_lst)):
 
-                dFC_mat_i = dFCM_lst[i].get_dFC_mat(TRs=common_TRs)
-                dFC_mat_j = dFCM_lst[j].get_dFC_mat(TRs=common_TRs)
+                dFC_mat_i = dFC_mat_lst[i]
+                dFC_mat_j = dFC_mat_lst[j]
 
                 dFC_vec_i = dFC_mat2vec(dFC_mat_i).flatten()
                 dFC_vec_j = dFC_mat2vec(dFC_mat_j).flatten()
@@ -1359,45 +1354,6 @@ class SIMILARITY_ASSESSMENT:
                 sim_mat[j, i] = sim_mat[i, j]
 
         return sim_mat
-
-    def dFC_temporal_corr(self, dFCM_i, dFCM_j, TRs=None):
-
-        # returns correlation of dFC measures across nodes
-
-        if TRs is None:
-            TRs = TR_intersection([dFCM_i, dFCM_j])
-        dFC_mat_i = dFCM_i.get_dFC_mat(TRs=TRs)
-        dFC_mat_j = dFCM_j.get_dFC_mat(TRs=TRs)
-        
-        corr = np.zeros((dFC_mat_i.shape[1], dFC_mat_i.shape[1]))
-        for node_i in range(dFC_mat_i.shape[1]):
-            for node_j in range(dFC_mat_i.shape[1]):
-                if np.var(dFC_mat_i[:,node_i,node_j])==0 or np.var(dFC_mat_j[:,node_i,node_j])==0:
-                    corr[node_i, node_j] = 0
-                else:
-                    corr[node_i, node_j] = np.corrcoef(dFC_mat_i[:,node_i,node_j], dFC_mat_j[:,node_i,node_j])[0,1]                    
-
-        return corr
-
-    def dFCM_lst_temporal_corr(self, dFCM_lst, common_TRs=None):
-
-        if common_TRs is None:
-            common_TRs = TR_intersection(dFCM_lst)
-
-        corr_mat = None
-        for i in range(len(dFCM_lst)):
-            for j in range(i+1, len(dFCM_lst)):
-
-                corr_ij = self.dFC_temporal_corr( \
-                    dFCM_lst[i], dFCM_lst[j], \
-                    TRs=common_TRs \
-                        )
-                if corr_mat is None:
-                    corr_mat = np.zeros((len(dFCM_lst), len(dFCM_lst), corr_ij.shape[0], corr_ij.shape[1]))
-                corr_mat[i,j,:,:] = corr_ij
-                corr_mat[j,i,:,:] = corr_mat[i,j,:,:] 
-
-        return corr_mat
 
     def FO_calc(self, dFCM_lst, common_TRs=None):
 
@@ -1424,76 +1380,18 @@ class SIMILARITY_ASSESSMENT:
 
         return FO_list
 
-    def COM_calc(self, dFCM_lst, common_TRs=None, lag=0):
-        # returns co-occurance (CO) with specified lag, a dict with:
-        # CO['Obs_seq']
-        # CO['FCS_name']
-        # CO['COM']
-        # automatically ignores DD methods
-
-        # TODO:  DOWNSAMPLING problem and ignoring the between state transitions
-
-        if common_TRs is None:
-            common_TRs = TR_intersection(dFCM_lst)
-
-        TRs_lst = list()
-        for TR in common_TRs:
-            TRs_lst.append('TR'+str(TR))
-
-        # list of FCS names
-        ############## when combining COMs check if the order of FCS names is the same
-        FCS_name_lst = list()
-        for i, dFCM in enumerate(dFCM_lst):
-            if dFCM.measure.is_state_based:
-                for FCS in dFCM.FCSs:
-                    FCS_name_lst.append('measure_'+str(i)+'_'+FCS)
-        # print(FCS_name_lst)
-
-        # building the observation sequence
-        Obs_seq = list()
-        for TR in TRs_lst:
-            Obs_vec = list()
-            for i, dFCM in enumerate(dFCM_lst):
-                if dFCM.measure.is_state_based:
-                    Obs_vec.append('measure_' + str(i) + '_' + dFCM.FCS_idx[TR])
-            Obs_seq.append(Obs_vec)
-        # print(Obs_seq)
-
-        # computing COM
-        flag = 0
-        CO = {}
-        CO['Obs_seq'] = Obs_seq
-        CO['FCS_name'] = FCS_name_lst
-        CO['COM'] = np.zeros((len(FCS_name_lst), len(FCS_name_lst)))
-        for i, TR in enumerate(TRs_lst):
-            if i>=lag:
-                for last_FCS in CO['Obs_seq'][i-lag]:
-                    for current_FCS in CO['Obs_seq'][i]:
-                        CO['COM'][CO['FCS_name'].index(last_FCS), CO['FCS_name'].index(current_FCS)] += 1
-
-        return CO
-
-
-    def dFC_avg(self, dFCM_lst, common_TRs=None):
-
-        if common_TRs is None:
-            common_TRs = TR_intersection(dFCM_lst)
+    def dFC_avg(self, dFC_mat_lst):
         
         dFC_avg_lst = list()
-        for i, dFCM_i in enumerate(dFCM_lst):
-            dFC_mat_i = dFCM_i.get_dFC_mat(TRs=common_TRs)
+        for i, dFC_mat_i in enumerate(dFC_mat_lst):
             dFC_avg_lst.append(np.mean(dFC_mat_i, axis=0))
             
         return dFC_avg_lst
 
-    def dFC_var(self, dFCM_lst, common_TRs=None):
-
-        if common_TRs is None:
-            common_TRs = TR_intersection(dFCM_lst)
+    def dFC_var(self, dFC_mat_lst):
         
         dFC_var_lst = list()
-        for i, dFCM_i in enumerate(dFCM_lst):
-            dFC_mat_i = dFCM_i.get_dFC_mat(TRs=common_TRs)
+        for i, dFC_mat_i in enumerate(dFC_mat_lst):
             dFC_var_lst.append(np.var(dFC_mat_i, axis=0))
             
         return dFC_var_lst
@@ -1549,10 +1447,7 @@ class SIMILARITY_ASSESSMENT:
         array of FC matrices = (n_time, n_regions, n_regions)
         metric options: correlation, euclidean, or graph properties
         ECM (Eigenvector Centrality Mapping), degree, shortest_path, clustering_coef
-        normalize option is for graph properties and euclidean metrics since correlation is already 
-        normalized.
-        for graph properties, the input can be an array of vecs and of shape (n_time, n_regions) 
-        or array of FC matrices = (n_time, n_regions, n_regions)
+        normalize option is by ranking values (same concept as spearman correlation).
         '''
         assert len(FC_t_i)==len(FC_t_j),\
             'the inputs must of the same number of samples'
@@ -1560,41 +1455,34 @@ class SIMILARITY_ASSESSMENT:
         distance_out = list()
         for t in range(FC_t_i.shape[0]):
 
-            if metric=='correlation' or metric=='euclidean':
-                assert FC_t_i[t].shape[0]==FC_t_i[t].shape[1],\
-                    'Matrices are not square'
-                assert FC_t_j[t].shape[0]==FC_t_j[t].shape[1],\
-                    'Matrices are not square'
+            assert len(FC_t_i[t].shape)==2 and len(FC_t_j[t].shape)==2,\
+                'incorrect dimensions'
+            assert FC_t_i[t].shape[0]==FC_t_i[t].shape[1],\
+                'Matrices are not square'
+            assert FC_t_j[t].shape[0]==FC_t_j[t].shape[1],\
+                'Matrices are not square'
+
+            FC_i = FC_t_i[t]
+            FC_j = FC_t_j[t]
+
+            if normalize:
+                FC_i = rank_norm(FC_i)
+                FC_j = rank_norm(FC_j)
 
             if metric=='correlation':
-                FC_vec_i = dFC_mat2vec(FC_t_i[t])
-                FC_vec_j = dFC_mat2vec(FC_t_j[t])
+                FC_vec_i = dFC_mat2vec(FC_i)
+                FC_vec_j = dFC_mat2vec(FC_j)
                 distance_out.append(distance.correlation(FC_vec_i, FC_vec_j))
 
             if metric=='euclidean':
-                FC_vec_i = dFC_mat2vec(FC_t_i[t])
-                FC_vec_j = dFC_mat2vec(FC_t_j[t])
-                if normalize:
-                    distance_out.append(normalized_euc_dist(FC_vec_i, FC_vec_j))
-                else:
-                    distance_out.append(distance.euclidean(FC_vec_i, FC_vec_j))
+                FC_vec_i = dFC_mat2vec(FC_i)
+                FC_vec_j = dFC_mat2vec(FC_j)
+                distance_out.append(distance.euclidean(FC_vec_i, FC_vec_j))
 
             if metric=='ECM' or metric=='degree' or metric=='shortest_path' or metric=='clustering_coef':
-                assert len(FC_t_i[t].shape)==2 and len(FC_t_j[t].shape)==2,\
-                    'incorrect dimensions'
-                assert FC_t_i[t].shape[0]==FC_t_i[t].shape[1],\
-                    'Matrices are not square'
-                assert FC_t_j[t].shape[0]==FC_t_j[t].shape[1],\
-                    'Matrices are not square'
-                graph_prop_i = calc_graph_propoerty(FC_t_i[t], property=metric)
-                graph_prop_j = calc_graph_propoerty(FC_t_j[t], property=metric)
-
+                graph_prop_i = calc_graph_propoerty(FC_i, property=metric)
+                graph_prop_j = calc_graph_propoerty(FC_j, property=metric)
                 distance_out.append(distance.correlation(graph_prop_i, graph_prop_j))
-
-                # if normalize:
-                #     distance_out.append(normalized_euc_dist(graph_prop_i, graph_prop_j))
-                # else:
-                #     distance_out.append(distance.euclidean(graph_prop_i, graph_prop_j))
 
         return np.array(distance_out)
 
@@ -1604,16 +1492,11 @@ class SIMILARITY_ASSESSMENT:
         # reg = LinearRegression().fit(xx.T, y.T)
         # reg_dist.append(reg.coef_)
 
-    def dFCM_lst_distance(self, dFCM_lst, metric, common_TRs=None, normalize=True):
-
-        if common_TRs is None:
-            common_TRs = TR_intersection(dFCM_lst)
+    def dFCM_lst_distance(self, dFC_mat_lst, metric, normalize=True):
         
-        distance_mat = np.zeros((len(common_TRs), len(dFCM_lst), len(dFCM_lst)))
-        for i, dFCM_i in enumerate(dFCM_lst):
-            for j, dFCM_j in enumerate(dFCM_lst):
-                dFC_mat_i = dFCM_i.get_dFC_mat(TRs=common_TRs)
-                dFC_mat_j = dFCM_j.get_dFC_mat(TRs=common_TRs)
+        distance_mat = np.zeros((dFC_mat_lst[0].shape[0], len(dFC_mat_lst), len(dFC_mat_lst)))
+        for i, dFC_mat_i in enumerate(dFC_mat_lst):
+            for j, dFC_mat_j in enumerate(dFC_mat_lst):
                 distance_mat[:, i, j] = self.dFC_distance(\
                     FC_t_i=dFC_mat_i, \
                     FC_t_j=dFC_mat_j, \
@@ -1622,7 +1505,7 @@ class SIMILARITY_ASSESSMENT:
                         )
         return distance_mat
 
-    def assess_similarity(self, dFCM_lst):
+    def assess_similarity(self, dFCM_lst, SWed=False, **param_dict):
             
         methods_assess = {}
 
@@ -1634,13 +1517,24 @@ class SIMILARITY_ASSESSMENT:
         new_order = find_new_order(old_list, new_list)
         dFCM_lst = [dFCM_lst[i] for i in new_order]
 
+        common_TRs = TR_intersection(dFCM_lst)
+
         measure_lst = list()
         TS_info_lst = list()
+        dFC_mat_lst = list()
         for dFCM in dFCM_lst:
             measure_lst.append(dFCM.measure)
             TS_info_lst.append(dFCM.TS_info)
-
-        common_TRs = TR_intersection(dFCM_lst)
+            if SWed:
+                dFC_mat_lst.append( \
+                    dFCM.SWed_dFC_mat( \
+                        W=param_dict['W'], \
+                        n_overlap=param_dict['n_overlap'], \
+                        tapered_window=param_dict['tapered_window'] \
+                    )
+                )
+            else:
+                dFC_mat_lst.append(dFCM.get_dFC_mat(TRs=common_TRs))
 
         methods_assess['measure_lst'] = measure_lst
         methods_assess['TS_info_lst'] = TS_info_lst
@@ -1649,9 +1543,8 @@ class SIMILARITY_ASSESSMENT:
         ########## dFCM samples ##########
 
         dFCM_samples = {}
-        for i, dFCM in enumerate(dFCM_lst):
-            sample = dFCM.dFC2dict(TRs=common_TRs)
-            dFCM_samples[str(i)] = sample
+        for i, dFC_mat in enumerate(dFC_mat_lst):
+            dFCM_samples[str(i)] = dFC_mat
         methods_assess['dFCM_samples'] = dFCM_samples
 
         ########## time record ##########
@@ -1671,43 +1564,33 @@ class SIMILARITY_ASSESSMENT:
         subj_dFC_sim = {}
         if 'subj_dFC_sim' in self.analysis_name_lst:
             subj_dFC_sim['MI'] = self.subj_lvl_dFC_similarity(
-                                    dFCM_lst, 
+                                    dFC_mat_lst, 
                                     metric='MI', 
                                     common_TRs=common_TRs
                                 )
             subj_dFC_sim['corr'] = self.subj_lvl_dFC_similarity(
-                                    dFCM_lst, 
+                                    dFC_mat_lst, 
                                     metric='corr', 
                                     common_TRs=common_TRs
                                 )
             subj_dFC_sim['spearman'] = self.subj_lvl_dFC_similarity(
-                                    dFCM_lst, 
+                                    dFC_mat_lst, 
                                     metric='spearman', 
                                     common_TRs=common_TRs
                                 )
         
         methods_assess['subj_dFC_sim'] = subj_dFC_sim
 
-        ########## dFCM corr ##########
-        # returns averaged correlation of dFC measures 
-
-        across_node_corr_mat = []
-        if 'across_node_corr_mat' in self.analysis_name_lst:
-            across_node_corr_mat = self.dFCM_lst_temporal_corr(dFCM_lst, \
-                common_TRs=common_TRs \
-                )
-        methods_assess['across_node_corr_mat'] = across_node_corr_mat
-
         ########## dFC temporal average and variance ##########
 
         dFC_avg_lst = []
         if 'dFC_avg' in self.analysis_name_lst:
-            dFC_avg_lst = self.dFC_avg(dFCM_lst, common_TRs=common_TRs)
+            dFC_avg_lst = self.dFC_avg(dFC_mat_lst)
         methods_assess['dFC_avg'] = dFC_avg_lst
 
         dFC_var_lst = []
         if 'dFC_var' in self.analysis_name_lst:
-            dFC_var_lst = self.dFC_var(dFCM_lst, common_TRs=common_TRs)
+            dFC_var_lst = self.dFC_var(dFC_mat_lst)
         methods_assess['dFC_var'] = dFC_var_lst
         
         ########## distance calc ##########
@@ -1715,39 +1598,33 @@ class SIMILARITY_ASSESSMENT:
         dFC_distance = {}
         if 'dFC_distance' in self.analysis_name_lst:
             dFC_distance['euclidean'] = self.dFCM_lst_distance(\
-                dFCM_lst, \
+                dFC_mat_lst, \
                 metric='euclidean', \
-                common_TRs=common_TRs, \
                 normalize=True \
                 )
             dFC_distance['correlation'] = self.dFCM_lst_distance(\
-                dFCM_lst, \
+                dFC_mat_lst, \
                 metric='correlation', \
-                common_TRs=common_TRs, \
                 normalize=True \
                 )
             dFC_distance['ECM'] = self.dFCM_lst_distance(\
-                dFCM_lst, \
+                dFC_mat_lst, \
                 metric='ECM', \
-                common_TRs=common_TRs, \
                 normalize=True \
                 )
             dFC_distance['degree'] = self.dFCM_lst_distance(\
-                dFCM_lst, \
+                dFC_mat_lst, \
                 metric='degree', \
-                common_TRs=common_TRs, \
                 normalize=True \
                 )
             dFC_distance['shortest_path'] = self.dFCM_lst_distance(\
-                dFCM_lst, \
+                dFC_mat_lst, \
                 metric='shortest_path', \
-                common_TRs=common_TRs, \
                 normalize=True \
                 )
             dFC_distance['clustering_coef'] = self.dFCM_lst_distance(\
-                dFCM_lst, \
+                dFC_mat_lst, \
                 metric='clustering_coef', \
-                common_TRs=common_TRs, \
                 normalize=True \
                 )
         
@@ -1762,24 +1639,6 @@ class SIMILARITY_ASSESSMENT:
                 )
         methods_assess['FO'] = FO_lst
 
-        ########## Co-Occurance Matrix and Transition Probability Matrix ##########
-
-        CO = {}
-        if 'CO' in self.analysis_name_lst:
-            CO = self.COM_calc(dFCM_lst, \
-                common_TRs=common_TRs, \
-                lag=0 \
-                )
-        methods_assess['CO'] = CO
-
-        TP = {}
-        if 'TP' in self.analysis_name_lst:
-            TP = self.COM_calc(dFCM_lst, \
-                common_TRs=common_TRs, \
-                lag=1 \
-                )
-        methods_assess['TP'] = TP
-
         ########## transition frequency ##########
 
         trans_freq_lst = []
@@ -1792,13 +1651,15 @@ class SIMILARITY_ASSESSMENT:
         ##############################################
         return methods_assess
 
-    def run(self, FILTERS):
+    def run(self, FILTERS, SWed=False):
         output = {}
         for filter in FILTERS:
             param_dict = FILTERS[filter]
             dFCM_lst2check = filter_dFCM_lst(self.dFCM_lst, **param_dict)
             output[filter] = self.assess_similarity( \
-                dFCM_lst=dFCM_lst2check \
+                dFCM_lst=dFCM_lst2check, \
+                SWed=SWed, \
+                **param_dict \
                 )
 
         return output
