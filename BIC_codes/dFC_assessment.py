@@ -65,7 +65,7 @@ analysis_name_lst = [ \
     ]
 
 similarity_assessment = SIMILARITY_ASSESSMENT(dFCM_lst=dFCM_dict['dFCM_lst'], analysis_name_lst=analysis_name_lst)
-SUBJ_output = similarity_assessment.run(FILTERS=dFC_analyzer.hyper_param_info)
+SUBJ_output = similarity_assessment.run(FILTERS=dFC_analyzer.hyper_param_info, downsampling_method='SWed')
 
 # Save
 np.save(output_root+'dFC_assessed/SUBJ_'+str(subj_id)+'_output.npy', SUBJ_output) 

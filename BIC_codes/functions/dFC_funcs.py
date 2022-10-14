@@ -1505,8 +1505,11 @@ class SIMILARITY_ASSESSMENT:
                         )
         return distance_mat
 
-    def assess_similarity(self, dFCM_lst, SWed=False, **param_dict):
-            
+    def assess_similarity(self, dFCM_lst, downsampling_method='default', **param_dict):
+        '''
+        downsampling_method: 'default' picks FCs at common_TRs 
+        while 'SWed' uses a sliding window to downsample
+        '''
         methods_assess = {}
 
         # sort dFCM_lst according to methods names
@@ -1525,7 +1528,7 @@ class SIMILARITY_ASSESSMENT:
         for dFCM in dFCM_lst:
             measure_lst.append(dFCM.measure)
             TS_info_lst.append(dFCM.TS_info)
-            if SWed:
+            if downsampling_method=='SWed':
                 dFC_mat_lst.append( \
                     dFCM.SWed_dFC_mat( \
                         W=param_dict['W'], \
@@ -1651,14 +1654,18 @@ class SIMILARITY_ASSESSMENT:
         ##############################################
         return methods_assess
 
-    def run(self, FILTERS, SWed=False):
+    def run(self, FILTERS, downsampling_method='default'):
+        '''
+        downsampling_method: 'default' picks FCs at common_TRs 
+        while 'SWed' uses a sliding window to downsample
+        '''
         output = {}
         for filter in FILTERS:
             param_dict = FILTERS[filter]
             dFCM_lst2check = filter_dFCM_lst(self.dFCM_lst, **param_dict)
             output[filter] = self.assess_similarity( \
                 dFCM_lst=dFCM_lst2check, \
-                SWed=SWed, \
+                downsampling_method=downsampling_method, \
                 **param_dict \
                 )
 
