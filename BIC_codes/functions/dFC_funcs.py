@@ -86,6 +86,45 @@ def filter_dFCM_lst(dFCM_lst, **param_dict):
             dFCM_lst2check.append(dFCM) 
     return dFCM_lst2check
 
+def SW_downsample(data, Fs, W, n_overlap, tapered_window=False):
+    '''
+    data = (n_time, ...)
+    the time samples will be picked after 
+    averaging over a window which slides
+    W is in sec
+    SWed_data = (n_time_new, ...)
+    '''
+
+    SWed_data = list()
+    L = data.shape[0]
+    # change W to timepoints
+    W = int(W * Fs) 
+    step = int((1-n_overlap)*W)
+    if step == 0:
+        step = 1
+
+    window_taper = signal.windows.gaussian(W, std=3*W/22)
+
+    TR_array = list()
+    for l in range(0, L-W+1, step):
+
+        ######### creating a rectangel window ############
+        window = np.zeros((L))
+        window[l:l+W] = 1
+        
+        ########### tapering the window ##############
+        if tapered_window:
+            window = signal.convolve(window, window_taper, mode='same') / sum(window_taper)
+
+        # int(l-W/2):int(l+3*W/2) is the nonzero interval after tapering
+        SWed_data.append(np.average(data, weights=window, axis=0))
+        
+        TR_array.append(int((l + (l+W)) / 2) )
+        
+    
+    SWed_data = np.array(SWed_data)
+    return SWed_data
+
 def mutual_information(X, Y, N_bins=100):
     """ Mutual information for joint histogram
     https://matthew-brett.github.io/teaching/mutual_information.html#:~:text=Mutual%20information%20is%20a%20measure,signal%20intensity%20in%20the%20first.
@@ -1704,6 +1743,7 @@ class dFC:
         self.TS_info_ = {}
         self.FCS_fit_time_ = None
         self.dFC_assess_time_ = None
+        self.logs_ = ''
 
     @property
     def FCS_fit_time(self):
@@ -1745,6 +1785,10 @@ class dFC:
     def info(self):
         return self.params
 
+    @property
+    def logs(self):
+        print(self.logs_)
+
     def issame(self, dFC):
         if type(self)==type(dFC):
             for param_name in self.params:
@@ -1771,6 +1815,33 @@ class dFC:
 
     def set_dFC_assess_time(self, time):
         self.dFC_assess_time_ = time
+
+    def set_mean_activity(self, time_series):
+        # mean activity of regions at each state
+        if self.is_state_based:
+            if 'sw_method' in self.params_name_lst:
+                SUBJECTs = time_series.subj_id_lst
+                TS_data = None
+                for subject in SUBJECTs:
+                    subj_TS = time_series.get_subj_ts(subjs_id=subject).data
+                    new_TS_data = SW_downsample(data=subj_TS.T, \
+                        Fs=time_series.Fs, W=self.params['W'], \
+                        n_overlap=self.params['n_overlap'], \
+                        tapered_window=self.params['tapered_window'] \
+                    ).T
+                    if TS_data is None:
+                        TS_data = new_TS_data
+                    else:
+                        TS_data = np.concatenate((TS_data, new_TS_data), axis=1)
+            else:
+                TS_data = time_series.data
+            mean_act = list()
+            for i in np.unique(self.Z):
+                ids = np.array([int(state==i) for state in self.Z])
+                mean_act.append(np.average(TS_data, weights=ids, axis=1))
+            self.mean_act = np.array(mean_act)
+        else:
+            self.mean_act = None
 
     def estimate_FCS(self, time_series=None):
         pass
@@ -1892,6 +1963,7 @@ class method_name(dFC):
 
     def __init__(self, **params):
         self.FCS_ = []
+        self.logs_ = ''
 
         self.params_name_lst = ['measure_name', 'is_state_based', 'n_states', \
             'normalization', 'num_subj', 'num_select_nodes', 'num_time_point', \
@@ -1921,6 +1993,11 @@ class method_name(dFC):
 
         # calc FCSs
 
+        # calc self.Z
+
+        # mean activation of states
+        self.set_mean_activity(time_series)
+
         # record time
         self.set_FCS_fit_time(time.time() - tic)
 
@@ -1930,6 +2007,9 @@ class method_name(dFC):
         
         assert type(time_series) is TIME_SERIES, \
             "time_series must be of TIME_SERIES class."
+
+        assert len(time_series.subj_id_lst)==1, \
+            'this function takes only one subject as input.'
 
         time_series = self.manipulate_time_series4dFC(time_series)
 
@@ -1967,7 +2047,9 @@ from sklearn.cluster import KMeans
 class CAP(dFC):
 
     def __init__(self, **params):
+        self.logs_ = ''
         self.FCS_ = []
+        self.mean_act = []
         self.FCS_fit_time_ = None
         self.dFC_assess_time_ = None
 
@@ -1995,7 +2077,6 @@ class CAP(dFC):
     def cluster_act_vec(self, act_vecs, n_clusters):
 
         kmeans_ = KMeans(n_clusters=n_clusters, n_init=500).fit(act_vecs)
-        Z = kmeans_.predict(act_vecs)
         act_centroids = kmeans_.cluster_centers_
 
         return act_centroids, kmeans_
@@ -2033,11 +2114,15 @@ class CAP(dFC):
             else:
                 act_center_1st_level = np.concatenate((act_center_1st_level, act_centroids), axis=0)
         
-        group_act_centroids, self.kmeans_ = self.cluster_act_vec( \
+        group_act_centroids, self.kmeans_= self.cluster_act_vec( \
             act_vecs=act_center_1st_level, \
             n_clusters = self.params['n_states'] \
             )
         self.FCS_ = self.act_vec2FCS(group_act_centroids)
+        self.Z = self.kmeans_.predict(time_series.data.T)
+
+        # mean activation of states
+        self.set_mean_activity(time_series)
 
         # record time
         self.set_FCS_fit_time(time.time() - tic)
@@ -2048,6 +2133,9 @@ class CAP(dFC):
         
         assert type(time_series) is TIME_SERIES, \
             "time_series must be of TIME_SERIES class."
+
+        assert len(time_series.subj_id_lst)==1, \
+            'this function takes only one subject as input.'
 
         time_series = self.manipulate_time_series4dFC(time_series)
 
@@ -2090,8 +2178,10 @@ from hmmlearn import hmm
 class HMM_CONT(dFC):
 
     def __init__(self, **params):
+        self.logs_ = ''
         self.TPM = []
         self.FCS_ = []
+        self.mean_act = []
         self.FCS_fit_time_ = None
         self.dFC_assess_time_ = None
 
@@ -2135,6 +2225,11 @@ class HMM_CONT(dFC):
         self.TPM = self.hmm_model.transmat_
         self.pi = self.hmm_model.startprob_
 
+        # mean activation of states
+        self.set_mean_activity(time_series)
+        print(self.mean_act.shape)
+        print(self.mean_act)
+
         # record time
         self.set_FCS_fit_time(time.time() - tic)
 
@@ -2144,6 +2239,9 @@ class HMM_CONT(dFC):
 
         assert type(time_series) is TIME_SERIES, \
             "time_series must be of TIME_SERIES class."
+        
+        assert len(time_series.subj_id_lst)==1, \
+            'this function takes only one subject as input.'
 
         time_series = self.manipulate_time_series4dFC(time_series)
 
@@ -2183,8 +2281,10 @@ from ksvd import ApproximateKSVD
 class WINDOWLESS(dFC):
 
     def __init__(self, **params):
+        self.logs_ = ''
         self.TPM = []
         self.FCS_ = []
+        self.mean_act = []
         self.FCS_fit_time_ = None
         self.dFC_assess_time_ = None
 
@@ -2223,8 +2323,11 @@ class WINDOWLESS(dFC):
             self.FCS_[i, :, :] = np.multiply(np.expand_dims(self.dictionary[i,:], axis=0).T, np.expand_dims(self.dictionary[i,:], axis=0))
 
         self.Z = list()
-        for i in range(time_series.n_time):
+        for i in range(self.gamma.shape[0]):
             self.Z.append(np.argwhere(self.gamma[i, :] != 0)[0,0])
+
+        # mean activation of states
+        self.set_mean_activity(time_series)
 
         # record time
         self.set_FCS_fit_time(time.time() - tic)
@@ -2235,6 +2338,9 @@ class WINDOWLESS(dFC):
         
         assert type(time_series) is TIME_SERIES, \
             "time_series must be of TIME_SERIES class."
+
+        assert len(time_series.subj_id_lst)==1, \
+            'this function takes only one subject as input.'
 
         time_series = self.manipulate_time_series4dFC(time_series)
 
@@ -2314,6 +2420,7 @@ class TIME_FREQ(dFC):
         assert TF_method in self.TF_methods_name_lst, \
             "Time-frequency method not recognized."
 
+        self.logs_ = ''
         self.TPM = []
         self.FCS_ = []
         self.FCS_fit_time_ = None
@@ -2387,6 +2494,8 @@ class TIME_FREQ(dFC):
         '''
         we assume calc is applied on subjects separately
         '''
+        assert len(time_series.subj_id_lst)==1, \
+            'this function takes only one subject as input.'
 
         # params
         J = 50 # -1
@@ -2451,7 +2560,7 @@ from sklearn.covariance import GraphicalLassoCV, graphical_lasso
 class SLIDING_WINDOW(dFC):
 
     def __init__(self, **params):
-
+        self.logs_ = ''
         self.TPM = []
         self.FCS_ = []
         self.FCS_fit_time_ = None
@@ -2566,7 +2675,9 @@ class SLIDING_WINDOW(dFC):
         '''
         we assume calc is applied on subjects separately
         '''
-        
+        assert len(time_series.subj_id_lst)==1, \
+            'this function takes only one subject as input.'
+
         assert type(time_series) is TIME_SERIES, \
             "time_series must be of TIME_SERIES class."
 
@@ -2624,9 +2735,10 @@ class SLIDING_WINDOW_CLUSTR(dFC):
         assert clstr_distance=='euclidean' or clstr_distance=='manhattan', \
             "Clustering distance not recognized. It must be either \
                 euclidean or manhattan."
-    
+        self.logs_ = ''
         self.TPM = []
         self.FCS_ = []
+        self.mean_act = []
         self.FCS_fit_time_ = None
         self.dFC_assess_time_ = None
 
@@ -2708,7 +2820,6 @@ class SLIDING_WINDOW_CLUSTR(dFC):
         else:
             ########### Euclidean Clustering ##############
             kmeans_ = KMeans(n_clusters=n_clusters, n_init=500).fit(F)
-            Z = kmeans_.predict(F)
             F_cent = kmeans_.cluster_centers_
 
         FCS_ = self.dFC_vec2mat(F_cent, N=n_regions)
@@ -2743,6 +2854,7 @@ class SLIDING_WINDOW_CLUSTR(dFC):
         # 2-level clustering
         SUBJECTs = time_series.subj_id_lst
         FCS_1st_level = None
+        SW_dFC = None
         for subject in SUBJECTs:
             
             dFCM_raw = base_dFC.estimate_dFCM( \
@@ -2761,6 +2873,11 @@ class SLIDING_WINDOW_CLUSTR(dFC):
                 n_clusters = self.params['n_subj_clstrs'], \
                 n_regions = dFCM_raw.n_regions \
                 )
+            
+            if SW_dFC is None:
+                SW_dFC = dFCM_raw.get_dFC_mat(TRs=dFCM_raw.TR_array)
+            else:
+                SW_dFC = np.concatenate((SW_dFC, dFCM_raw.get_dFC_mat(TRs=dFCM_raw.TR_array)), axis=0)
             if FCS_1st_level is None:
                 FCS_1st_level = FCS
             else:
@@ -2771,6 +2888,10 @@ class SLIDING_WINDOW_CLUSTR(dFC):
             n_clusters = self.params['n_states'], \
             n_regions = dFCM_raw.n_regions \
             )
+        self.Z = self.kmeans_.predict(self.dFC_mat2vec(SW_dFC))
+
+        # mean activation of states
+        self.set_mean_activity(time_series)
 
         # record time
         self.set_FCS_fit_time(time.time() - tic)
@@ -2781,6 +2902,9 @@ class SLIDING_WINDOW_CLUSTR(dFC):
         
         assert type(time_series) is TIME_SERIES, \
             "time_series must be of TIME_SERIES class."
+
+        assert len(time_series.subj_id_lst)==1, \
+            'this function takes only one subject as input.'
 
         time_series = self.manipulate_time_series4dFC(time_series)
 
@@ -2830,7 +2954,7 @@ Parameters
         (num of observations/n_state) of 16
     N : int
         (num of hidden states) of 24
-    self.FCC_ : 
+    self.FCC : 
         dFCM estimated by Clustering which is then used to fit Discrete HMM 
     self.FCS_ : 
         collection FCS pattern coded in numbers for Discrete HMM
@@ -2845,9 +2969,10 @@ from hmmlearn import hmm
 class HMM_DISC(dFC):
 
     def __init__(self, **params):
-            
+        self.logs_ = ''
         self.TPM = []
         self.FCS_ = []
+        self.mean_act = []
         self.swc = None
         self.FCS_fit_time_ = None
         self.dFC_assess_time_ = None
@@ -2889,35 +3014,46 @@ class HMM_DISC(dFC):
 
         self.swc = SLIDING_WINDOW_CLUSTR(**params)
         self.swc.estimate_FCS(time_series=time_series)
-        self.FCC_ = self.swc.estimate_dFCM(time_series=time_series)
+
+        SUBJECTs = time_series.subj_id_lst
+        SWC_dFC = None
+        Obs_seq = None
+        for subject in SUBJECTs:
+            new_dFCM = self.swc.estimate_dFCM(time_series=time_series.get_subj_ts(subjs_id=subject))
+            new_dFC_mat = new_dFCM.get_dFC_mat()
+            new_Obs = new_dFCM.FCS_idx_array.reshape(-1, 1)
+            if SWC_dFC is None:
+                SWC_dFC = new_dFC_mat
+                Obs_seq = new_Obs
+            else:
+                SWC_dFC = np.concatenate((SWC_dFC, new_dFC_mat), axis=0)
+                Obs_seq = np.concatenate((Obs_seq, new_Obs), axis=0)
 
         Models, Scores = [], []
         for i in range(self.params['hmm_iter']):
             model = hmm.MultinomialHMM(n_components=self.params['n_states'])
-            model.fit(self.FCC_.FCS_idx_array.reshape(-1, 1)) 
-            score = model.score(self.FCC_.FCS_idx_array.reshape(-1, 1))
+            model.fit(Obs_seq) 
+            score = model.score(Obs_seq)
             Models.append(model)
             Scores.append(score)
             
         self.hmm_model = Models[np.argmax(Scores)]
-        self.Z = self.hmm_model.predict(self.FCC_.FCS_idx_array.reshape(-1, 1))
+        self.Z = self.hmm_model.predict(Obs_seq)
         self.TPM = self.hmm_model.transmat_
         self.EPM = self.hmm_model.emissionprob_ 
 
-        # self.hmm_model = hmm.MultinomialHMM(n_components=self.params['n_states'])
-        # self.hmm_model.fit(self.FCC_.FCS_idx_array.reshape(-1, 1))
-
-        # self.Z = self.hmm_model.predict(self.FCC_.FCS_idx_array.reshape(-1, 1))
-        # self.TPM = self.hmm_model.transmat_
-        # self.EPM = self.hmm_model.emissionprob_ 
+        if len(np.unique(self.Z)) < self.params['n_states']:
+            self.logs_ += 'Less number of states were fitted than n_states. \n'
 
         self.FCS_ = np.zeros((self.params['n_states'], \
             time_series.n_regions, time_series.n_regions))
         for i in range(self.params['n_states']):
-            if len(np.argwhere(self.Z==i))>0:
-                self.FCS_[i,:,:] = np.mean(self.FCC_.get_dFC_mat(\
-                    TRs=self.FCC_.TR_array[np.squeeze(np.argwhere(self.Z==i))]\
-                        ), axis=0)  # III
+            ids = np.array([int(state==i) for state in self.Z])
+            if np.any(ids>0):
+                self.FCS_[i,:,:] = np.average(SWC_dFC, weights=ids, axis=0)
+
+        # mean activation of states
+        self.set_mean_activity(time_series)
 
         # record time
         self.set_FCS_fit_time(time.time() - tic)
@@ -2929,14 +3065,18 @@ class HMM_DISC(dFC):
         assert type(time_series) is TIME_SERIES, \
             "time_series must be of TIME_SERIES class."
 
+        assert len(time_series.subj_id_lst)==1, \
+            'this function takes only one subject as input.'
+
         time_series = self.manipulate_time_series4dFC(time_series)
 
         # start timing
         tic = time.time()
 
         FCC = self.swc.estimate_dFCM(time_series=time_series)
+        Obs_seq = FCC.FCS_idx_array.reshape(-1, 1)
 
-        Z = self.hmm_model.predict(FCC.FCS_idx_array.reshape(-1, 1))
+        Z = self.hmm_model.predict(Obs_seq)
 
         # record time
         self.set_dFC_assess_time(time.time() - tic)
@@ -3493,22 +3633,19 @@ class DFCM():
         else:
             return dFC_mat, TRs
 
-    def SWed_dFC_mat(self, W=None, n_overlap=None, tapered_window=False):
+    def SW_downsample(data, Fs, W, n_overlap, tapered_window=False):
         '''
+        data = (n_time, ...)
         the time samples will be picked after 
         averaging over a window which slides
         W is in sec
+        SWed_data = (n_time_new, ...)
         '''
-        dFC_mat = self.get_dFC_mat()
 
-        # method not applicable to SW-based methods
-        if 'sw_method' in self.measure.info:
-            return dFC_mat
-
-        dFC_mat_new = list()
-        L = self.n_time
+        SWed_data = list()
+        L = data.shape[0]
         # change W to timepoints
-        W = int(W * self.TS_info['Fs']) 
+        W = int(W * Fs) 
         step = int((1-n_overlap)*W)
         if step == 0:
             step = 1
@@ -3527,12 +3664,30 @@ class DFCM():
                 window = signal.convolve(window, window_taper, mode='same') / sum(window_taper)
 
             # int(l-W/2):int(l+3*W/2) is the nonzero interval after tapering
-            dFC_mat_new.append(np.average(dFC_mat, weights=window, axis=0))
+            SWed_data.append(np.average(data, weights=window, axis=0))
             
             TR_array.append(int((l + (l+W)) / 2) )
             
         
-        dFC_mat_new = np.array(dFC_mat_new)
+        SWed_data = np.array(SWed_data)
+        return SWed_data
+
+    def SWed_dFC_mat(self, W=None, n_overlap=None, tapered_window=False):
+        '''
+        the time samples will be picked after 
+        averaging over a window which slides
+        W is in sec
+        '''
+        dFC_mat = self.get_dFC_mat()
+
+        # method not applicable to SW-based methods
+        if 'sw_method' in self.measure.info:
+            return dFC_mat
+
+        dFC_mat_new = SW_downsample(data=dFC_mat, \
+            Fs=self.TS_info['Fs'], W=W, n_overlap=n_overlap, tapered_window=tapered_window \
+        )
+        
         return dFC_mat_new
 
 
