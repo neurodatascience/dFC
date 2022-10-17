@@ -1127,12 +1127,6 @@ class DFC_ANALYZER:
         self.analysis_name = analysis_name
         
         self.params = params
-        if not 'vis_TR_idx' in self.params:
-            self.params['vis_TR_idx'] = None
-        if not 'save_image' in self.params:
-            self.params['save_image'] = False
-        if not 'output_root' in self.params:
-            self.params['output_root'] = None
         if not 'n_jobs' in self.params:
             self.params['n_jobs'] = -1
         if not 'verbose' in self.params:

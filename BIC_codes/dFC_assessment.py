@@ -13,22 +13,23 @@ print('################################# subject-level dFC assessment CODE start
 ################################# Parameters #################################
 ###### DATA PARAMETERS ######
 
+input_root = './'
 output_root = './'
 
 ################################# LOAD #################################
 
-dFC_analyzer = np.load('./dFC_analyzer.npy',allow_pickle='TRUE').item()
-data_loader = np.load('./data_loader.npy',allow_pickle='TRUE').item()
+dFC_analyzer = np.load(input_root+'dFC_analyzer.npy',allow_pickle='TRUE').item()
+data_loader = np.load(input_root+'data_loader.npy',allow_pickle='TRUE').item()
 
 ################################# LOAD FIT MEASURES #################################
 
 if dFC_analyzer.MEASURES_fit_lst==[]:
-    ALL_RECORDS = os.listdir('./fitted_MEASURES/')
+    ALL_RECORDS = os.listdir(input_root+'fitted_MEASURES/')
     ALL_RECORDS = [i for i in ALL_RECORDS if 'MEASURE' in i]
     ALL_RECORDS.sort()
     MEASURES_fit_lst = list()
     for s in ALL_RECORDS:
-        fit_measure = np.load('./fitted_MEASURES/'+s,allow_pickle='TRUE').item()
+        fit_measure = np.load(input_root+'fitted_MEASURES/'+s,allow_pickle='TRUE').item()
         MEASURES_fit_lst.append(fit_measure)
     dFC_analyzer.set_MEASURES_fit_lst(MEASURES_fit_lst)
     print('fitted MEASURES loaded ...')

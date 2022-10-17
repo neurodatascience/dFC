@@ -14,9 +14,7 @@ print('################################# CODE started running ... ##############
 
 ###### DATA PARAMETERS ######
 
-output_root = './../../../../../RESULTs/methods_implementation/'
-# output_root = '/data/origami/dFC/RESULTs/methods_implementation/'
-# output_root = '/Users/mte/Documents/McGill/Project/dFC/RESULTs/methods_implementation/'
+output_root = './'
 
 # DATA_type is either 'sample' or 'Gordon' or 'simulated' or 'ICA'
 params_data_load = { \
@@ -89,8 +87,6 @@ alter_hparams = { \
 ###### dFC ANALYZER PARAMETERS ######
 
 params_dFC_analyzer = { \
-    # VISUALIZATION
-    'vis_TR_idx': list(range(10, 20, 1)),'save_image': True, 'output_root': output_root, \
     # Parallelization Parameters
     'n_jobs': None, 'verbose': 0, 'backend': 'loky' \
 }
@@ -146,8 +142,8 @@ else:
     print('Measurement required %0.3f seconds.' % (time.time() - tic, ))
 
     # Save
-    np.save('./fitted_MEASURES/MEASURE_'+str(MEASURE_id)+'.npy', measure) 
-    np.save('./dFC_analyzer.npy', dFC_analyzer) 
-    np.save('./data_loader.npy', data_loader) 
+    np.save(output_root+'fitted_MEASURES/MEASURE_'+str(MEASURE_id)+'.npy', measure) 
+    np.save(output_root+'dFC_analyzer.npy', dFC_analyzer) 
+    np.save(output_root+'data_loader.npy', data_loader) 
 
 #################################################################################
