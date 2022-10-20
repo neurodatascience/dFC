@@ -2257,8 +2257,6 @@ class HMM_CONT(dFC):
 
         # mean activation of states
         self.set_mean_activity(time_series)
-        print(self.mean_act.shape)
-        print(self.mean_act)
 
         # record time
         self.set_FCS_fit_time(time.time() - tic)
