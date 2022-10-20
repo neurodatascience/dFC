@@ -170,7 +170,7 @@ def normalized_euc_dist(x, y):
         return 0
     return 0.5*((np.linalg.norm((x-np.mean(x)) - (y-np.mean(y)))**2)/(np.linalg.norm(x-np.mean(x))**2 + np.linalg.norm(y-np.mean(y))**2))
 
-def calc_graph_propoerty(A, property):
+def calc_graph_propoerty(A, property, threshold=False, binarize=False):
     """
     calc_graph_propoerty: Computes Graph-based properties 
     of adjacency matrix A
@@ -190,26 +190,32 @@ def calc_graph_propoerty(A, property):
         graph-property (np.array): a vector
     """
     N_edges = 200 # number of edges to keep for shortest path computations
+    if property=='shortest_path' or property=='clustering_coef':
+        threshold==True
 
     G = nx.from_numpy_matrix(np.abs(A)) 
     G.remove_edges_from(nx.selfloop_edges(G))
     # G = G.to_undirected()
 
-    if property=='ECM':
-        graph_property = nx.eigenvector_centrality(G, weight='weight')
-        graph_property = [graph_property[node] for node in graph_property]
-        graph_property = np.array(graph_property)
-    if property=='shortest_path':
-
-        # pruning edges for faster computation
+    # pruning edges 
+    if threshold:
         labels = [d["weight"] for (u, v, d) in G.edges(data=True)]
         labels.sort()
         threshold = labels[-1*N_edges]
         ebunch = [(u, v) for u, v, d in G.edges(data=True) if d['weight']<threshold]
         G.remove_edges_from(ebunch)
 
-        SHORTEST_PATHS = dict(nx.shortest_path_length(G, weight='weight'))
+    if binarize:
+        weight='None'
+    else:
+        weight='weight'
 
+    if property=='ECM':
+        graph_property = nx.eigenvector_centrality(G, weight=weight)
+        graph_property = [graph_property[node] for node in graph_property]
+        graph_property = np.array(graph_property)
+    if property=='shortest_path':
+        SHORTEST_PATHS = dict(nx.shortest_path_length(G, weight=weight))
         graph_property = np.zeros((A.shape[0], A.shape[0]))
         for node_i in SHORTEST_PATHS:
             for node_j in SHORTEST_PATHS[node_i]:
@@ -217,15 +223,10 @@ def calc_graph_propoerty(A, property):
         graph_property = graph_property + graph_property.T
         graph_property = dFC_mat2vec(graph_property)
     if property=='degree':
-        graph_property = [G.degree(weight='weight')[node] for node in G]
+        graph_property = [G.degree(weight=weight)[node] for node in G]
         graph_property = np.array(graph_property)
     if property=='clustering_coef':
-        labels = [d["weight"] for (u, v, d) in G.edges(data=True)]
-        labels.sort()
-        threshold = labels[-1*N_edges]
-        ebunch = [(u, v) for u, v, d in G.edges(data=True) if d['weight']<threshold]
-        G.remove_edges_from(ebunch)
-        graph_property = nx.clustering(G, weight='weight')
+        graph_property = nx.clustering(G, weight=weight)
         graph_property = [graph_property[node] for node in graph_property]
         graph_property = np.array(graph_property)
 
@@ -1348,6 +1349,7 @@ class SIMILARITY_ASSESSMENT:
         '''
             analysis_name_lst = [ \
                 'subj_dFC_sim', \
+                'inter_time_similarity', \
                 'dFC_avg', \
                 'dFC_var', \
                 'dFC_distance', \
@@ -1384,6 +1386,31 @@ class SIMILARITY_ASSESSMENT:
                     sim_mat[i, j] = spearman_coef
                 else:
                     sim_mat[i, j] = mutual_information(X=dFC_vec_i, Y=dFC_vec_j, N_bins=100)
+                sim_mat[j, i] = sim_mat[i, j]
+
+        return sim_mat
+
+    def inter_time_similarity(self, dFC_mat_lst):
+
+        sim_mat = np.zeros((len(dFC_mat_lst), len(dFC_mat_lst)))
+        for i in range(len(dFC_mat_lst)):
+            for j in range(i, len(dFC_mat_lst)):
+
+                dFC_mat_i = dFC_mat_lst[i]
+                dFC_mat_j = dFC_mat_lst[j]
+
+                features_i = dFC_mat2vec(dFC_mat_i)
+                features_j = dFC_mat2vec(dFC_mat_j)
+
+                inter_time_corr_i = np.corrcoef(features_i)
+                inter_time_corr_j = np.corrcoef(features_j)
+                
+                inter_time_corr_i = dFC_mat2vec(inter_time_corr_i)
+                inter_time_corr_j = dFC_mat2vec(inter_time_corr_j)
+
+                spear_coef, p_value = stats.spearmanr(inter_time_corr_i, inter_time_corr_j)
+
+                sim_mat[i, j] = spear_coef
                 sim_mat[j, i] = sim_mat[i, j]
 
         return sim_mat
@@ -1601,21 +1628,30 @@ class SIMILARITY_ASSESSMENT:
         if 'subj_dFC_sim' in self.analysis_name_lst:
             subj_dFC_sim['MI'] = self.subj_lvl_dFC_similarity(
                                     dFC_mat_lst, 
-                                    metric='MI', 
-                                    common_TRs=common_TRs
+                                    metric='MI'
                                 )
             subj_dFC_sim['corr'] = self.subj_lvl_dFC_similarity(
                                     dFC_mat_lst, 
-                                    metric='corr', 
-                                    common_TRs=common_TRs
+                                    metric='corr'
                                 )
             subj_dFC_sim['spearman'] = self.subj_lvl_dFC_similarity(
                                     dFC_mat_lst, 
-                                    metric='spearman', 
-                                    common_TRs=common_TRs
+                                    metric='spearman'
                                 )
         
         methods_assess['subj_dFC_sim'] = subj_dFC_sim
+
+        ########## inter_time_sim ##########
+        # returns correspondence of inter-time relation between results of dFC 
+        # measures in each subject
+
+        inter_time_sim = {}
+        if 'inter_time_similarity' in self.analysis_name_lst:
+            inter_time_sim = self.inter_time_similarity(
+                                    dFC_mat_lst, 
+                                )
+        
+        methods_assess['inter_time_similarity'] = inter_time_sim
 
         ########## dFC temporal average and variance ##########
 

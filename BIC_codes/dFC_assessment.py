@@ -58,6 +58,7 @@ print('Measurement required %0.3f seconds.' % (time.time() - tic, ))
 
 analysis_name_lst = [ \
     'subj_dFC_sim', \
+    'inter_time_similarity', \
     'dFC_avg', \
     'dFC_var', \
     'dFC_distance', \
