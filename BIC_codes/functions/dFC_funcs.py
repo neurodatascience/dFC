@@ -1382,8 +1382,11 @@ class SIMILARITY_ASSESSMENT:
                     else:
                         sim_mat[i, j] = np.corrcoef(dFC_vec_i, dFC_vec_j)[0,1]
                 elif metric=='spearman':
-                    spearman_coef, p = stats.spearmanr(dFC_vec_i, dFC_vec_j)
-                    sim_mat[i, j] = spearman_coef
+                    if np.var(dFC_vec_i)==0 or np.var(dFC_vec_j)==0:
+                        sim_mat[i, j] = 0
+                    else:
+                        spearman_coef, p = stats.spearmanr(dFC_vec_i, dFC_vec_j)
+                        sim_mat[i, j] = spearman_coef
                 else:
                     sim_mat[i, j] = mutual_information(X=dFC_vec_i, Y=dFC_vec_j, N_bins=100)
                 sim_mat[j, i] = sim_mat[i, j]
@@ -1404,11 +1407,17 @@ class SIMILARITY_ASSESSMENT:
 
                 inter_time_corr_i = np.corrcoef(features_i)
                 inter_time_corr_j = np.corrcoef(features_j)
+
+                inter_time_corr_i = np.nan_to_num(inter_time_corr_i)
+                inter_time_corr_j = np.nan_to_num(inter_time_corr_j)
                 
                 inter_time_corr_i = dFC_mat2vec(inter_time_corr_i)
                 inter_time_corr_j = dFC_mat2vec(inter_time_corr_j)
 
-                spear_coef, p_value = stats.spearmanr(inter_time_corr_i, inter_time_corr_j)
+                if np.var(inter_time_corr_i)==0 or np.var(inter_time_corr_j)==0:
+                    spear_coef = 0
+                else:
+                    spear_coef, p_value = stats.spearmanr(inter_time_corr_i, inter_time_corr_j)
 
                 sim_mat[i, j] = spear_coef
                 sim_mat[j, i] = sim_mat[i, j]
@@ -1532,17 +1541,26 @@ class SIMILARITY_ASSESSMENT:
             if metric=='correlation':
                 FC_vec_i = dFC_mat2vec(FC_i)
                 FC_vec_j = dFC_mat2vec(FC_j)
-                distance_out.append(distance.correlation(FC_vec_i, FC_vec_j))
+                if np.var(FC_vec_i)==0 or np.var(FC_vec_j)==0:
+                    distance_out.append(0)
+                else:
+                    distance_out.append(distance.correlation(FC_vec_i, FC_vec_j))
 
             if metric=='euclidean':
                 FC_vec_i = dFC_mat2vec(FC_i)
                 FC_vec_j = dFC_mat2vec(FC_j)
-                distance_out.append(distance.euclidean(FC_vec_i, FC_vec_j))
+                if np.var(FC_vec_i)==0 or np.var(FC_vec_j)==0:
+                    distance_out.append(0)
+                else:
+                    distance_out.append(distance.euclidean(FC_vec_i, FC_vec_j))
 
             if metric=='ECM' or metric=='degree' or metric=='shortest_path' or metric=='clustering_coef':
                 graph_prop_i = calc_graph_propoerty(FC_i, property=metric)
                 graph_prop_j = calc_graph_propoerty(FC_j, property=metric)
-                distance_out.append(distance.correlation(graph_prop_i, graph_prop_j))
+                if np.var(graph_prop_i)==0 or np.var(graph_prop_j)==0:
+                    distance_out.append(0)
+                else:
+                    distance_out.append(distance.correlation(graph_prop_i, graph_prop_j))
 
         return np.array(distance_out)
 
