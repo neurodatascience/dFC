@@ -1673,11 +1673,9 @@ class SIMILARITY_ASSESSMENT:
                                                 )
         # ########## dFC temporal average and variance ##########
 
-        # dFC_avg_lst = self.dFC_avg(dFC_mat_lst)
-        # methods_assess['dFC_avg'] = dFC_avg_lst
+        methods_assess['dFC_avg'] = [self.feature_dFC_avg(dFC_mat) for dFC_mat in dFC_mat_lst]
 
-        # dFC_var_lst = self.dFC_var(dFC_mat_lst)
-        # methods_assess['dFC_var'] = dFC_var_lst
+        methods_assess['dFC_var'] = [self.feature_dFC_var(dFC_mat) for dFC_mat in dFC_mat_lst]
         
         ########## Fractional Occupancy ##########
 
