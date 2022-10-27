@@ -56,7 +56,7 @@ for filter in ['default_values']:
             TRs = SUBJs_output[filter]['common_TRs'][:10]
             samples = {}
             for tr in TRs:
-                samples['TR'+str(tr)] = SUBJs_output[filter]['dFCM_samples'][measure_id]['TR'+str(tr)]
+                samples['TR'+str(tr)] = SUBJs_output[filter]['dFCM_samples'][measure_id][SUBJs_output[filter]['common_TRs'].index(tr), :, :]
             visualize_conn_mat_dict(samples, node_networks=node_networks, 
                 title=SUBJs_output[filter]['measure_lst'][int(measure_id)].measure_name+'_'+filter, 
                 normalize=True, fix_lim=False, 
@@ -194,10 +194,7 @@ for filter in FILTERS:
         features_i = list()
         for i, measure_i in enumerate(SUBJs_output[filter]['measure_lst']):
 
-            dFC_mat_i = []
-            for TR in SUBJs_output[filter]['dFCM_samples'][str(i)]:
-                dFC_mat_i.append(SUBJs_output[filter]['dFCM_samples'][str(i)][TR])
-            dFC_mat_i = np.array(dFC_mat_i)
+            dFC_mat_i = SUBJs_output[filter]['dFCM_samples'][str(i)]
 
             # rank normalization
             dFC_mat_i = rank_norm(dFC_mat_i) 

@@ -56,17 +56,7 @@ print('Measurement required %0.3f seconds.' % (time.time() - tic, ))
 
 ################################# POST ANALYSIS #################################
 
-analysis_name_lst = [ \
-    'subj_dFC_sim', \
-    'inter_time_similarity', \
-    'dFC_avg', \
-    'dFC_var', \
-    'dFC_distance', \
-    'FO', \
-    'trans_freq' \
-    ]
-
-similarity_assessment = SIMILARITY_ASSESSMENT(dFCM_lst=dFCM_dict['dFCM_lst'], analysis_name_lst=analysis_name_lst)
+similarity_assessment = SIMILARITY_ASSESSMENT(dFCM_lst=dFCM_dict['dFCM_lst'])
 SUBJ_output = similarity_assessment.run(FILTERS=dFC_analyzer.hyper_param_info, downsampling_method='SWed')
 
 # Save

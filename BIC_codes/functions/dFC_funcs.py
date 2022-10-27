@@ -6,7 +6,7 @@ Created on Sun Jun 13 22:34:49 2021
 @author: mte
 """
 
-from tkinter import N
+# from tkinter import N
 import numpy as np
 from scipy import signal
 import scipy.spatial.distance as ssd
@@ -22,7 +22,7 @@ import os
 import time
 import hdf5storage
 import scipy.io as sio
-from sklearn.preprocessing import power_transform
+# np.seterr(invalid='ignore')
 
 # ########## bundled brain graph visualizer ##########
 
@@ -1345,89 +1345,15 @@ class DFC_ANALYZER:
 
 class SIMILARITY_ASSESSMENT:
 
-    def __init__(self, dFCM_lst, analysis_name_lst):
-        '''
-            analysis_name_lst = [ \
-                'subj_dFC_sim', \
-                'inter_time_similarity', \
-                'dFC_avg', \
-                'dFC_var', \
-                'dFC_distance', \
-                'FO', \
-                'trans_freq' \
-                ]
-            '''
-        self.analysis_name_lst = analysis_name_lst
+    def __init__(self, dFCM_lst):
         self.dFCM_lst = dFCM_lst
 
-    ##################### dFC CHARACTERISTICS ######################
-
-    def subj_lvl_dFC_similarity(self, dFC_mat_lst, metric='MI'):
-        # computes correlation/MI similarity over all dFCs of a subject 
-        # metric can be 'MI' or 'corr' or 'spearman'
-
-        sim_mat = np.zeros((len(dFC_mat_lst), len(dFC_mat_lst)))
-        for i in range(len(dFC_mat_lst)):
-            for j in range(i, len(dFC_mat_lst)):
-
-                dFC_mat_i = dFC_mat_lst[i]
-                dFC_mat_j = dFC_mat_lst[j]
-
-                dFC_vec_i = dFC_mat2vec(dFC_mat_i).flatten()
-                dFC_vec_j = dFC_mat2vec(dFC_mat_j).flatten()
-
-                if metric=='corr':
-                    if np.var(dFC_vec_i)==0 or np.var(dFC_vec_j)==0:
-                        sim_mat[i, j] = 0
-                    else:
-                        sim_mat[i, j] = np.corrcoef(dFC_vec_i, dFC_vec_j)[0,1]
-                elif metric=='spearman':
-                    if np.var(dFC_vec_i)==0 or np.var(dFC_vec_j)==0:
-                        sim_mat[i, j] = 0
-                    else:
-                        spearman_coef, p = stats.spearmanr(dFC_vec_i, dFC_vec_j)
-                        sim_mat[i, j] = spearman_coef
-                else:
-                    sim_mat[i, j] = mutual_information(X=dFC_vec_i, Y=dFC_vec_j, N_bins=100)
-                sim_mat[j, i] = sim_mat[i, j]
-
-        return sim_mat
-
-    def inter_time_similarity(self, dFC_mat_lst):
-
-        sim_mat = np.zeros((len(dFC_mat_lst), len(dFC_mat_lst)))
-        for i in range(len(dFC_mat_lst)):
-            for j in range(i, len(dFC_mat_lst)):
-
-                dFC_mat_i = dFC_mat_lst[i]
-                dFC_mat_j = dFC_mat_lst[j]
-
-                features_i = dFC_mat2vec(dFC_mat_i)
-                features_j = dFC_mat2vec(dFC_mat_j)
-
-                inter_time_corr_i = np.corrcoef(features_i)
-                inter_time_corr_j = np.corrcoef(features_j)
-
-                inter_time_corr_i = np.nan_to_num(inter_time_corr_i)
-                inter_time_corr_j = np.nan_to_num(inter_time_corr_j)
-                
-                inter_time_corr_i = dFC_mat2vec(inter_time_corr_i)
-                inter_time_corr_j = dFC_mat2vec(inter_time_corr_j)
-
-                if np.var(inter_time_corr_i)==0 or np.var(inter_time_corr_j)==0:
-                    spear_coef = 0
-                else:
-                    spear_coef, p_value = stats.spearmanr(inter_time_corr_i, inter_time_corr_j)
-
-                sim_mat[i, j] = spear_coef
-                sim_mat[j, i] = sim_mat[i, j]
-
-        return sim_mat
+    ##################### dFC FEATURES ######################
 
     def FO_calc(self, dFCM_lst, common_TRs=None):
 
         # returns, for each state the Fractional Occupancy (FO)
-        # see Visaure et al., 2017
+        # see Vidaurre et al., 2017
         # it only considers TRs in common_TRs
 
         if common_TRs is None:
@@ -1448,22 +1374,6 @@ class SIMILARITY_ASSESSMENT:
             FO_list.append(FO)
 
         return FO_list
-
-    def dFC_avg(self, dFC_mat_lst):
-        
-        dFC_avg_lst = list()
-        for i, dFC_mat_i in enumerate(dFC_mat_lst):
-            dFC_avg_lst.append(np.mean(dFC_mat_i, axis=0))
-            
-        return dFC_avg_lst
-
-    def dFC_var(self, dFC_mat_lst):
-        
-        dFC_var_lst = list()
-        for i, dFC_mat_i in enumerate(dFC_mat_lst):
-            dFC_var_lst.append(np.var(dFC_mat_i, axis=0))
-            
-        return dFC_var_lst
 
     def transition_freq(self, dFCM_lst, common_TRs=None):
         # returns the number of total state transition within common_TRs -> trans_freq
@@ -1510,78 +1420,127 @@ class SIMILARITY_ASSESSMENT:
 
         return trans_freq_lst 
 
-    def dFC_distance(self, FC_t_i, FC_t_j, metric, normalize=True):
+    def feature_all(self, dFC_mat):
+        vectorized_dFC = dFC_mat2vec(dFC_mat).flatten() # (time*connection, )
+        vectorized_dFC = np.expand_dims(vectorized_dFC, axis=0) # (1, time*connection)
+        return vectorized_dFC
+
+    def feature_spatial(self, dFC_mat):
+        conn_over_time = dFC_mat2vec(dFC_mat) # (time, connection)
+        return conn_over_time
+
+    def feature_temporal(self, dFC_mat):
+        conn_over_time = dFC_mat2vec(dFC_mat) # (time, connection)
+        time_over_conn = conn_over_time.T # (connection, time)
+        return time_over_conn
+
+    def feature_inter_time_corr(self, dFC_mat):
         '''
-        FC_t_i and FC_t_j must be an 
-        array of FC matrices = (n_time, n_regions, n_regions)
-        metric options: correlation, euclidean, or graph properties
-        ECM (Eigenvector Centrality Mapping), degree, shortest_path, clustering_coef
-        normalize option is by ranking values (same concept as spearman correlation).
+        returns correspondence of inter-time relation between results of dFC 
+        measures in each subject
         '''
-        assert len(FC_t_i)==len(FC_t_j),\
-            'the inputs must of the same number of samples'
+        conn_over_time = dFC_mat2vec(dFC_mat) # (time, connection)
+        inter_time_corr = np.corrcoef(conn_over_time) # (time, time)
+        inter_time_corr = np.nan_to_num(inter_time_corr)
+        inter_time_corr = dFC_mat2vec(inter_time_corr) # (time*(time-1)/2, )
+        inter_time_corr = np.expand_dims(inter_time_corr, axis=0) # (1, time*(time-1)/2)
+        return inter_time_corr
 
-        distance_out = list()
-        for t in range(FC_t_i.shape[0]):
+    def feature_inter_conn_corr(self, dFC_mat):
+        conn_over_time = dFC_mat2vec(dFC_mat) # (time, connection)
+        time_over_conn = conn_over_time.T # (connection, time)
+        inter_conn_corr = np.corrcoef(time_over_conn) # (connection, connection)
+        inter_conn_corr = np.nan_to_num(inter_conn_corr)
+        inter_conn_corr = dFC_mat2vec(inter_conn_corr) # (connection*(connection-1)/2, )
+        inter_conn_corr = np.expand_dims(inter_conn_corr, axis=0) # (1, connection*(connection-1)/2)
+        return inter_conn_corr
 
-            assert len(FC_t_i[t].shape)==2 and len(FC_t_j[t].shape)==2,\
-                'incorrect dimensions'
-            assert FC_t_i[t].shape[0]==FC_t_i[t].shape[1],\
-                'Matrices are not square'
-            assert FC_t_j[t].shape[0]==FC_t_j[t].shape[1],\
-                'Matrices are not square'
+    def feature_dFC_avg(self, dFC_mat):
+        dFC_avg = np.mean(dFC_mat, axis=0) # (ROI, ROI)
+        vectorized_dFC_avg = dFC_mat2vec(dFC_avg) # (connection, )
+        vectorized_dFC_avg = np.expand_dims(vectorized_dFC_avg, axis=0) # (1, connection)
+        return vectorized_dFC_avg
 
-            FC_i = FC_t_i[t]
-            FC_j = FC_t_j[t]
+    def feature_dFC_var(self, dFC_mat):
+        dFC_var = np.var(dFC_mat, axis=0) # (ROI, ROI)
+        vectorized_dFC_var = dFC_mat2vec(dFC_var) # (connection, )
+        vectorized_dFC_var = np.expand_dims(vectorized_dFC_var, axis=0) # (1, connection)
+        return vectorized_dFC_var
 
-            if normalize:
-                FC_i = rank_norm(FC_i)
-                FC_j = rank_norm(FC_j)
+    def feature_graph_spatial(self, dFC_mat, graph_property):
+        pass
 
-            if metric=='correlation':
-                FC_vec_i = dFC_mat2vec(FC_i)
-                FC_vec_j = dFC_mat2vec(FC_j)
-                if np.var(FC_vec_i)==0 or np.var(FC_vec_j)==0:
-                    distance_out.append(0)
-                else:
-                    distance_out.append(distance.correlation(FC_vec_i, FC_vec_j))
+    def feature_graph_temporal(self, dFC_mat, graph_property):
+        pass
 
-            if metric=='euclidean':
-                FC_vec_i = dFC_mat2vec(FC_i)
-                FC_vec_j = dFC_mat2vec(FC_j)
-                if np.var(FC_vec_i)==0 or np.var(FC_vec_j)==0:
-                    distance_out.append(0)
-                else:
-                    distance_out.append(distance.euclidean(FC_vec_i, FC_vec_j))
+    def extract_feature(self, dFC_mat, feature2extract, graph_property=None):
+        '''
+        feature2extract_list = [
+            'all', 
+            'spatial', 'temporal', 
+            'inter_time_corr', 'inter_conn_corr', 
+            'dFC_avg', 'dFC_var', 
+            'graph_spatial', 'graph_temporal'
+        ]
+        '''
+        feature = None
+        if feature2extract=='all':
+            feature = self.feature_all(dFC_mat)
+        if feature2extract=='spatial':
+            feature = self.feature_spatial(dFC_mat)
+        if feature2extract=='temporal':
+            feature = self.feature_temporal(dFC_mat)
+        if feature2extract=='inter_time_corr':
+            feature = self.feature_inter_time_corr(dFC_mat)
+        if feature2extract=='inter_conn_corr':
+            feature = self.feature_inter_conn_corr(dFC_mat)
+        if feature2extract=='dFC_avg':
+            feature = self.feature_dFC_avg(dFC_mat)
+        if feature2extract=='dFC_var':
+            feature = self.feature_dFC_var(dFC_mat)
+        if feature2extract=='graph_spatial':
+            feature = self.feature_graph_spatial(dFC_mat, graph_property=graph_property)
+        if feature2extract=='graph_temporal':
+            feature = self.feature_graph_temporal(dFC_mat, graph_property=graph_property)
 
-            if metric=='ECM' or metric=='degree' or metric=='shortest_path' or metric=='clustering_coef':
-                graph_prop_i = calc_graph_propoerty(FC_i, property=metric)
-                graph_prop_j = calc_graph_propoerty(FC_j, property=metric)
-                if np.var(graph_prop_i)==0 or np.var(graph_prop_j)==0:
-                    distance_out.append(0)
-                else:
-                    distance_out.append(distance.correlation(graph_prop_i, graph_prop_j))
+        return feature
 
-        return np.array(distance_out)
-
-    # #regression
-        # y = dFC_vec_j[t]
-        # xx = FCS_vecs_new_order
-        # reg = LinearRegression().fit(xx.T, y.T)
-        # reg_dist.append(reg.coef_)
-
-    def dFCM_lst_distance(self, dFC_mat_lst, metric, normalize=True):
+    def dFC_mat_lst_similarity(self, dFC_mat_lst, feature2extract, metric, graph_property=None):
         
-        distance_mat = np.zeros((dFC_mat_lst[0].shape[0], len(dFC_mat_lst), len(dFC_mat_lst)))
+        sim_mat_over_sample = None
         for i, dFC_mat_i in enumerate(dFC_mat_lst):
             for j, dFC_mat_j in enumerate(dFC_mat_lst):
-                distance_mat[:, i, j] = self.dFC_distance(\
-                    FC_t_i=dFC_mat_i, \
-                    FC_t_j=dFC_mat_j, \
-                    metric=metric, \
-                    normalize=normalize\
-                        )
-        return distance_mat
+
+                if j<=i:
+                    continue
+
+                assert dFC_mat_i.shape==dFC_mat_j.shape,\
+                    'shape mismatch'
+
+                feature_i = self.extract_feature(dFC_mat_i, feature2extract=feature2extract, graph_property=graph_property) # (samples, variables)
+                feature_j = self.extract_feature(dFC_mat_j, feature2extract=feature2extract, graph_property=graph_property) # (samples, variables)
+
+                sim_over_sample = list()
+                for sample in range(feature_i.shape[0]):
+                    if np.var(feature_i[sample, :])==0 or np.var(feature_j[sample, :])==0:
+                        sim = 0
+                    else:
+                        if metric=='corr':
+                            sim = np.corrcoef(feature_i[sample, :], feature_j[sample, :])[0,1]
+                        elif metric=='spearman':
+                            spearman_coef, p = stats.spearmanr(feature_i[sample, :], feature_j[sample, :])
+                            sim = spearman_coef
+                        elif metric=='MI':
+                            sim = mutual_information(X=feature_i[sample, :], Y=feature_j[sample, :], N_bins=100)
+                    sim_over_sample.append(sim)
+                
+                if sim_mat_over_sample is None:
+                    sim_mat_over_sample = np.zeros((len(sim_over_sample), len(dFC_mat_lst), len(dFC_mat_lst)))
+
+                sim_mat_over_sample[:, i, j] = np.array(sim_over_sample)
+                sim_mat_over_sample[:, j, i] = sim_mat_over_sample[:, i, j]
+
+        return sim_mat_over_sample
 
     def assess_similarity(self, dFCM_lst, downsampling_method='default', **param_dict):
         '''
@@ -1639,102 +1598,75 @@ class SIMILARITY_ASSESSMENT:
         methods_assess['time_record_dict'] = time_record_dict
 
         ########## subj_dFC_sim ##########
-        # returns correlation/MI between results of dFC 
-        # measures over a whole subject
+        # returns correlation/MI/spearman corr between results of dFC 
+        # measures in a subject
+        feature2extract_list = [
+            # 'all', 
+            'spatial', 'temporal', 
+            'inter_time_corr', 'inter_conn_corr', 
+            'dFC_avg', 'dFC_var', 
+            # 'graph_spatial', 'graph_temporal'
+        ]
+        metric_list = [
+            'corr',
+            'spearman',
+            'MI'
+        ]
+        graph_property_list = [
+            'ECM',
+            'shortest_path',
+            'degree',
+            'clustering_coef'
+        ]
+        methods_assess['all'] = {}
+        for metric in metric_list:
+            methods_assess['all'][metric] = self.dFC_mat_lst_similarity(
+                                                dFC_mat_lst, 
+                                                feature2extract='all', 
+                                                metric=metric
+                                                )
+        methods_assess['feature_based'] = {}
+        for feature2extract in feature2extract_list:
+            methods_assess['feature_based'][feature2extract] = self.dFC_mat_lst_similarity(
+                                                dFC_mat_lst, 
+                                                feature2extract=feature2extract, 
+                                                metric='spearman'
+                                                )
+        methods_assess['graph_based'] = {}
+        methods_assess['graph_based']['graph_spatial'] = {}
+        methods_assess['graph_based']['graph_temporal'] = {}
+        for graph_property in graph_property_list:
+            methods_assess['graph_based']['graph_spatial'][graph_property] = self.dFC_mat_lst_similarity(
+                                                dFC_mat_lst, 
+                                                feature2extract='graph_spatial', 
+                                                metric='spearman',
+                                                graph_property=graph_property
+                                                )
+            methods_assess['graph_based']['graph_temporal'][graph_property] = self.dFC_mat_lst_similarity(
+                                                dFC_mat_lst, 
+                                                feature2extract='graph_temporal', 
+                                                metric='spearman',
+                                                graph_property=graph_property
+                                                )
+        # ########## dFC temporal average and variance ##########
 
-        subj_dFC_sim = {}
-        if 'subj_dFC_sim' in self.analysis_name_lst:
-            subj_dFC_sim['MI'] = self.subj_lvl_dFC_similarity(
-                                    dFC_mat_lst, 
-                                    metric='MI'
-                                )
-            subj_dFC_sim['corr'] = self.subj_lvl_dFC_similarity(
-                                    dFC_mat_lst, 
-                                    metric='corr'
-                                )
-            subj_dFC_sim['spearman'] = self.subj_lvl_dFC_similarity(
-                                    dFC_mat_lst, 
-                                    metric='spearman'
-                                )
+        # dFC_avg_lst = self.dFC_avg(dFC_mat_lst)
+        # methods_assess['dFC_avg'] = dFC_avg_lst
+
+        # dFC_var_lst = self.dFC_var(dFC_mat_lst)
+        # methods_assess['dFC_var'] = dFC_var_lst
         
-        methods_assess['subj_dFC_sim'] = subj_dFC_sim
-
-        ########## inter_time_sim ##########
-        # returns correspondence of inter-time relation between results of dFC 
-        # measures in each subject
-
-        inter_time_sim = {}
-        if 'inter_time_similarity' in self.analysis_name_lst:
-            inter_time_sim = self.inter_time_similarity(
-                                    dFC_mat_lst, 
-                                )
-        
-        methods_assess['inter_time_similarity'] = inter_time_sim
-
-        ########## dFC temporal average and variance ##########
-
-        dFC_avg_lst = []
-        if 'dFC_avg' in self.analysis_name_lst:
-            dFC_avg_lst = self.dFC_avg(dFC_mat_lst)
-        methods_assess['dFC_avg'] = dFC_avg_lst
-
-        dFC_var_lst = []
-        if 'dFC_var' in self.analysis_name_lst:
-            dFC_var_lst = self.dFC_var(dFC_mat_lst)
-        methods_assess['dFC_var'] = dFC_var_lst
-        
-        ########## distance calc ##########
-
-        dFC_distance = {}
-        if 'dFC_distance' in self.analysis_name_lst:
-            dFC_distance['euclidean'] = self.dFCM_lst_distance(\
-                dFC_mat_lst, \
-                metric='euclidean', \
-                normalize=True \
-                )
-            dFC_distance['correlation'] = self.dFCM_lst_distance(\
-                dFC_mat_lst, \
-                metric='correlation', \
-                normalize=True \
-                )
-            dFC_distance['ECM'] = self.dFCM_lst_distance(\
-                dFC_mat_lst, \
-                metric='ECM', \
-                normalize=True \
-                )
-            dFC_distance['degree'] = self.dFCM_lst_distance(\
-                dFC_mat_lst, \
-                metric='degree', \
-                normalize=True \
-                )
-            dFC_distance['shortest_path'] = self.dFCM_lst_distance(\
-                dFC_mat_lst, \
-                metric='shortest_path', \
-                normalize=True \
-                )
-            dFC_distance['clustering_coef'] = self.dFCM_lst_distance(\
-                dFC_mat_lst, \
-                metric='clustering_coef', \
-                normalize=True \
-                )
-        
-        methods_assess['dFC_distance'] = dFC_distance
-
         ########## Fractional Occupancy ##########
 
-        FO_lst = []
-        if 'FO' in self.analysis_name_lst:
-            FO_lst = self.FO_calc(dFCM_lst, \
-                common_TRs=common_TRs \
-                )
+        FO_lst = self.FO_calc(dFCM_lst, \
+            common_TRs=common_TRs \
+            )
         methods_assess['FO'] = FO_lst
 
         ########## transition frequency ##########
 
-        trans_freq_lst = []
-        if 'trans_freq' in self.analysis_name_lst:
-            trans_freq_lst = self.transition_freq(dFCM_lst, \
-                common_TRs=common_TRs \
+        trans_freq_lst = self.transition_freq(dFCM_lst, \
+            common_TRs=common_TRs \
                 )
         methods_assess['trans_freq'] = trans_freq_lst
                 
