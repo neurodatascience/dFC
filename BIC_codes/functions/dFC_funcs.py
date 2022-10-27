@@ -1468,10 +1468,23 @@ class SIMILARITY_ASSESSMENT:
         return vectorized_dFC_var
 
     def feature_graph_spatial(self, dFC_mat, graph_property):
-        pass
+        graph_feature_over_time = list()
+        for FC_mat in dFC_mat:
+            graph_feature = calc_graph_propoerty(FC_mat, property=graph_property, threshold=False, binarize=False)
+            graph_feature_over_time.append(graph_feature)
+        graph_feature_over_time = np.array(graph_feature_over_time) # (time, ROI)
+        return graph_feature_over_time
 
     def feature_graph_temporal(self, dFC_mat, graph_property):
-        pass
+        graph_feature_over_time = list()
+        for FC_mat in dFC_mat:
+            graph_feature = calc_graph_propoerty(FC_mat, property=graph_property, threshold=False, binarize=False)
+            graph_feature_over_time.append(graph_feature)
+        graph_feature_over_time = np.array(graph_feature_over_time) # (time, ROI)
+        graph_feature_over_node = graph_feature_over_time.T # (ROI, time)
+        graph_feature_avg = np.mean(graph_feature_over_node, axis=0) # (time, )
+        graph_feature_avg = np.expand_dims(graph_feature_avg, axis=0) # (1, time)
+        return graph_feature_avg
 
     def extract_feature(self, dFC_mat, feature2extract, graph_property=None):
         '''
@@ -1517,8 +1530,16 @@ class SIMILARITY_ASSESSMENT:
                 assert dFC_mat_i.shape==dFC_mat_j.shape,\
                     'shape mismatch'
 
-                feature_i = self.extract_feature(dFC_mat_i, feature2extract=feature2extract, graph_property=graph_property) # (samples, variables)
-                feature_j = self.extract_feature(dFC_mat_j, feature2extract=feature2extract, graph_property=graph_property) # (samples, variables)
+                feature_i = self.extract_feature(
+                    dFC_mat_i, 
+                    feature2extract=feature2extract, 
+                    graph_property=graph_property
+                ) # (samples, variables)
+                feature_j = self.extract_feature(
+                    dFC_mat_j, 
+                    feature2extract=feature2extract, 
+                    graph_property=graph_property
+                ) # (samples, variables)
 
                 sim_over_sample = list()
                 for sample in range(feature_i.shape[0]):
@@ -1528,15 +1549,13 @@ class SIMILARITY_ASSESSMENT:
                         if metric=='corr':
                             sim = np.corrcoef(feature_i[sample, :], feature_j[sample, :])[0,1]
                         elif metric=='spearman':
-                            spearman_coef, p = stats.spearmanr(feature_i[sample, :], feature_j[sample, :])
-                            sim = spearman_coef
+                            sim, p = stats.spearmanr(feature_i[sample, :], feature_j[sample, :])
                         elif metric=='MI':
                             sim = mutual_information(X=feature_i[sample, :], Y=feature_j[sample, :], N_bins=100)
                     sim_over_sample.append(sim)
                 
                 if sim_mat_over_sample is None:
                     sim_mat_over_sample = np.zeros((len(sim_over_sample), len(dFC_mat_lst), len(dFC_mat_lst)))
-
                 sim_mat_over_sample[:, i, j] = np.array(sim_over_sample)
                 sim_mat_over_sample[:, j, i] = sim_mat_over_sample[:, i, j]
 
