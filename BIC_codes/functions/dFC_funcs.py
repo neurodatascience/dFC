@@ -1552,6 +1552,9 @@ class SIMILARITY_ASSESSMENT:
                             sim, p = stats.spearmanr(feature_i[sample, :], feature_j[sample, :])
                         elif metric=='MI':
                             sim = mutual_information(X=feature_i[sample, :], Y=feature_j[sample, :], N_bins=100)
+                        elif metric=='euclidean_distance':
+                            # normalized euclidean is used
+                            sim = normalized_euc_dist(x=feature_i[sample, :], y=feature_j[sample, :])
                     sim_over_sample.append(sim)
                 
                 if sim_mat_over_sample is None:
@@ -1617,7 +1620,7 @@ class SIMILARITY_ASSESSMENT:
         methods_assess['time_record_dict'] = time_record_dict
 
         ########## subj_dFC_sim ##########
-        # returns correlation/MI/spearman corr between results of dFC 
+        # returns correlation/MI/spearman corr/euclidean distance between results of dFC 
         # measures in a subject
         feature2extract_list = [
             # 'all', 
@@ -1629,7 +1632,8 @@ class SIMILARITY_ASSESSMENT:
         metric_list = [
             'corr',
             'spearman',
-            'MI'
+            'MI',
+            'euclidean_distance'
         ]
         graph_property_list = [
             'ECM',
@@ -3605,7 +3609,8 @@ class DFCM():
         the specified TRs 
         TRs should be list/ndarray not necessarily in order ?
         if num_samples specified, it will downsample 
-        TRs to reach that number of samples
+        TRs to reach that number of samples and will also
+        return picked TRs
         if num_samples > len(TRs) -> picks all TRs
         '''
 
@@ -3629,45 +3634,6 @@ class DFCM():
             return dFC_mat
         else:
             return dFC_mat, TRs
-
-    def SW_downsample(data, Fs, W, n_overlap, tapered_window=False):
-        '''
-        data = (n_time, ...)
-        the time samples will be picked after 
-        averaging over a window which slides
-        W is in sec
-        SWed_data = (n_time_new, ...)
-        '''
-
-        SWed_data = list()
-        L = data.shape[0]
-        # change W to timepoints
-        W = int(W * Fs) 
-        step = int((1-n_overlap)*W)
-        if step == 0:
-            step = 1
-
-        window_taper = signal.windows.gaussian(W, std=3*W/22)
-
-        TR_array = list()
-        for l in range(0, L-W+1, step):
-
-            ######### creating a rectangel window ############
-            window = np.zeros((L))
-            window[l:l+W] = 1
-            
-            ########### tapering the window ##############
-            if tapered_window:
-                window = signal.convolve(window, window_taper, mode='same') / sum(window_taper)
-
-            # int(l-W/2):int(l+3*W/2) is the nonzero interval after tapering
-            SWed_data.append(np.average(data, weights=window, axis=0))
-            
-            TR_array.append(int((l + (l+W)) / 2) )
-            
-        
-        SWed_data = np.array(SWed_data)
-        return SWed_data
 
     def SWed_dFC_mat(self, W=None, n_overlap=None, tapered_window=False):
         '''
