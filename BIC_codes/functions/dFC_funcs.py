@@ -189,7 +189,7 @@ def calc_graph_propoerty(A, property, threshold=False, binarize=False):
 
         graph-property (np.array): a vector
     """
-    N_edges = 200 # number of edges to keep for shortest path computations
+    N_edges = 200 # number of edges to keep 
     if property=='shortest_path' or property=='clustering_coef':
         threshold==True
 
@@ -1470,7 +1470,7 @@ class SIMILARITY_ASSESSMENT:
     def feature_graph_spatial(self, dFC_mat, graph_property):
         graph_feature_over_time = list()
         for FC_mat in dFC_mat:
-            graph_feature = calc_graph_propoerty(FC_mat, property=graph_property, threshold=False, binarize=False)
+            graph_feature = calc_graph_propoerty(FC_mat, property=graph_property, threshold=True, binarize=False)
             graph_feature_over_time.append(graph_feature)
         graph_feature_over_time = np.array(graph_feature_over_time) # (time, ROI)
         return graph_feature_over_time
@@ -1478,7 +1478,7 @@ class SIMILARITY_ASSESSMENT:
     def feature_graph_temporal(self, dFC_mat, graph_property):
         graph_feature_over_time = list()
         for FC_mat in dFC_mat:
-            graph_feature = calc_graph_propoerty(FC_mat, property=graph_property, threshold=False, binarize=False)
+            graph_feature = calc_graph_propoerty(FC_mat, property=graph_property, threshold=True, binarize=False)
             graph_feature_over_time.append(graph_feature)
         graph_feature_over_time = np.array(graph_feature_over_time) # (time, ROI)
         graph_feature_over_node = graph_feature_over_time.T # (ROI, time)
