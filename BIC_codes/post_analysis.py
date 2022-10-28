@@ -115,7 +115,7 @@ for metric in metric_list:
         RESULTS[filter]['var_mat'] = across_subj_var
         RESULTS[filter]['name_lst'] = measure_name_lst
 
-    ############ Distance Matrices ############
+    ############ VISUALIZE ############
     visualize_conn_mat_dict(RESULTS, title=metric+' average', fix_lim=False, 
     disp_diag=False, cmap='viridis', name_lst_key='name_lst', mat_key='avg_mat',
                         save_image=save_image, output_root=output_root)
@@ -169,7 +169,7 @@ for feature2extract in feature2extract_list:
         RESULTS[filter]['var_mat'] = across_subj_var
         RESULTS[filter]['name_lst'] = measure_name_lst
 
-    ############ Distance Matrices ############
+    ############ VISUALIZE ############
     visualize_conn_mat_dict(RESULTS, title=feature2extract+' average', fix_lim=False, 
     disp_diag=False, cmap='viridis', name_lst_key='name_lst', mat_key='avg_mat',
                         save_image=save_image, output_root=output_root)
@@ -222,7 +222,7 @@ for graph_property in graph_property_list:
         RESULTS[filter]['var_mat'] = across_subj_var
         RESULTS[filter]['name_lst'] = measure_name_lst
 
-    ############ Distance Matrices ############
+    ############ VISUALIZE ############
     visualize_conn_mat_dict(RESULTS, title='spatial '+graph_property+' average', fix_lim=False, 
     disp_diag=False, cmap='viridis', name_lst_key='name_lst', mat_key='avg_mat',
                         save_image=save_image, output_root=output_root)
@@ -263,7 +263,7 @@ for graph_property in graph_property_list:
         RESULTS[filter]['var_mat'] = across_subj_var
         RESULTS[filter]['name_lst'] = measure_name_lst
 
-    ############ Distance Matrices ############
+    ############ VISUALIZE ############
     visualize_conn_mat_dict(RESULTS, title='temporal '+graph_property+' average', fix_lim=False, 
     disp_diag=False, cmap='viridis', name_lst_key='name_lst', mat_key='avg_mat',
                         save_image=save_image, output_root=output_root)
@@ -335,7 +335,7 @@ for filter in FILTERS:
     measure_name_lst = [measure.measure_name for measure in SUBJs_output[filter]['measure_lst']]
     RESULTS[filter]['name_lst'] = measure_name_lst
 
-############ Distance Matrices ############
+############ VISUALIZE ############
 visualize_conn_mat_dict(RESULTS, title='inter-subject similarity', fix_lim=False, 
 disp_diag=False, cmap='viridis', name_lst_key='name_lst', mat_key='sim_mat',
                     save_image=save_image, output_root=output_root)
@@ -441,6 +441,51 @@ for filter in ['default_values']:
         disp_diag=False, cmap='jet', normalize=True,
         save_image=save_image, output_root=output_root
         )
+
+################################# Variation #################################
+'''
+    - compare variation over methods with variation over time.
+'''
+for filter in ['default_values']:
+    var_over_time = list()
+    var_over_method = list()
+    for s in ALL_RECORDS:
+
+        SUBJs_output = np.load(assessment_results_root+'dFC_assessed/'+s, allow_pickle='True').item()
+        node_networks = node_info2network(SUBJs_output[filter]['TS_info_lst'][0]['nodes_info'])
+
+        dFC_mat_lst = list()
+        for i, measure_i in enumerate(SUBJs_output[filter]['measure_lst']):
+
+            dFC_mat_i = SUBJs_output[filter]['dFCM_samples'][str(i)]
+
+            # rank normalization
+            dFC_mat_i = rank_norm(dFC_mat_i)
+
+            # dFC mat
+            var_over_time.append(np.var(dFC_mat_i, axis=0))
+            dFC_mat_lst.append(dFC_mat_i)
+
+        dFC_mat_lst = np.array(dFC_mat_lst)
+        var_over_method.append(np.mean(np.var(dFC_mat_lst, axis=0), axis=0))
+
+    var_over_time = np.array(var_over_time) # (subj*method, ROI, ROI)
+    var_over_time = np.mean(var_over_time, axis=0) # (ROI, ROI)
+    var_over_method = np.array(var_over_method) # (subj, ROI, ROI)
+    var_over_method = np.mean(var_over_method, axis=0) # (ROI, ROI)
+
+    RESULTS = {}
+    RESULTS['var_over_time'] = var_over_time
+    RESULTS['var_over_method'] = var_over_method
+    RESULTS['var_over_method/var_over_time'] = np.divide(var_over_method, var_over_time) - 1
+
+############ VISUALIZE ############
+
+    visualize_conn_mat_dict(RESULTS, node_networks=node_networks, 
+        title='variation '+filter, fix_lim=False, 
+        disp_diag=True, cmap='jet',
+        save_image=save_image, output_root=output_root
+    )
 
 ################################# Subject Clustering #################################
 '''
