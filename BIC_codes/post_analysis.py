@@ -522,18 +522,6 @@ for filter in ['default_values']:
         save_image=save_image, output_root=output_root+'variation/'
     )
 
-################################# Subject Clustering #################################
-'''
-
-'''
-# RESULTS = {}
-#     for filter in FILTERS:
-
-#         all_subj_avg_dist_mat = list()
-#         all_subj_var_dist_mat = list()
-#         for s in ALL_RECORDS:
-#             SUBJs_output = np.load(assessment_results_root+'dFC_assessed/'+s, allow_pickle='True').item()
-
 ################################# TIME RECORD #################################
 
 for filter in ['default_values']:
