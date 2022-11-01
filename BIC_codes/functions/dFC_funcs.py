@@ -14,6 +14,7 @@ import scipy.cluster.hierarchy as shc
 from copy import deepcopy
 import matplotlib.pyplot as plt
 import matplotlib as mpl
+from nilearn.plotting import plot_markers
 import networkx as nx
 from scipy.spatial import distance
 from scipy import stats
@@ -480,7 +481,7 @@ def visualize_conn_mat_dict(data, title='', \
     cmap='jet',\
     normalize=False,\
     disp_diag=True,\
-    save_image=False, output_root=None, \
+    save_image=False, output_root=None, axes=None, fig=None, \
     fix_lim=True, center_0=True, \
     node_networks=None \
     ):
@@ -517,15 +518,20 @@ def visualize_conn_mat_dict(data, title='', \
         fig_width = 55*(len(data)/10) + 4
     fig_height = 15
 
-    fig, axs = plt.subplots(1, len(data), figsize=(fig_width, fig_height), \
-        facecolor='w', edgecolor='k')
+    fig_flag = True
+    if axes is None or fig is None:
+        fig_flag = False
 
-    if not type(axs) is np.ndarray:
-        axs = np.array([axs])
+    if not fig_flag:
+        fig, axes = plt.subplots(1, len(data), figsize=(fig_width, fig_height), \
+            facecolor='w', edgecolor='k')
+
+    if not type(axes) is np.ndarray:
+        axes = np.array([axes])
 
     fig.suptitle(title, fontsize=20) #, fontsize=20, size=20
 
-    axs = axs.ravel()
+    axes = axes.ravel()
 
     # normalizing and scale
     conn_mats = list()
@@ -575,35 +581,38 @@ def visualize_conn_mat_dict(data, title='', \
             if type(name_lst_key) is str:
                 name_lst = data[key][name_lst_key]
 
-        im = visualize_conn_mat(C, axis=axs[i], title=key, \
+        im = visualize_conn_mat(C, axis=axes[i], title=key, \
             name_lst=name_lst, \
             cmap=cmap,\
             V_MIN=V_MIN, V_MAX=V_MAX, \
             node_networks=node_networks \
             )
-
-    fig.subplots_adjust(
-        bottom=0.1, \
-        top=1.5, \
-        left=0.1, \
-        right=0.9,
-        # wspace=0.02, \
-        # hspace=0.02\
-    )
-
-    if not node_networks is None:
+    if not fig_flag:
         fig.subplots_adjust(
-            wspace=0.55 
+            bottom=0.1, \
+            top=1.5, \
+            left=0.1, \
+            right=0.9,
+            # wspace=0.02, \
+            # hspace=0.02\
         )
-    elif not name_lst is None:
-        fig.subplots_adjust(
-            wspace=0.85 
-        )
-        
-    if name_lst is None:
-        cb_ax = fig.add_axes([0.91, 0.75, 0.007, 0.1])
+
+        if not node_networks is None:
+            fig.subplots_adjust(
+                wspace=0.55 
+            )
+        elif not name_lst is None:
+            fig.subplots_adjust(
+                wspace=0.85 
+            )
+            
+    l, b, w, h = axes[-1].get_position().bounds
+    if fig_flag:
+        cb_ax = fig.add_axes([0.91, b, 0.007, h])
+    elif name_lst is None:
+        cb_ax = fig.add_axes([0.91, b, 0.007, h])
     else:
-        cb_ax = fig.add_axes([0.91, 0.75, 0.02, 0.1])
+        cb_ax = fig.add_axes([0.91, b, 0.02, h])
     cbar = fig.colorbar(im, cax=cb_ax, shrink=0.8) # shrink=0.8??
 
     # # set the colorbar ticks and tick labels
@@ -828,27 +837,25 @@ def dist_mat_dendo(dist_mat, labels, title='', \
         ) 
         plt.close()
 
-def plot_brain_act(act_vec, locs):
-    X = []
-    Y = []
-    Z = []
-    for loc in locs:
-        X.append(loc[0])
-        Y.append(loc[1])
-        Z.append(loc[2])
-    X = np.array(X)
-    Y = np.array(Y)
-    Z = np.array(Z)
+def plot_brain_act(act_vec, locs, axes,
+    title='', save_image=False, output_root=''
+    ):
 
-    # plt.figure()
-    # for mean_act in measure.means_:
-    mean_act = act_vec
-    fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
-    ax.view_init(0, 0)
-    ax.scatter(X, Y, Z, c=act_vec, linewidths=5, cmap='hot')
-    ax.axis("off")
+    plot_markers(
+        node_values=act_vec, node_coords=locs, 
+        node_cmap='hot', 
+        display_mode='z', 
+        colorbar=False, axes=axes
+    )
 
-    # plt.show()
+    if save_image:
+        folder = output_root[:output_root.rfind('/')]
+        if not os.path.exists(folder):
+            os.makedirs(folder)
+        plt.savefig(output_root+title+'.png', \
+            dpi=fig_dpi, bbox_inches=fig_bbox_inches, pad_inches=fig_pad \
+        ) 
+        plt.close()
 
 '''
 ########## bundled brain graph visualizer ##########
@@ -1894,7 +1901,7 @@ class dFC:
         pass
 
     # todo : use FCS_dict func in this func
-    def visualize_FCS(self, node_networks=None, 
+    def visualize_FCS(self,
                 normalize=True, fix_lim=True, 
                 save_image=False, output_root=None
                 ):
@@ -1907,10 +1914,39 @@ class dFC:
         else:
             D = self.FCS_dict
 
+        fig_width = 55*(len(D)/10)
+        fig_height = 8
+
+        fig, axes = plt.subplots(2, len(D), figsize=(fig_width, fig_height), \
+            facecolor='w', edgecolor='k')
+
+        fig.subplots_adjust(
+            bottom=0.1, \
+            top=0.85, \
+            left=0.1, \
+            right=0.9,
+            wspace=0.3, \
+            hspace=0.8\
+        )
+
+        # plot mean activity
+        for i, mean_act in enumerate(self.mean_act):
+            plot_markers(
+                node_values=mean_act, 
+                node_coords=self.TS_info['nodes_locs'], 
+                node_cmap='hot', 
+                display_mode='z', 
+                colorbar=False, axes=axes[1, i]
+            )
+
+        # plot FC pattern
+        node_networks = node_info2network(self.TS_info['nodes_info'])
+
         visualize_conn_mat_dict(data=D, \
             node_networks=node_networks, \
             title=self.measure_name+' FCS', \
             save_image=save_image, \
+            axes=axes[0, :], fig=fig, 
             output_root=output_root, \
             disp_diag=False, \
             fix_lim=fix_lim \

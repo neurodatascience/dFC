@@ -10,10 +10,10 @@ print('################################# POST ANALYSIS STARTED RUNNING ... #####
 
 ################################# LOAD RESULTS #################################
 
-# assessment_results_root = './../../../../RESULTs/methods_implementation/server/methods_implementation/'
-assessment_results_root = './'
-# output_root = './../../../../RESULTs/methods_implementation/server/methods_implementation/out/'
-output_root = './output/'
+assessment_results_root = './../../../../RESULTs/methods_implementation/server/methods_implementation/'
+# assessment_results_root = './'
+output_root = './../../../../RESULTs/methods_implementation/server/methods_implementation/out/'
+# output_root = './output/'
 save_image = True
 
 ALL_RECORDS = os.listdir(assessment_results_root+'dFC_assessed/')
@@ -55,13 +55,21 @@ for filter in ['default_values']:
         for measure_id in SUBJs_output[filter]['dFCM_samples']:
             TRs = SUBJs_output[filter]['common_TRs'][:10]
             samples = {}
+            samples_ranked = {}
             for tr in TRs:
                 samples['TR'+str(tr)] = SUBJs_output[filter]['dFCM_samples'][measure_id][SUBJs_output[filter]['common_TRs'].index(tr), :, :]
+                samples_ranked['TR'+str(tr)] = rank_norm(SUBJs_output[filter]['dFCM_samples'][measure_id][SUBJs_output[filter]['common_TRs'].index(tr), :, :])
             visualize_conn_mat_dict(samples, node_networks=node_networks, 
                 title=SUBJs_output[filter]['measure_lst'][int(measure_id)].measure_name+'_'+filter, 
-                normalize=True, fix_lim=False, 
+                normalize=False, fix_lim=False, 
                 disp_diag=False,
-                save_image=save_image, output_root=output_root
+                save_image=save_image, output_root=output_root+'dFC_sample/'
+                )
+            visualize_conn_mat_dict(samples_ranked, node_networks=node_networks, 
+                title=SUBJs_output[filter]['measure_lst'][int(measure_id)].measure_name+'_ranked_'+filter, 
+                normalize=False, fix_lim=False, 
+                disp_diag=False,
+                save_image=save_image, output_root=output_root+'dFC_sample/'
                 )
 
 ################################# FCS visualization #################################
@@ -71,13 +79,12 @@ for filter in ['default_values']:
     # for SUBJs_output in SUBJs_output_lst:
     for s in ALL_RECORDS[:1]:
         SUBJs_output = np.load(assessment_results_root+'dFC_assessed/'+s, allow_pickle='True').item()
-        node_networks = node_info2network(SUBJs_output[filter]['TS_info_lst'][0]['nodes_info'])
 
         for measure in SUBJs_output[filter]['measure_lst']:
 
-            measure.visualize_FCS(node_networks=node_networks,
+            measure.visualize_FCS(
                     normalize=True, fix_lim=False, 
-                    save_image=save_image, output_root=output_root
+                    save_image=save_image, output_root=output_root+'FCS/'
                     )
 
 ################################# dFC Similarity #################################
@@ -117,22 +124,28 @@ for metric in metric_list:
 
     ############ VISUALIZE ############
     visualize_conn_mat_dict(RESULTS, title=metric+' average', fix_lim=False, 
-    disp_diag=False, cmap='viridis', name_lst_key='name_lst', mat_key='avg_mat',
-                        save_image=save_image, output_root=output_root)
+    disp_diag=False, cmap='viridis', name_lst_key='name_lst', mat_key='avg_mat', center_0=False,
+                        save_image=save_image, output_root=output_root+'dFC_similarity/')
 
     visualize_conn_mat_dict(RESULTS, title=metric+' across subj var', fix_lim=False, 
-    disp_diag=False, cmap='viridis', name_lst_key='name_lst', mat_key='var_mat',
-                        save_image=save_image, output_root=output_root)
+    disp_diag=False, cmap='viridis', name_lst_key='name_lst', mat_key='var_mat', center_0=False,
+                        save_image=save_image, output_root=output_root+'dFC_similarity/')
 
     ############ Hierarchical Clustering ############
     for filter in ['default_values']:
-        dist_mat = 1 - RESULTS[filter]['avg_mat']
+        if metric=='MI':
+            normalized_mat = np.divide(RESULTS[filter]['avg_mat'], np.max(RESULTS[filter]['avg_mat']))
+            dist_mat = 1 - normalized_mat
+        elif metric=='euclidean_distance':
+            dist_mat = RESULTS[filter]['avg_mat']
+        else:
+            dist_mat = 1 - RESULTS[filter]['avg_mat']
         dist_mat = 0.5*(dist_mat + dist_mat.T)
         # diagonal values of dist_mat must equal exactly zero
         np.fill_diagonal(dist_mat, 0)
         dist_mat_dendo(dist_mat=dist_mat, labels=RESULTS[filter]['name_lst'], 
             title='Hierarchical Clustering of Methods ' + filter+' using '+metric, 
-            save_image=save_image, output_root=output_root
+            save_image=save_image, output_root=output_root+'dFC_similarity/'
         )
 ################# feature-based #################
 '''
@@ -171,12 +184,12 @@ for feature2extract in feature2extract_list:
 
     ############ VISUALIZE ############
     visualize_conn_mat_dict(RESULTS, title=feature2extract+' average', fix_lim=False, 
-    disp_diag=False, cmap='viridis', name_lst_key='name_lst', mat_key='avg_mat',
-                        save_image=save_image, output_root=output_root)
+    disp_diag=False, cmap='viridis', name_lst_key='name_lst', mat_key='avg_mat', center_0=False,
+                        save_image=save_image, output_root=output_root+'feature_based/')
 
     visualize_conn_mat_dict(RESULTS, title=feature2extract+' across subj var', fix_lim=False, 
-    disp_diag=False, cmap='viridis', name_lst_key='name_lst', mat_key='var_mat',
-                        save_image=save_image, output_root=output_root)
+    disp_diag=False, cmap='viridis', name_lst_key='name_lst', mat_key='var_mat', center_0=False,
+                        save_image=save_image, output_root=output_root+'feature_based/')
 
     ############ Hierarchical Clustering ############
     for filter in ['default_values']:
@@ -186,7 +199,7 @@ for feature2extract in feature2extract_list:
         np.fill_diagonal(dist_mat, 0)
         dist_mat_dendo(dist_mat=dist_mat, labels=RESULTS[filter]['name_lst'], 
             title='Hierarchical Clustering of Methods ' + filter+' using '+feature2extract, 
-            save_image=save_image, output_root=output_root
+            save_image=save_image, output_root=output_root+'feature_based/'
         )
 ################# graph-based #################
 '''
@@ -224,12 +237,12 @@ for graph_property in graph_property_list:
 
     ############ VISUALIZE ############
     visualize_conn_mat_dict(RESULTS, title='spatial '+graph_property+' average', fix_lim=False, 
-    disp_diag=False, cmap='viridis', name_lst_key='name_lst', mat_key='avg_mat',
-                        save_image=save_image, output_root=output_root)
+    disp_diag=False, cmap='viridis', name_lst_key='name_lst', mat_key='avg_mat', center_0=False,
+                        save_image=save_image, output_root=output_root+'graph_based/')
 
     visualize_conn_mat_dict(RESULTS, title='spatial '+graph_property+' across subj var', fix_lim=False, 
-    disp_diag=False, cmap='viridis', name_lst_key='name_lst', mat_key='var_mat',
-                        save_image=save_image, output_root=output_root)
+    disp_diag=False, cmap='viridis', name_lst_key='name_lst', mat_key='var_mat', center_0=False,
+                        save_image=save_image, output_root=output_root+'graph_based/')
 
     ############ Hierarchical Clustering ############
     for filter in ['default_values']:
@@ -239,7 +252,7 @@ for graph_property in graph_property_list:
         np.fill_diagonal(dist_mat, 0)
         dist_mat_dendo(dist_mat=dist_mat, labels=RESULTS[filter]['name_lst'], 
             title='Hierarchical Clustering of Methods ' + filter+' using '+ 'spatial '+ graph_property, 
-            save_image=save_image, output_root=output_root
+            save_image=save_image, output_root=output_root+'graph_based/'
         )
 ###### temporal #####
 for graph_property in graph_property_list:
@@ -265,12 +278,12 @@ for graph_property in graph_property_list:
 
     ############ VISUALIZE ############
     visualize_conn_mat_dict(RESULTS, title='temporal '+graph_property+' average', fix_lim=False, 
-    disp_diag=False, cmap='viridis', name_lst_key='name_lst', mat_key='avg_mat',
-                        save_image=save_image, output_root=output_root)
+    disp_diag=False, cmap='viridis', name_lst_key='name_lst', mat_key='avg_mat', center_0=False,
+                        save_image=save_image, output_root=output_root+'graph_based/')
 
     visualize_conn_mat_dict(RESULTS, title='temporal '+graph_property+' across subj var', fix_lim=False, 
-    disp_diag=False, cmap='viridis', name_lst_key='name_lst', mat_key='var_mat',
-                        save_image=save_image, output_root=output_root)
+    disp_diag=False, cmap='viridis', name_lst_key='name_lst', mat_key='var_mat', center_0=False,
+                        save_image=save_image, output_root=output_root+'graph_based/')
 
     ############ Hierarchical Clustering ############
     for filter in ['default_values']:
@@ -280,7 +293,7 @@ for graph_property in graph_property_list:
         np.fill_diagonal(dist_mat, 0)
         dist_mat_dendo(dist_mat=dist_mat, labels=RESULTS[filter]['name_lst'], 
             title='Hierarchical Clustering of Methods ' + filter+' using '+ 'temporal '+ graph_property, 
-            save_image=save_image, output_root=output_root
+            save_image=save_image, output_root=output_root+'graph_based/'
         )
 
 ################################# inter_subject similarity #################################
@@ -321,8 +334,8 @@ for filter in FILTERS:
             features_j = np.squeeze(features_subj[:,j,:,:])
             features_j = features_j.reshape(features_j.shape[0], -1)
 
-            inter_subj_sim_i = np.corrcoef(features_i) # C_i = (subj, subj)
-            inter_subj_sim_j = np.corrcoef(features_j) # C_j = (subj, subj)
+            inter_subj_sim_i = np.corrcoef(features_i) # inter_subj_sim_i = (subj, subj)
+            inter_subj_sim_j = np.corrcoef(features_j) # inter_subj_sim_j = (subj, subj)
 
             inter_subj_sim_i = dFC_mat2vec(inter_subj_sim_i)
             inter_subj_sim_j = dFC_mat2vec(inter_subj_sim_j)
@@ -337,8 +350,8 @@ for filter in FILTERS:
 
 ############ VISUALIZE ############
 visualize_conn_mat_dict(RESULTS, title='inter-subject similarity', fix_lim=False, 
-disp_diag=False, cmap='viridis', name_lst_key='name_lst', mat_key='sim_mat',
-                    save_image=save_image, output_root=output_root)
+disp_diag=False, cmap='viridis', name_lst_key='name_lst', mat_key='sim_mat', center_0=False,
+                    save_image=save_image, output_root=output_root+'inter_subject/')
 
 ############ Hierarchical Clustering ############
 for filter in RESULTS:
@@ -348,7 +361,7 @@ for filter in RESULTS:
     np.fill_diagonal(dist_mat, 0)
     dist_mat_dendo(dist_mat=dist_mat, labels=RESULTS[filter]['name_lst'], 
     title='Hierarchical Clustering of Methods ' + filter+' using inter-subject similarity', 
-    save_image=save_image, output_root=output_root
+    save_image=save_image, output_root=output_root+'inter_subject/'
     )
 
 ################################# dFC var #################################
@@ -361,14 +374,15 @@ for filter in ['default_values']:
     for s in ALL_RECORDS:
         SUBJs_output = np.load(assessment_results_root+'dFC_assessed/'+s, allow_pickle='True').item()
         node_networks = node_info2network(SUBJs_output[filter]['TS_info_lst'][0]['nodes_info'])
+        n_regions = SUBJs_output[filter]['TS_info_lst'][0]['n_regions']
 
         for i, measure in enumerate(SUBJs_output[filter]['measure_lst']):
             if not measure.measure_name in RESULTS:
                 RESULTS[measure.measure_name] = list()
             # SUBJs_output[filter]['dFC_var'][i] = (1, connection)
-            var_mat = np.squeeze(dFC_vec2mat(SUBJs_output[filter]['dFC_var'][i])) # (ROI, ROI)
+            var_mat = np.squeeze(dFC_vec2mat(SUBJs_output[filter]['dFC_var'][i], N=n_regions)) # (ROI, ROI)
             np.fill_diagonal(var_mat, 0)
-            RESULTS[measure.measure_name].append(var_mat)
+            RESULTS[measure.measure_name].append(rank_norm(var_mat))
 
     for key in RESULTS:
         RESULTS[key] = np.array(RESULTS[key])
@@ -377,7 +391,7 @@ for filter in ['default_values']:
     visualize_conn_mat_dict(RESULTS, node_networks=node_networks, 
                 title='dFC var ' + filter, 
                 fix_lim=False, disp_diag=True, cmap='jet', normalize=False, 
-                save_image=save_image, output_root=output_root)
+                save_image=save_image, output_root=output_root+'dFC_var/')
 
 ################################# dFC avg #################################
 
@@ -390,13 +404,14 @@ for filter in ['default_values']:
     for s in ALL_RECORDS:
         SUBJs_output = np.load(assessment_results_root+'dFC_assessed/'+s, allow_pickle='True').item()
         node_networks = node_info2network(SUBJs_output[filter]['TS_info_lst'][0]['nodes_info'])
+        n_regions = SUBJs_output[filter]['TS_info_lst'][0]['n_regions']
 
         for i, measure in enumerate(SUBJs_output[filter]['measure_lst']):
             if not measure.measure_name in RESULTS:
                 RESULTS[measure.measure_name] = list()
             # SUBJs_output[filter]['dFC_avg'][i] = (1, connection)
-            avg_mat = np.squeeze(dFC_vec2mat(SUBJs_output[filter]['dFC_avg'][i])) # (ROI, ROI)
-            RESULTS[measure.measure_name].append(avg_mat)
+            avg_mat = np.squeeze(dFC_vec2mat(SUBJs_output[filter]['dFC_avg'][i], N=n_regions)) # (ROI, ROI)
+            RESULTS[measure.measure_name].append(rank_norm(avg_mat))
 
     for key in RESULTS:
         RESULTS[key] = np.array(RESULTS[key])
@@ -404,8 +419,8 @@ for filter in ['default_values']:
 
     visualize_conn_mat_dict(RESULTS, node_networks=node_networks, 
             title='dFC avg ' + filter, 
-            fix_lim=False, disp_diag=True, cmap='jet', normalize=False,
-            save_image=save_image, output_root=output_root)
+            fix_lim=False, disp_diag=False, cmap='jet', normalize=False,
+            save_image=save_image, output_root=output_root+'dFC_avg/')
 
 ################################# Across Node Temporal Correlation #################################
 
@@ -417,6 +432,7 @@ for filter in ['default_values']:
     for s in ALL_RECORDS:
         SUBJs_output = np.load(assessment_results_root+'dFC_assessed/'+s, allow_pickle='True').item()
         node_networks = node_info2network(SUBJs_output[filter]['TS_info_lst'][0]['nodes_info'])
+        n_regions = SUBJs_output[filter]['TS_info_lst'][0]['n_regions']
 
         # SUBJs_output[filter]['feature_based']['temporal'] = (connection, method, method)
 
@@ -428,7 +444,15 @@ for filter in ['default_values']:
                     RESULTS[measure_name_i] = {}
                 if not measure_name_j in RESULTS[measure_name_i]:
                     RESULTS[measure_name_i][measure_name_j] = list()
-                mat = dFC_vec2mat(SUBJs_output[filter]['feature_based']['temporal'][:, i, j]) # (ROI, ROI)
+                mat = np.squeeze(
+                    dFC_vec2mat(
+                        np.expand_dims(
+                            SUBJs_output[filter]['feature_based']['temporal'][:, i, j], 
+                            axis=0
+                        ), 
+                        N=n_regions
+                    )
+                ) # (ROI, ROI)
                 RESULTS[measure_name_i][measure_name_j].append(mat)
 
     for key_i in RESULTS:
@@ -439,7 +463,7 @@ for filter in ['default_values']:
     visualize_conn_mat_2D_dict(RESULTS, node_networks=node_networks, 
         title='across node temporal spearman corr ' + filter, fix_lim=False, 
         disp_diag=False, cmap='jet', normalize=True,
-        save_image=save_image, output_root=output_root
+        save_image=save_image, output_root=output_root+'across_node/'
         )
 
 ################################# Variation #################################
@@ -475,16 +499,16 @@ for filter in ['default_values']:
     var_over_method = np.mean(var_over_method, axis=0) # (ROI, ROI)
 
     RESULTS = {}
-    RESULTS['var_over_time'] = var_over_time
-    RESULTS['var_over_method'] = var_over_method
-    RESULTS['var_over_method/var_over_time'] = np.divide(var_over_method, var_over_time) - 1
+    RESULTS['var_over_time'] = rank_norm(var_over_time)
+    RESULTS['var_over_method'] = rank_norm(var_over_method)
+    RESULTS['var_over_method/var_over_time'] = rank_norm(np.divide(var_over_method, var_over_time) - 1)
 
 ############ VISUALIZE ############
 
     visualize_conn_mat_dict(RESULTS, node_networks=node_networks, 
         title='variation '+filter, fix_lim=False, 
         disp_diag=True, cmap='jet',
-        save_image=save_image, output_root=output_root
+        save_image=save_image, output_root=output_root+'variation/'
     )
 
 ################################# Subject Clustering #################################
