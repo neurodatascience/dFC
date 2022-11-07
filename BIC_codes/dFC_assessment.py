@@ -29,7 +29,7 @@ if dFC_analyzer.MEASURES_fit_lst==[]:
     ALL_RECORDS.sort()
     MEASURES_fit_lst = list()
     for s in ALL_RECORDS:
-        fit_measure = np.load(input_root+'fitted_MEASURES/'+s,allow_pickle='TRUE').item()
+        fit_measure = np.load(input_root+'fitted_MEASURES/'+s, allow_pickle='TRUE').item()
         MEASURES_fit_lst.append(fit_measure)
     dFC_analyzer.set_MEASURES_fit_lst(MEASURES_fit_lst)
     print('fitted MEASURES loaded ...')
@@ -53,12 +53,13 @@ print("dFCM estimation done.")
 
 print('Measurement required %0.3f seconds.' % (time.time() - tic, ))
 
+################################# SAVE DATA #################################
 
-################################# POST ANALYSIS #################################
+folder = output_root+'dFC_assessed/SUBJ_'+str(subj_id)
+if not os.path.exists(folder):
+    os.makedirs(folder)
 
-similarity_assessment = SIMILARITY_ASSESSMENT(dFCM_lst=dFCM_dict['dFCM_lst'])
-SUBJ_output = similarity_assessment.run(FILTERS=dFC_analyzer.hyper_param_info, downsampling_method='SWed')
+for dFCM_id, dFCM in enumerate(dFCM_dict['dFCM_lst']):
+    np.save(folder+'/dFCM_'+str(dFCM_id)+'.npy', dFCM) 
 
-# Save
-np.save(output_root+'dFC_assessed/SUBJ_'+str(subj_id)+'_output.npy', SUBJ_output) 
 #################################################################################
