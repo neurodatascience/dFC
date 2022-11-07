@@ -2450,10 +2450,10 @@ import pycwt as wavelet
 
 class TIME_FREQ(dFC):
 
-    def __init__(self, TF_method='WTC', coi_correction=True, **params):
+    def __init__(self, coi_correction=True, **params):
         
-        assert TF_method in self.TF_methods_name_lst, \
-            "Time-frequency method not recognized."
+        # assert TF_method in self.TF_methods_name_lst, \
+        #     "Time-frequency method not recognized."
 
         self.logs_ = ''
         self.TPM = []
@@ -2472,7 +2472,6 @@ class TIME_FREQ(dFC):
         
         self.params['measure_name'] = 'Time-Freq'
         self.params['is_state_based'] = False
-        self.params['TF_method'] = TF_method
         self.params['coi_correction'] = coi_correction
 
     @property
@@ -2533,9 +2532,9 @@ class TIME_FREQ(dFC):
             'this function takes only one subject as input.'
 
         # params
-        J = 50 # -1
+        J = 100 # -1
         s0 = 1 # -1
-        dj = 1/8 # 1/12
+        dj = 1/12 # 1/12
 
         assert type(time_series) is TIME_SERIES, \
             "time_series must be of TIME_SERIES class."
