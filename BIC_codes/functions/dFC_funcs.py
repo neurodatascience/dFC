@@ -304,6 +304,8 @@ def dFC_mat2vec(C_t):
     C_t must be an array of matrices or a single matrix
     diagonal values not included. if you want to include 
     them set k=0
+    if C_t is a single matrix, F will be one dim
+    changing F will not change C_t
     '''
     if len(C_t.shape)==2:
         assert C_t.shape[0]==C_t.shape[1],\
@@ -1706,15 +1708,26 @@ class SIMILARITY_ASSESSMENT:
         downsampling_method: 'default' picks FCs at common_TRs 
         while 'SWed' uses a sliding window to downsample
         '''
+        parallelize = True
         output = {}
-        for filter in FILTERS:
-            param_dict = FILTERS[filter]
-            dFCM_lst2check = filter_dFCM_lst(self.dFCM_lst, **param_dict)
-            output[filter] = self.assess_similarity( \
-                dFCM_lst=dFCM_lst2check, \
-                downsampling_method=downsampling_method, \
-                **param_dict \
-                )
+        if parallelize:
+            out_lst = Parallel( \
+                    n_jobs=4, verbose=0, backend='loky')( \
+                    delayed(self.assess_similarity)(dFCM_lst=filter_dFCM_lst(self.dFCM_lst, **FILTERS[filter]), \
+                    downsampling_method=downsampling_method, \
+                    **FILTERS[filter]) \
+                        for filter in FILTERS)
+            for i, filter in enumerate(FILTERS):
+                output[filter] = out_lst[i]
+        else:
+            for filter in FILTERS:
+                param_dict = FILTERS[filter]
+                dFCM_lst2check = filter_dFCM_lst(self.dFCM_lst, **param_dict)
+                output[filter] = self.assess_similarity( \
+                    dFCM_lst=dFCM_lst2check, \
+                    downsampling_method=downsampling_method, \
+                    **param_dict \
+                    )
 
         return output
 

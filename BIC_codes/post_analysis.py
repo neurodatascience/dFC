@@ -510,9 +510,11 @@ for filter in ['default_values']:
     var_over_method = np.mean(var_over_method, axis=0) # (ROI, ROI)
 
     RESULTS = {}
-    RESULTS['var_over_time'] = rank_norm(var_over_time)
-    RESULTS['var_over_method'] = rank_norm(var_over_method)
-    RESULTS['var_over_method/var_over_time'] = rank_norm(np.divide(var_over_method, var_over_time) - 1)
+    # RESULTS['var_over_time'] = rank_norm(var_over_time)
+    # RESULTS['var_over_method'] = rank_norm(var_over_method)
+    RESULTS['var_over_time'] = np.divide(var_over_time, np.max(var_over_time))
+    RESULTS['var_over_method'] = np.divide(var_over_method, np.max(var_over_method))
+    RESULTS['var_over_method/var_over_time'] = np.divide(var_over_method, var_over_time) - 1
 
 ############ VISUALIZE ############
 
