@@ -14,6 +14,7 @@ import scipy.cluster.hierarchy as shc
 from copy import deepcopy
 import matplotlib.pyplot as plt
 import matplotlib as mpl
+import seaborn as sns
 from nilearn.plotting import plot_markers
 import networkx as nx
 from scipy.spatial import distance
@@ -416,6 +417,108 @@ def node_info2network(nodes_info):
             continue
         node_networks.append(info[3])    
     return node_networks
+
+def visualize_sim_mat(data, mat_key, title='', \
+    name_lst_key=None, \
+    cmap='viridis',\
+    save_image=False, output_root=None, axes=None, fig=None, \
+    ):
+
+    '''
+    - name_lst_key is the key to list of names
+    - data must be a dict of correlation/connectivity matrices
+    sample:
+    Suptitle1
+        corr_mat
+            0.00 0.31 0.76 
+            0.31 0.00 0.43 
+            0.76 0.43 0.00 
+        measure_lst
+            ContinuousHMM
+            Windowless
+            Clustering_pear_corr
+    Suptitle1
+        corr_mat
+            0.00 0.32 0.76 
+            0.32 0.00 0.45 
+            0.76 0.45 0.00 
+        measure_lst
+            ContinuousHMM
+            Windowless
+            Clustering_pear_corr
+    '''
+
+    if name_lst_key is None:
+        fig_width = int(25*(len(data)/10))
+    else:
+        fig_width = int(60*(len(data)/10) + 1)
+    fig_height = 5
+
+    fig_flag = True
+    if axes is None or fig is None:
+        fig_flag = False
+
+    if not fig_flag:
+        fig, axes = plt.subplots(1, len(data), figsize=(fig_width, fig_height), \
+            facecolor='w', edgecolor='k', sharey=False)
+
+    if not type(axes) is np.ndarray:
+        axes = np.array([axes])
+
+    fig.suptitle(title, fontsize=20, y=0.98) #, fontsize=20, size=20
+
+    axes = axes.ravel()
+
+    # normalizing and scale
+    sim_mats = list()
+    for i, key in enumerate(data):
+        sim_mats.append(data[key][mat_key])
+    sim_mats = np.array(sim_mats)
+
+    # plot
+    for i, key in enumerate(data):
+
+        C = sim_mats[i,:,:]
+
+        name_lst = None
+        if not name_lst_key is None:
+            name_lst = data[key][name_lst_key]
+
+        cbar_flag = False
+        # if i==(len(data)-1):
+        #     cbar_flag = True
+
+        im = sns.heatmap(C, 
+            annot=True, fmt=".2f", cmap=cmap, 
+            xticklabels=name_lst, yticklabels=name_lst, 
+            ax=axes[i], cbar=cbar_flag,
+            square=True, linewidth=2, linecolor='w'
+        )
+        axes[i].set_title(key, fontsize=18)
+
+    if not fig_flag:
+        fig.subplots_adjust(
+            bottom=0.1, \
+            top=0.85, \
+            left=0.1, \
+            right=0.9,
+        )
+
+        if not name_lst is None:
+            fig.subplots_adjust(
+                wspace=0.25 
+            )
+
+    if save_image:
+        folder = output_root[:output_root.rfind('/')]
+        if not os.path.exists(folder):
+            os.makedirs(folder)
+        plt.savefig(output_root+title+'.png', \
+            dpi=fig_dpi, bbox_inches=fig_bbox_inches, pad_inches=fig_pad \
+        ) 
+        plt.close()
+    else:
+        plt.show()
 
 def visualize_conn_mat(C, axis=None, title='', \
     name_lst=None, \
