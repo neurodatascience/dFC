@@ -254,6 +254,21 @@ def rank_norm(dFC_mat):
         dFC_mat_new = np.squeeze(dFC_mat_new)
     return dFC_mat_new
 
+def cat_data(X_t, N):
+    '''
+    X_t = (time, roi, roi)
+    X_t is preferable to be ranked prior to cat_data
+    '''
+    X_t_new = list()
+    for X in X_t:
+        borders = np.linspace(1, np.max(X), N, endpoint=False)
+        score_mat = np.zeros(X.shape)
+        for border in borders:
+            score_mat += X >= border
+        X_t_new.append(score_mat)
+    X_t_new = np.array(X_t_new)
+    return X_t_new
+    
 # test
 def zip_name(name):
     # zip measure names
