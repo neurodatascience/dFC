@@ -268,7 +268,7 @@ def cat_data(X_t, N):
         X_t_new.append(score_mat)
     X_t_new = np.array(X_t_new)
     return X_t_new
-    
+
 # test
 def zip_name(name):
     # zip measure names
@@ -536,7 +536,6 @@ def visualize_sim_mat(data, mat_key, title='', \
         plt.show()
 
 def visualize_conn_mat(C, axis=None, title='', \
-    name_lst=None, \
     cmap='jet',\
     V_MIN=None, V_MAX=None, \
     node_networks=None \
@@ -548,7 +547,7 @@ def visualize_conn_mat(C, axis=None, title='', \
     if axis is None:
         fig, axis = plt.subplots(1, 1, figsize=(5, 5))
 
-    if name_lst is None and node_networks is None:
+    if node_networks is None:
         axis.set_axis_off()
 
     if V_MAX is None:
@@ -584,20 +583,14 @@ def visualize_conn_mat(C, axis=None, title='', \
 
         axis.set_xticks(ticks_position)
         axis.set_yticks(ticks_position)
-        axis.set_xticklabels(network_names, rotation=90, fontsize=11)
-        axis.set_yticklabels(network_names, fontsize=11)
+        axis.set_xticklabels(network_names, rotation=90, fontsize=13)
+        axis.set_yticklabels(network_names, fontsize=13)
     
-    if not name_lst is None and node_networks is None:
-        axis.set_xticks(np.arange(len(name_lst)))
-        axis.set_yticks(np.arange(len(name_lst)))
-        axis.set_xticklabels(name_lst, rotation=90, fontsize=11)
-        axis.set_yticklabels(name_lst, fontsize=11)
     axis.set_title(title, fontsize=18)
 
     return im
 
 def visualize_conn_mat_dict(data, title='', \
-    name_lst_key=None, mat_key=None, \
     cmap='jet',\
     normalize=False,\
     disp_diag=True,\
@@ -607,36 +600,23 @@ def visualize_conn_mat_dict(data, title='', \
     ):
 
     '''
-    - name_lst_key is the key to list of names
-    - data must be a dict of correlation/connectivity matrices
+    - data must be a dict of connectivity matrices
     sample:
     Suptitle1
-        corr_mat
-            0.00 0.31 0.76 
-            0.31 0.00 0.43 
-            0.76 0.43 0.00 
-        measure_lst
-            ContinuousHMM
-            Windowless
-            Clustering_pear_corr
+        0.00 0.31 0.76 
+        0.31 0.00 0.43 
+        0.76 0.43 0.00 
     Suptitle1
-        corr_mat
-            0.00 0.32 0.76 
-            0.32 0.00 0.45 
-            0.76 0.45 0.00 
-        measure_lst
-            ContinuousHMM
-            Windowless
-            Clustering_pear_corr
+        0.00 0.32 0.76 
+        0.32 0.00 0.45 
+        0.76 0.45 0.00 
     '''
 
-    if name_lst_key is None and node_networks is None:
+    if node_networks is None:
         fig_width = 25*(len(data)/10)
-    elif not name_lst_key is None:
-        fig_width = 35*(len(data)/10) + 4
     else:
-        fig_width = 55*(len(data)/10) + 4
-    fig_height = 15
+        fig_width = 60*(len(data)/10)
+    fig_height = 5
 
     fig_flag = True
     if axes is None or fig is None:
@@ -649,7 +629,7 @@ def visualize_conn_mat_dict(data, title='', \
     if not type(axes) is np.ndarray:
         axes = np.array([axes])
 
-    fig.suptitle(title, fontsize=20) #, fontsize=20, size=20
+    fig.suptitle(title, fontsize=20, y=0.98) #, fontsize=20, size=20
 
     axes = axes.ravel()
 
@@ -657,10 +637,8 @@ def visualize_conn_mat_dict(data, title='', \
     conn_mats = list()
     V_MAX_all = None
     for i, key in enumerate(data):
-        if mat_key is None:
-            C = data[key]
-        else:
-            C = data[key][mat_key]
+        
+        C = data[key]
 
         if normalize:
             C = dFC_mat_normalize(C[None,:,:], global_normalization=False, threshold=0.0)[0]
@@ -696,13 +674,7 @@ def visualize_conn_mat_dict(data, title='', \
 
         C = conn_mats[i,:,:]
 
-        name_lst = None
-        if not name_lst_key is None:
-            if type(name_lst_key) is str:
-                name_lst = data[key][name_lst_key]
-
         im = visualize_conn_mat(C, axis=axes[i], title=key, \
-            name_lst=name_lst, \
             cmap=cmap,\
             V_MIN=V_MIN, V_MAX=V_MAX, \
             node_networks=node_networks \
@@ -710,7 +682,7 @@ def visualize_conn_mat_dict(data, title='', \
     if not fig_flag:
         fig.subplots_adjust(
             bottom=0.1, \
-            top=1.5, \
+            top=0.85, \
             left=0.1, \
             right=0.9,
             # wspace=0.02, \
@@ -721,23 +693,13 @@ def visualize_conn_mat_dict(data, title='', \
             fig.subplots_adjust(
                 wspace=0.55 
             )
-        elif not name_lst is None:
-            fig.subplots_adjust(
-                wspace=0.85 
-            )
             
     l, b, w, h = axes[-1].get_position().bounds
     if fig_flag:
         cb_ax = fig.add_axes([0.91, b, 0.007, h])
-    elif name_lst is None:
-        cb_ax = fig.add_axes([0.91, b, 0.007, h])
     else:
-        cb_ax = fig.add_axes([0.91, b, 0.02, h])
+        cb_ax = fig.add_axes([0.91, b, 0.01, h])
     cbar = fig.colorbar(im, cax=cb_ax, shrink=0.8) # shrink=0.8??
-
-    # # set the colorbar ticks and tick labels
-    # cbar.set_ticks(np.arange(0, 1.1, 0.5))
-    # cbar.set_ticklabels(['0', '0.5', '1'])
 
     if save_image:
         folder = output_root[:output_root.rfind('/')]
@@ -747,12 +709,11 @@ def visualize_conn_mat_dict(data, title='', \
             dpi=fig_dpi, bbox_inches=fig_bbox_inches, pad_inches=fig_pad \
         ) 
         plt.close()
-    # else:
-    #     plt.show()
+    else:
+        plt.show()
 
 
 def visualize_conn_mat_2D_dict(data, title='', \
-    name_lst_key=None, mat_key=None, \
     cmap='jet',\
     normalize=False,\
     disp_diag=True,\
@@ -762,47 +723,32 @@ def visualize_conn_mat_2D_dict(data, title='', \
     ):
 
     '''
-    - name_lst_key is the key to list of names
-    - data must be a 2D dict of correlation/connectivity matrices
+    - data must be a 2D dict of connectivity matrices
     sample:
     ROW1 (method_1)
         COLUMN1 (method_1)
-            corr_mat (data[method_1][method_1]['mat_key'])
+            data[method_1][method_1]
                 0.00 0.31 0.76 
                 0.31 0.00 0.43 
                 0.76 0.43 0.00 
-            node_lst (data[method_1][method_1]['name_lst_key'])
-                node_1
-                node_2
-                node_3
         COLUMN2 (method_2)
-            corr_mat (data[method_1][method_2]['mat_key'])
+            data[method_1][method_2]
                 0.00 0.31 0.76 
                 0.31 0.00 0.43 
                 0.76 0.43 0.00 
-            node_lst (data[method_1][method_2]['name_lst_key'])
-                node_1
-                node_2
-                node_3
     ROW2 (method_2)
         COLUMN1 (method_1)
-            corr_mat (data[method_2][method_1]['mat_key'])
+            data[method_2][method_1]
                 0.00 0.31 0.76 
                 0.31 0.00 0.43 
                 0.76 0.43 0.00 
-            node_lst (data[method_2][method_1]['name_lst_key'])
-                node_1
-                node_2
-                node_3
     '''
 
-    if name_lst_key is None and node_networks is None:
+    if node_networks is None:
         fig_width = 30*(len(data)/10)
-    elif not name_lst_key is None:
-        fig_width = 30*(len(data)/10) + 4
     else:
-        fig_width = 40*(len(data)/10) + 4
-    fig_height = fig_width * 1.10
+        fig_width = 55*(len(data)/10) + 4
+    fig_height = fig_width * 1.0
 
     fig, axs = plt.subplots(len(data), len(data), figsize=(fig_width, fig_height), \
         facecolor='w', edgecolor='k')
@@ -810,7 +756,7 @@ def visualize_conn_mat_2D_dict(data, title='', \
     if not type(axs) is np.ndarray:
         axs = np.array([axs])
 
-    fig.suptitle(title, fontsize=25) #, fontsize=20, size=20
+    fig.suptitle(title, fontsize=25, y=0.98) #, fontsize=20, size=20
 
     # axs = axs.ravel()
 
@@ -819,10 +765,8 @@ def visualize_conn_mat_2D_dict(data, title='', \
     V_MAX_all = None
     for i, key_i in enumerate(data):
         for j, key_j in enumerate(data[key_i]):
-            if mat_key is None:
-                C = data[key_i][key_j]
-            else:
-                C = data[key_i][key_j][mat_key]
+            
+            C = data[key_i][key_j]
 
             if normalize:
                 C = dFC_mat_normalize(C[None,:,:], global_normalization=False, threshold=0.0)[0]
@@ -859,10 +803,7 @@ def visualize_conn_mat_2D_dict(data, title='', \
 
         for j, key_j in enumerate(data[key_i]):
 
-            if mat_key is None:
-                C = data[key_i][key_j]
-            else:
-                C = data[key_i][key_j][mat_key]
+            C = data[key_i][key_j]
 
             if normalize:
                 C = dFC_mat_normalize(C[None,:,:], global_normalization=False, threshold=0.0)[0]
@@ -871,13 +812,7 @@ def visualize_conn_mat_2D_dict(data, title='', \
                 C = np.multiply(C, 1-np.eye(len(C)))
                 C = C + np.mean(C.flatten()) * np.eye(len(C))
 
-            name_lst = None
-            if not name_lst_key is None:
-                if type(name_lst_key) is str:
-                    name_lst = data[key_i][key_j][name_lst_key]
-
             im = visualize_conn_mat(C, axis=axs[i][j], title=key_i + ' and ' + key_j, \
-                name_lst=name_lst, \
                 cmap=cmap,\
                 V_MIN=V_MIN, V_MAX=V_MAX, \
                 node_networks=node_networks \
@@ -892,34 +827,26 @@ def visualize_conn_mat_2D_dict(data, title='', \
             ax.xaxis.set_tick_params(which='both', labelbottom=True)
 
     fig.subplots_adjust(
-        # bottom=0.1, \
-        # top=1.5, \
-        # left=0.1, \
-        # right=0.9,
+        bottom=0.1, \
+        top=0.95, \
+        left=0.1, \
+        right=0.9,
         wspace=0.001, \
         hspace=0.4\
     )
 
     if not node_networks is None:
         fig.subplots_adjust(
-            wspace=0.55, 
-            hspace=0.55
-        )
-    elif not name_lst is None:
-        fig.subplots_adjust(
-            wspace=0.85, 
-            hspace=0.85
+            wspace=0.45, 
+            hspace=0.50
         )
         
-    if name_lst is None:
-        cb_ax = fig.add_axes([0.91, 0.5, 0.007, 0.1])
+    l, b, w, h = axs[-1][-1].get_position().bounds
+    if node_networks is None:
+        cb_ax = fig.add_axes([0.91, 0.5-h/2, 0.007, h])
     else:
-        cb_ax = fig.add_axes([0.91, 0.5, 0.02, 0.1])
+        cb_ax = fig.add_axes([0.91, 0.5-h/2, 0.015, h])
     cbar = fig.colorbar(im, cax=cb_ax, shrink=0.8) # shrink=0.8??
-
-    # # set the colorbar ticks and tick labels
-    # cbar.set_ticks(np.arange(0, 1.1, 0.5))
-    # cbar.set_ticklabels(['0', '0.5', '1'])
 
     if save_image:
         folder = output_root[:output_root.rfind('/')]
@@ -929,8 +856,8 @@ def visualize_conn_mat_2D_dict(data, title='', \
             dpi=fig_dpi, bbox_inches=fig_bbox_inches, pad_inches=fig_pad \
         ) 
         plt.close()
-    # else:
-    #     plt.show()
+    else:
+        plt.show()
 
 
 def dist_mat_dendo(dist_mat, labels, title='', \
