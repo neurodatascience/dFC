@@ -247,9 +247,12 @@ def rank_norm(dFC_mat):
     assert dFC_mat_new.shape[1]==dFC_mat_new.shape[2], \
         'dimension mismatch.'
     n_region = dFC_mat_new.shape[1]
-    for i, mat in enumerate(dFC_mat_new):
-        np.fill_diagonal(mat, 0)
-        dFC_mat_new[i,:,:] = stats.rankdata(mat).reshape(n_region, n_region)
+    dFC_vecs = dFC_mat2vec(dFC_mat_new)
+    dFC_vecs_new = list()
+    for i, vec in enumerate(dFC_vecs):
+        dFC_vecs_new.append(stats.rankdata(vec))
+    dFC_vecs_new = np.array(dFC_vecs_new)
+    dFC_mat_new = dFC_vec2mat(dFC_vecs_new, N=n_region)
     if flag_dim:
         dFC_mat_new = np.squeeze(dFC_mat_new)
     return dFC_mat_new
