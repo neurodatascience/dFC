@@ -68,7 +68,7 @@ for filter in ['default_values']:
             visualize_conn_mat_dict(samples_ranked, node_networks=node_networks, 
                 title=SUBJs_output[filter]['measure_lst'][int(measure_id)].measure_name+'_ranked_'+filter, 
                 normalize=False, fix_lim=False, 
-                disp_diag=False,
+                disp_diag=False, cmap='plasma', center_0=False,
                 save_image=save_image, output_root=output_root+'dFC_sample/'
                 )
 
@@ -123,14 +123,16 @@ for metric in metric_list:
         RESULTS[filter]['name_lst'] = measure_name_lst
 
     ############ VISUALIZE ############
-    visualize_conn_mat_dict(RESULTS, title=metric+' average', fix_lim=False, 
-    disp_diag=False, cmap='viridis', name_lst_key='name_lst', mat_key='avg_mat', center_0=False,
-                        save_image=save_image, output_root=output_root+'dFC_similarity/')
-
-    visualize_conn_mat_dict(RESULTS, title=metric+' across subj var', fix_lim=False, 
-    disp_diag=False, cmap='viridis', name_lst_key='name_lst', mat_key='var_mat', center_0=False,
-                        save_image=save_image, output_root=output_root+'dFC_similarity/')
-
+    visualize_sim_mat(RESULTS, mat_key='avg_mat', title=metric+' average', 
+                                    name_lst_key='name_lst', 
+                                    cmap='viridis',
+                                    save_image=save_image, output_root=output_root+'dFC_similarity/'
+    )
+    visualize_sim_mat(RESULTS, mat_key='var_mat', title=metric+' across subj var', 
+                                    name_lst_key='name_lst', 
+                                    cmap='viridis',
+                                    save_image=save_image, output_root=output_root+'dFC_similarity/'
+    )
     ############ Hierarchical Clustering ############
     for filter in ['default_values']:
         if metric=='MI':
@@ -183,14 +185,16 @@ for feature2extract in feature2extract_list:
         RESULTS[filter]['name_lst'] = measure_name_lst
 
     ############ VISUALIZE ############
-    visualize_conn_mat_dict(RESULTS, title=feature2extract+' average', fix_lim=False, 
-    disp_diag=False, cmap='viridis', name_lst_key='name_lst', mat_key='avg_mat', center_0=False,
-                        save_image=save_image, output_root=output_root+'feature_based/')
-
-    visualize_conn_mat_dict(RESULTS, title=feature2extract+' across subj var', fix_lim=False, 
-    disp_diag=False, cmap='viridis', name_lst_key='name_lst', mat_key='var_mat', center_0=False,
-                        save_image=save_image, output_root=output_root+'feature_based/')
-
+    visualize_sim_mat(RESULTS, mat_key='avg_mat', title=feature2extract+' average', 
+                                    name_lst_key='name_lst', 
+                                    cmap='viridis',
+                                    save_image=save_image, output_root=output_root+'feature_based/'
+    )
+    visualize_sim_mat(RESULTS, mat_key='var_mat', title=feature2extract+' across subj var', 
+                                    name_lst_key='name_lst', 
+                                    cmap='viridis',
+                                    save_image=save_image, output_root=output_root+'feature_based/'
+    )
     ############ Hierarchical Clustering ############
     for filter in ['default_values']:
         dist_mat = 1 - RESULTS[filter]['avg_mat']
@@ -236,14 +240,16 @@ for graph_property in graph_property_list:
         RESULTS[filter]['name_lst'] = measure_name_lst
 
     ############ VISUALIZE ############
-    visualize_conn_mat_dict(RESULTS, title='spatial '+graph_property+' average', fix_lim=False, 
-    disp_diag=False, cmap='viridis', name_lst_key='name_lst', mat_key='avg_mat', center_0=False,
-                        save_image=save_image, output_root=output_root+'graph_based/')
-
-    visualize_conn_mat_dict(RESULTS, title='spatial '+graph_property+' across subj var', fix_lim=False, 
-    disp_diag=False, cmap='viridis', name_lst_key='name_lst', mat_key='var_mat', center_0=False,
-                        save_image=save_image, output_root=output_root+'graph_based/')
-
+    visualize_sim_mat(RESULTS, mat_key='avg_mat', title='spatial '+graph_property+' average', 
+                                    name_lst_key='name_lst', 
+                                    cmap='viridis',
+                                    save_image=save_image, output_root=output_root+'graph_based/'
+    )
+    visualize_sim_mat(RESULTS, mat_key='var_mat', title='spatial '+graph_property+' across subj var', 
+                                    name_lst_key='name_lst', 
+                                    cmap='viridis',
+                                    save_image=save_image, output_root=output_root+'graph_based/'
+    )
     ############ Hierarchical Clustering ############
     for filter in ['default_values']:
         dist_mat = 1 - RESULTS[filter]['avg_mat']
@@ -277,14 +283,16 @@ for graph_property in graph_property_list:
         RESULTS[filter]['name_lst'] = measure_name_lst
 
     ############ VISUALIZE ############
-    visualize_conn_mat_dict(RESULTS, title='temporal '+graph_property+' average', fix_lim=False, 
-    disp_diag=False, cmap='viridis', name_lst_key='name_lst', mat_key='avg_mat', center_0=False,
-                        save_image=save_image, output_root=output_root+'graph_based/')
-
-    visualize_conn_mat_dict(RESULTS, title='temporal '+graph_property+' across subj var', fix_lim=False, 
-    disp_diag=False, cmap='viridis', name_lst_key='name_lst', mat_key='var_mat', center_0=False,
-                        save_image=save_image, output_root=output_root+'graph_based/')
-
+    visualize_sim_mat(RESULTS, mat_key='avg_mat', title='temporal '+graph_property+' average', 
+                                    name_lst_key='name_lst', 
+                                    cmap='viridis',
+                                    save_image=save_image, output_root=output_root+'graph_based/'
+    )
+    visualize_sim_mat(RESULTS, mat_key='var_mat', title='temporal '+graph_property+' across subj var', 
+                                    name_lst_key='name_lst', 
+                                    cmap='viridis',
+                                    save_image=save_image, output_root=output_root+'graph_based/'
+    )
     ############ Hierarchical Clustering ############
     for filter in ['default_values']:
         dist_mat = 1 - RESULTS[filter]['avg_mat']
@@ -360,10 +368,11 @@ for subj_lvl_feature in subj_lvl_feature_lst:
         RESULTS[filter]['name_lst'] = measure_name_lst
 
     ############ VISUALIZE ############
-    visualize_conn_mat_dict(RESULTS, title='inter-subject similarity based on '+subj_lvl_feature, fix_lim=False, 
-    disp_diag=False, cmap='viridis', name_lst_key='name_lst', mat_key='sim_mat', center_0=False,
-                        save_image=save_image, output_root=output_root+'inter_subject/')
-
+    visualize_sim_mat(RESULTS, mat_key='sim_mat', title='inter-subject similarity based on '+subj_lvl_feature, 
+                                    name_lst_key='name_lst', 
+                                    cmap='viridis',
+                                    save_image=save_image, output_root=output_root+'inter_subject/'
+    )
     ############ Hierarchical Clustering ############
     for filter in RESULTS:
         dist_mat = 1 - RESULTS[filter]['sim_mat']
@@ -473,13 +482,13 @@ for filter in ['default_values']:
             
     visualize_conn_mat_2D_dict(RESULTS, node_networks=node_networks, 
         title='across node temporal spearman corr ' + filter, fix_lim=False, 
-        disp_diag=False, cmap='jet', normalize=True,
+        disp_diag=False, cmap='jet', normalize=False,
         save_image=save_image, output_root=output_root+'across_node/'
         )
 
 ################################# Variation #################################
 '''
-    - compare variation over methods with variation over time.
+    - high variation regions over methods and over time.
 '''
 for filter in ['default_values']:
     var_over_time = list()
@@ -515,13 +524,147 @@ for filter in ['default_values']:
     RESULTS['var_over_time'] = np.divide(var_over_time, np.max(var_over_time))
     RESULTS['var_over_method'] = np.divide(var_over_method, np.max(var_over_method))
     RESULTS['var_over_method/var_over_time'] = np.divide(var_over_method, var_over_time) - 1
+    RESULTS['var_over_method*var_over_time'] = np.multiply(var_over_method, var_over_time)
+    for key in RESULTS:
+        RESULTS[key] = rank_norm(RESULTS[key])
+        RESULTS[key] = cat_data(RESULTS[key], N=10)
+        RESULTS[key] = np.where(RESULTS[key] == np.max(RESULTS[key]), 1, 0)
 
 ############ VISUALIZE ############
 
     visualize_conn_mat_dict(RESULTS, node_networks=node_networks, 
-        title='variation '+filter, fix_lim=False, 
-        disp_diag=True, cmap='jet',
+        title='high variation regions '+filter, fix_lim=False, 
+        disp_diag=True, cmap='plasma', center_0=False,
         save_image=save_image, output_root=output_root+'variation/'
+    )
+
+################################# Variation Value Comparison #################################
+'''
+    - compare variation over methods with variation over time.
+'''
+RESULTS = {}
+for filter in ['default_values']:
+    diff_mat_dict = {}
+    temp_var_dict = {}
+    lag_1_diff_mat_dict = {}
+    for s in ALL_RECORDS:
+
+        SUBJs_output = np.load(assessment_results_root+'dFC_assessed/'+s, allow_pickle='True').item()
+
+        for i, measure_i in enumerate(SUBJs_output[filter]['measure_lst']):
+            measure_name_i = measure_i.measure_name
+
+            dFC_mat_i = rank_norm(SUBJs_output[filter]['dFCM_samples'][str(i)])
+
+            for j, measure_j in enumerate(SUBJs_output[filter]['measure_lst']):
+                measure_name_j = measure_j.measure_name
+
+                dFC_mat_j = rank_norm(SUBJs_output[filter]['dFCM_samples'][str(j)])
+
+                if not measure_name_i in diff_mat_dict:
+                    diff_mat_dict[measure_name_i] = {}
+                    temp_var_dict[measure_name_i] = {}
+                    lag_1_diff_mat_dict[measure_name_i] = {}
+                if not measure_name_j in diff_mat_dict[measure_name_i]:
+                    diff_mat_dict[measure_name_i][measure_name_j] = list()
+                    temp_var_dict[measure_name_i][measure_name_j] = list()
+                    lag_1_diff_mat_dict[measure_name_i][measure_name_j] = list()
+
+                dFC = np.concatenate((dFC_mat_i[None,:,:,:], dFC_mat_j[None,:,:,:]), axis=0)
+                diff_mat_dict[measure_name_i][measure_name_j].append(np.mean(np.var(dFC, axis=0), axis=0))
+                temp_var_dict[measure_name_i][measure_name_j].append(np.mean(np.var(dFC, axis=1), axis=0))
+                lag_1_diff_mat_dict[measure_name_i][measure_name_j].append(np.mean(np.mean(0.25*(np.diff(dFC, axis=1)**2), axis=1), axis=0))
+
+    measure_name_lst = [measure_key_i for measure_key_i in diff_mat_dict]
+
+    divide_temp = np.zeros((len(measure_name_lst),len(measure_name_lst)))
+    divide_1_lag = np.zeros((len(measure_name_lst),len(measure_name_lst)))
+    for i, measure_key_i in enumerate(measure_name_lst):
+        for j, measure_key_j in enumerate(measure_name_lst):
+
+            A = np.mean(np.array(diff_mat_dict[measure_key_i][measure_key_j]), axis=0)
+            B = np.mean(np.array(temp_var_dict[measure_key_i][measure_key_j]), axis=0)
+            C = np.mean(np.array(lag_1_diff_mat_dict[measure_key_i][measure_key_j]), axis=0)
+
+            divide_temp[i, j] = np.mean(np.divide(A, B, out=np.zeros_like(A), where=B!=0))
+            divide_1_lag[i, j] = np.mean(np.divide(A, C, out=np.zeros_like(A), where=C!=0))
+
+    RESULTS['divide_temp'] = {'sim_mat': divide_temp, 'name_lst': measure_name_lst}
+    RESULTS['divide_1_lag'] = {'sim_mat': divide_1_lag, 'name_lst': measure_name_lst}
+
+############ VISUALIZE ############
+
+    visualize_sim_mat(RESULTS, mat_key='sim_mat', title='variation in different dimensions '+filter, 
+                                    name_lst_key='name_lst', 
+                                    cmap='viridis',
+                                    save_image=save_image, output_root=output_root+'variation/'
+    )
+
+################################# Similarity in different Variation Levels #################################
+'''
+    - measure spearman correlation similarity in different variation levels.
+'''
+num_var_band = 10
+
+RESULTS = {}
+for filter in ['default_values']:
+    RESULTS['sim'] = {}
+    RESULTS['sim']['sim_mat'] = list()
+    for n in range(1, num_var_band+1):
+        RESULTS['sim_high_var'+str(n)] = {}
+        RESULTS['sim_high_var'+str(n)]['sim_mat'] = list()
+    for s in ALL_RECORDS:
+
+        SUBJs_output = np.load(assessment_results_root+'dFC_assessed/'+s, allow_pickle='True').item()
+
+        sim_mat = np.zeros((len(SUBJs_output[filter]['measure_lst']), len(SUBJs_output[filter]['measure_lst'])))
+        sim_mat_high_var = np.zeros((num_var_band, len(SUBJs_output[filter]['measure_lst']), len(SUBJs_output[filter]['measure_lst'])))
+        for i, measure_i in enumerate(SUBJs_output[filter]['measure_lst']):
+
+            dFC_mat_i = SUBJs_output[filter]['dFCM_samples'][str(i)]
+
+            temp_var_mat_i = np.var(dFC_mat_i, axis=0)
+
+            for j, measure_j in enumerate(SUBJs_output[filter]['measure_lst']):
+
+                dFC_mat_j = SUBJs_output[filter]['dFCM_samples'][str(j)]
+
+                # all similarity
+                sim, p = stats.spearmanr(dFC_mat_i.flatten(), dFC_mat_j.flatten())
+                sim_mat[i, j] = sim
+
+                # var band similarity
+                temp_var_mat_j = np.var(dFC_mat_j, axis=0)
+                temp_var_mat = np.divide(temp_var_mat_i + temp_var_mat_j, 2)
+                for n in range(1, num_var_band+1):
+                    var_mask = rank_norm(temp_var_mat)
+                    var_mask = cat_data(var_mask, N=num_var_band)
+                    var_mask = np.where(var_mask == n, 1, 0) # (roi, roi)
+                    # high_var_func_conns is not syymetric!
+                    var_mask = np.divide(var_mask + var_mask.T, 2)
+                    var_mask = np.where(var_mask == 0, 0, 1)
+
+                    masked_i = dFC_mask(dFC_mat_i, var_mask==1)
+                    masked_j = dFC_mask(dFC_mat_j, var_mask==1)
+
+                    sim, p = stats.spearmanr(masked_i.flatten(), masked_j.flatten())
+
+                    sim_mat_high_var[n-1, i, j] = sim
+
+        RESULTS['sim']['sim_mat'].append(sim_mat)
+        for n in range(1,num_var_band+1):
+            RESULTS['sim_high_var'+str(n)]['sim_mat'].append(sim_mat_high_var[n-1,:,:])
+
+    for key in RESULTS:
+        RESULTS[key]['sim_mat'] = np.mean(np.array(RESULTS[key]['sim_mat']), axis=0)
+        RESULTS[key]['name_lst'] = [measure.measure_name for measure in SUBJs_output[filter]['measure_lst']]
+
+############ VISUALIZE ############
+
+    visualize_sim_mat(RESULTS, mat_key='sim_mat', title='Similarity in different Variation Levels '+filter, 
+                                    name_lst_key='name_lst', 
+                                    cmap='viridis',
+                                    save_image=save_image, output_root=output_root+'variation/'
     )
 
 ################################# TIME RECORD #################################

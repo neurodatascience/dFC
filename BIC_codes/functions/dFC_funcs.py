@@ -272,6 +272,21 @@ def cat_data(X_t, N):
     X_t_new = np.array(X_t_new)
     return X_t_new
 
+def dFC_mask(dFC_mat, mask):
+    '''
+    dFC_mat and mask will be vectorized using dFC_mat2vec
+    mask = (roi, roi)
+    '''
+    dFC_vecs = dFC_mat2vec(dFC_mat)
+    mask_vec = dFC_mat2vec(mask)
+
+    dFC_vec_new = list()
+    for dFC_vec in dFC_vecs:
+        dFC_vec_new.append(dFC_vec[mask_vec])
+    dFC_vec_new = np.array(dFC_vec_new)
+
+    return dFC_vec_new
+    
 # test
 def zip_name(name):
     # zip measure names
