@@ -55,11 +55,31 @@ print('Measurement required %0.3f seconds.' % (time.time() - tic, ))
 
 ################################# SAVE DATA #################################
 
-folder = output_root+'dFC_assessed/SUBJ_'+str(subj_id)
+# folder = output_root+'dFC_assessed/SUBJ_'+str(subj_id)
+# if not os.path.exists(folder):
+#     os.makedirs(folder)
+
+# for dFCM_id, dFCM in enumerate(dFCM_dict['dFCM_lst']):
+#     np.save(folder+'/dFCM_'+str(dFCM_id)+'.npy', dFCM) 
+
+################################# SIMILARITY MEASUREMENT #################################
+
+similarity_assessment = SIMILARITY_ASSESSMENT(dFCM_lst=dFCM_dict['dFCM_lst'])
+
+tic = time.time()
+print('Measurement Started ...')
+
+print("Similarity measurement started...")
+SUBJ_output = similarity_assessment.run(FILTERS=dFC_analyzer.hyper_param_info, downsampling_method='default')
+print("Similarity measurement done.")
+
+print('Measurement required %0.3f seconds.' % (time.time() - tic, ))
+
+# Save
+folder = output_root+'similarity_measured'
 if not os.path.exists(folder):
     os.makedirs(folder)
 
-for dFCM_id, dFCM in enumerate(dFCM_dict['dFCM_lst']):
-    np.save(folder+'/dFCM_'+str(dFCM_id)+'.npy', dFCM) 
+np.save(folder+'/SUBJ_'+str(subj_id)+'_output.npy', SUBJ_output) 
 
 #################################################################################

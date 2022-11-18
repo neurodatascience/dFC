@@ -22,6 +22,8 @@ ALL_RECORDS.sort()
 for s in ALL_RECORDS[:1]:
     output = np.load(assessment_results_root+'dFC_assessed/'+s, allow_pickle='True').item()
 
+print('*** %d subjects were found.' % (len(ALL_RECORDS)))
+
 FILTERS = [key for key in output]
 print(FILTERS)
 
@@ -486,7 +488,7 @@ for filter in ['default_values']:
         save_image=save_image, output_root=output_root+'across_node/'
         )
 
-################################# Variation #################################
+################################# High Variation Regions #################################
 '''
     - high variation regions over methods and over time.
 '''
@@ -662,6 +664,64 @@ for filter in ['default_values']:
 ############ VISUALIZE ############
 
     visualize_sim_mat(RESULTS, mat_key='sim_mat', title='Similarity in different Variation Levels '+filter, 
+                                    name_lst_key='name_lst', 
+                                    cmap='viridis',
+                                    save_image=save_image, output_root=output_root+'variation/'
+    )
+
+################################# Similarity inter Time vs. Method #################################
+'''
+    - compare spearman correlation similarity between consecutive time points and between methods.
+'''
+RESULTS = {}
+for filter in ['default_values']:
+    RESULTS['sim'] = {}
+    RESULTS['sim']['sim_mat'] = list()
+    RESULTS['sim_mat_across_method'] = {}
+    RESULTS['sim_mat_across_method']['sim_mat'] = list()
+    RESULTS['sim_mat_across_time'] = {}
+    RESULTS['sim_mat_across_time']['sim_mat'] = list()
+    for s in ALL_RECORDS:
+
+        SUBJs_output = np.load(assessment_results_root+'dFC_assessed/'+s, allow_pickle='True').item()
+        n_time = SUBJs_output[filter]['dFCM_samples'][str(0)].shape[0]
+
+        sim_mat = np.zeros((len(SUBJs_output[filter]['measure_lst']), len(SUBJs_output[filter]['measure_lst'])))
+        sim_mat_across_method = np.zeros((n_time-1, len(SUBJs_output[filter]['measure_lst']), len(SUBJs_output[filter]['measure_lst'])))
+        sim_mat_across_time = np.zeros((n_time-1, len(SUBJs_output[filter]['measure_lst']), len(SUBJs_output[filter]['measure_lst'])))
+        for i, measure_i in enumerate(SUBJs_output[filter]['measure_lst']):
+
+            dFC_mat_i = SUBJs_output[filter]['dFCM_samples'][str(i)]
+
+            for j, measure_j in enumerate(SUBJs_output[filter]['measure_lst']):
+
+                dFC_mat_j = SUBJs_output[filter]['dFCM_samples'][str(j)]
+
+                # all similarity
+                sim, p = stats.spearmanr(dFC_mat_i.flatten(), dFC_mat_j.flatten())
+                sim_mat[i, j] = sim
+
+                for t in range(n_time-1):
+                    sim, p = stats.spearmanr(dFC_mat_i[t,:,:].flatten(), dFC_mat_j[t,:,:].flatten())
+                    sim_mat_across_method[t, i, j] = sim
+                    sim_i, p = stats.spearmanr(dFC_mat_i[t,:,:].flatten(), dFC_mat_i[t+1,:,:].flatten())
+                    sim_j, p = stats.spearmanr(dFC_mat_j[t,:,:].flatten(), dFC_mat_j[t+1,:,:].flatten())
+                    sim_mat_across_time[t, i, j] = (sim_i + sim_j) / 2
+
+        RESULTS['sim']['sim_mat'].append(sim_mat)
+        RESULTS['sim_mat_across_method']['sim_mat'].append(np.mean(sim_mat_across_method, axis=0))
+        RESULTS['sim_mat_across_time']['sim_mat'].append(np.mean(sim_mat_across_time, axis=0))
+
+    measure_lst = [measure.measure_name for measure in SUBJs_output[filter]['measure_lst']]
+    for key in RESULTS:
+        RESULTS[key]['sim_mat'] = np.mean(np.array(RESULTS[key]['sim_mat']), axis=0)
+        RESULTS[key]['name_lst'] = measure_lst
+
+    RESULTS['divide_method_time'] = {'sim_mat': np.divide(RESULTS['sim_mat_across_method']['sim_mat'], RESULTS['sim_mat_across_time']['sim_mat']) - 1, 'name_lst': measure_lst}
+
+############ VISUALIZE ############
+
+    visualize_sim_mat(RESULTS, mat_key='sim_mat', title='Similarity inter Time vs. Method '+filter, 
                                     name_lst_key='name_lst', 
                                     cmap='viridis',
                                     save_image=save_image, output_root=output_root+'variation/'

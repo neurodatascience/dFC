@@ -43,9 +43,9 @@ similarity_assessment = SIMILARITY_ASSESSMENT(dFCM_lst=dFCM_lst)
 tic = time.time()
 print('Measurement Started ...')
 
-print("dFCM estimation started...")
+print("Similarity measurement started...")
 SUBJ_output = similarity_assessment.run(FILTERS=dFC_analyzer.hyper_param_info, downsampling_method='default')
-print("dFCM estimation done.")
+print("Similarity measurement done.")
 
 print('Measurement required %0.3f seconds.' % (time.time() - tic, ))
 
