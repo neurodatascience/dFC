@@ -460,6 +460,7 @@ def visualize_sim_mat(data, mat_key, title='', \
     '''
     - name_lst_key is the key to list of names
     - data must be a dict of correlation/connectivity matrices
+    - masks the nan values
     sample:
     Suptitle1
         corr_mat
