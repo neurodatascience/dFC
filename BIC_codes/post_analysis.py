@@ -123,8 +123,8 @@ for metric in metric_list:
         RESULTS[filter] = {}
         RESULTS[filter]['avg_mat'] = all_subjs_avg
         RESULTS[filter]['var_mat'] = across_subj_var
-        RESULTS[filter]['avg_div_var_mat'] = np.divide(all_subjs_avg, across_subj_var)
-        RESULTS[filter]['var_div_avg_mat'] = np.divide(across_subj_var, all_subjs_avg)
+        RESULTS[filter]['avg_div_var_mat'] = np.divide(all_subjs_avg, across_subj_var, out=np.zeros_like(all_subjs_avg), where=across_subj_var!=0)
+        RESULTS[filter]['var_div_avg_mat'] = np.divide(across_subj_var, all_subjs_avg, out=np.zeros_like(across_subj_var), where=all_subjs_avg!=0)
         RESULTS[filter]['name_lst'] = measure_name_lst
 
     ############ VISUALIZE ############
@@ -185,8 +185,8 @@ for feature2extract in feature2extract_list:
         RESULTS[filter] = {}
         RESULTS[filter]['avg_mat'] = all_subjs_avg
         RESULTS[filter]['var_mat'] = across_subj_var
-        RESULTS[filter]['avg_div_var_mat'] = np.divide(all_subjs_avg, across_subj_var)
-        RESULTS[filter]['var_div_avg_mat'] = np.divide(across_subj_var, all_subjs_avg)
+        RESULTS[filter]['avg_div_var_mat'] = np.divide(all_subjs_avg, across_subj_var, out=np.zeros_like(all_subjs_avg), where=across_subj_var!=0)
+        RESULTS[filter]['var_div_avg_mat'] = np.divide(across_subj_var, all_subjs_avg, out=np.zeros_like(across_subj_var), where=all_subjs_avg!=0)
         RESULTS[filter]['name_lst'] = measure_name_lst
 
     ############ VISUALIZE ############
@@ -240,8 +240,8 @@ for graph_property in graph_property_list:
         RESULTS[filter] = {}
         RESULTS[filter]['avg_mat'] = all_subjs_avg
         RESULTS[filter]['var_mat'] = across_subj_var
-        RESULTS[filter]['avg_div_var_mat'] = np.divide(all_subjs_avg, across_subj_var)
-        RESULTS[filter]['var_div_avg_mat'] = np.divide(across_subj_var, all_subjs_avg)
+        RESULTS[filter]['avg_div_var_mat'] = np.divide(all_subjs_avg, across_subj_var, out=np.zeros_like(all_subjs_avg), where=across_subj_var!=0)
+        RESULTS[filter]['var_div_avg_mat'] = np.divide(across_subj_var, all_subjs_avg, out=np.zeros_like(across_subj_var), where=all_subjs_avg!=0)
         RESULTS[filter]['name_lst'] = measure_name_lst
 
     ############ VISUALIZE ############
@@ -283,8 +283,8 @@ for graph_property in graph_property_list:
         RESULTS[filter] = {}
         RESULTS[filter]['avg_mat'] = all_subjs_avg
         RESULTS[filter]['var_mat'] = across_subj_var
-        RESULTS[filter]['avg_div_var_mat'] = np.divide(all_subjs_avg, across_subj_var)
-        RESULTS[filter]['var_div_avg_mat'] = np.divide(across_subj_var, all_subjs_avg)
+        RESULTS[filter]['avg_div_var_mat'] = np.divide(all_subjs_avg, across_subj_var, out=np.zeros_like(all_subjs_avg), where=across_subj_var!=0)
+        RESULTS[filter]['var_div_avg_mat'] = np.divide(across_subj_var, all_subjs_avg, out=np.zeros_like(across_subj_var), where=all_subjs_avg!=0)
         RESULTS[filter]['name_lst'] = measure_name_lst
 
     ############ VISUALIZE ############
