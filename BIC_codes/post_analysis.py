@@ -10,17 +10,18 @@ print('################################# POST ANALYSIS STARTED RUNNING ... #####
 
 ################################# LOAD RESULTS #################################
 
-# assessment_results_root = './../../../../RESULTs/methods_implementation/server/methods_implementation/'
-assessment_results_root = './'
-# output_root = './../../../../RESULTs/methods_implementation/server/methods_implementation/out/'
-output_root = './output/'
+assessment_results_root = './../../../../RESULTs/methods_implementation/server/methods_implementation/'
+# assessment_results_root = './'
+output_root = './../../../../RESULTs/methods_implementation/server/methods_implementation/out/'
+# output_root = './output/'
+FOLDER_name = 'similarity_measured/'
 save_image = True
 
-ALL_RECORDS = os.listdir(assessment_results_root+'dFC_assessed/')
+ALL_RECORDS = os.listdir(assessment_results_root+FOLDER_name)
 ALL_RECORDS = [i for i in ALL_RECORDS if 'SUBJ_' in i]
 ALL_RECORDS.sort()
 for s in ALL_RECORDS[:1]:
-    output = np.load(assessment_results_root+'dFC_assessed/'+s, allow_pickle='True').item()
+    output = np.load(assessment_results_root+FOLDER_name+s, allow_pickle='True').item()
 
 print('*** %d subjects were found.' % (len(ALL_RECORDS)))
 
@@ -30,7 +31,7 @@ print(FILTERS)
 for filter in FILTERS:
     measure_name_lst = None
     for s in ALL_RECORDS:
-        SUBJs_output = np.load(assessment_results_root+'dFC_assessed/'+s, allow_pickle='True').item()
+        SUBJs_output = np.load(assessment_results_root+FOLDER_name+s, allow_pickle='True').item()
         # check measures order
         if measure_name_lst is None:
             measure_name_lst = [measure.measure_name for measure in SUBJs_output[filter]['measure_lst']]
@@ -51,7 +52,7 @@ for filter in ['default_values']:
 
     # for SUBJs_output in SUBJs_output_lst:
     for s in ALL_RECORDS[:1]:
-        SUBJs_output = np.load(assessment_results_root+'dFC_assessed/'+s, allow_pickle='True').item()
+        SUBJs_output = np.load(assessment_results_root+FOLDER_name+s, allow_pickle='True').item()
         node_networks = node_info2network(SUBJs_output[filter]['TS_info_lst'][0]['nodes_info'])
 
         for measure_id in SUBJs_output[filter]['dFCM_samples']:
@@ -80,7 +81,7 @@ for filter in ['default_values']:
 
     # for SUBJs_output in SUBJs_output_lst:
     for s in ALL_RECORDS[:1]:
-        SUBJs_output = np.load(assessment_results_root+'dFC_assessed/'+s, allow_pickle='True').item()
+        SUBJs_output = np.load(assessment_results_root+FOLDER_name+s, allow_pickle='True').item()
 
         for measure in SUBJs_output[filter]['measure_lst']:
 
@@ -110,7 +111,7 @@ for metric in metric_list:
 
         all_subjs_sim_mat = list()
         for s in ALL_RECORDS:
-            SUBJs_output = np.load(assessment_results_root+'dFC_assessed/'+s, allow_pickle='True').item()
+            SUBJs_output = np.load(assessment_results_root+FOLDER_name+s, allow_pickle='True').item()
             # SUBJs_output[filter]['all']['metric'] = (1, method, method)
             all_subjs_sim_mat.append(np.squeeze(SUBJs_output[filter]['all'][metric]))
 
@@ -122,19 +123,19 @@ for metric in metric_list:
         RESULTS[filter] = {}
         RESULTS[filter]['avg_mat'] = all_subjs_avg
         RESULTS[filter]['var_mat'] = across_subj_var
+        RESULTS[filter]['avg_div_var_mat'] = np.divide(all_subjs_avg, across_subj_var)
+        RESULTS[filter]['var_div_avg_mat'] = np.divide(across_subj_var, all_subjs_avg)
         RESULTS[filter]['name_lst'] = measure_name_lst
 
     ############ VISUALIZE ############
-    visualize_sim_mat(RESULTS, mat_key='avg_mat', title=metric+' average', 
-                                    name_lst_key='name_lst', 
-                                    cmap='viridis',
-                                    save_image=save_image, output_root=output_root+'dFC_similarity/'
-    )
-    visualize_sim_mat(RESULTS, mat_key='var_mat', title=metric+' across subj var', 
-                                    name_lst_key='name_lst', 
-                                    cmap='viridis',
-                                    save_image=save_image, output_root=output_root+'dFC_similarity/'
-    )
+    for key in RESULTS[filter]:
+        if key=='name_lst':
+            continue
+        visualize_sim_mat(RESULTS, mat_key=key, title=metric+' '+key, 
+                                        name_lst_key='name_lst', 
+                                        cmap='viridis',
+                                        save_image=save_image, output_root=output_root+'dFC_similarity/'+metric+'/'
+        )
     ############ Hierarchical Clustering ############
     for filter in ['default_values']:
         if metric=='MI':
@@ -149,7 +150,7 @@ for metric in metric_list:
         np.fill_diagonal(dist_mat, 0)
         dist_mat_dendo(dist_mat=dist_mat, labels=RESULTS[filter]['name_lst'], 
             title='Hierarchical Clustering of Methods ' + filter+' using '+metric, 
-            save_image=save_image, output_root=output_root+'dFC_similarity/'
+            save_image=save_image, output_root=output_root+'dFC_similarity/'+metric+'/'
         )
 ################# feature-based #################
 '''
@@ -172,7 +173,7 @@ for feature2extract in feature2extract_list:
 
         all_subjs_sim_mat = list()
         for s in ALL_RECORDS:
-            SUBJs_output = np.load(assessment_results_root+'dFC_assessed/'+s, allow_pickle='True').item()
+            SUBJs_output = np.load(assessment_results_root+FOLDER_name+s, allow_pickle='True').item()
             # SUBJs_output[filter]['feature_based'][feature2extract] = (sample, method, method)
             all_subjs_sim_mat.append(np.mean(SUBJs_output[filter]['feature_based'][feature2extract], axis=0))
 
@@ -184,19 +185,19 @@ for feature2extract in feature2extract_list:
         RESULTS[filter] = {}
         RESULTS[filter]['avg_mat'] = all_subjs_avg
         RESULTS[filter]['var_mat'] = across_subj_var
+        RESULTS[filter]['avg_div_var_mat'] = np.divide(all_subjs_avg, across_subj_var)
+        RESULTS[filter]['var_div_avg_mat'] = np.divide(across_subj_var, all_subjs_avg)
         RESULTS[filter]['name_lst'] = measure_name_lst
 
     ############ VISUALIZE ############
-    visualize_sim_mat(RESULTS, mat_key='avg_mat', title=feature2extract+' average', 
-                                    name_lst_key='name_lst', 
-                                    cmap='viridis',
-                                    save_image=save_image, output_root=output_root+'feature_based/'
-    )
-    visualize_sim_mat(RESULTS, mat_key='var_mat', title=feature2extract+' across subj var', 
-                                    name_lst_key='name_lst', 
-                                    cmap='viridis',
-                                    save_image=save_image, output_root=output_root+'feature_based/'
-    )
+    for key in RESULTS[filter]:
+        if key=='name_lst':
+            continue
+        visualize_sim_mat(RESULTS, mat_key=key, title=feature2extract+' '+key, 
+                                        name_lst_key='name_lst', 
+                                        cmap='viridis',
+                                        save_image=save_image, output_root=output_root+'feature_based/'+feature2extract+'/'
+        )
     ############ Hierarchical Clustering ############
     for filter in ['default_values']:
         dist_mat = 1 - RESULTS[filter]['avg_mat']
@@ -205,7 +206,7 @@ for feature2extract in feature2extract_list:
         np.fill_diagonal(dist_mat, 0)
         dist_mat_dendo(dist_mat=dist_mat, labels=RESULTS[filter]['name_lst'], 
             title='Hierarchical Clustering of Methods ' + filter+' using '+feature2extract, 
-            save_image=save_image, output_root=output_root+'feature_based/'
+            save_image=save_image, output_root=output_root+'feature_based/'+feature2extract+'/'
         )
 ################# graph-based #################
 '''
@@ -227,7 +228,7 @@ for graph_property in graph_property_list:
 
         all_subjs_sim_mat = list()
         for s in ALL_RECORDS:
-            SUBJs_output = np.load(assessment_results_root+'dFC_assessed/'+s, allow_pickle='True').item()
+            SUBJs_output = np.load(assessment_results_root+FOLDER_name+s, allow_pickle='True').item()
             # SUBJs_output[filter]['graph_based']['graph_spatial'][graph_property] = (sample, method, method)
             all_subjs_sim_mat.append(np.mean(SUBJs_output[filter]['graph_based']['graph_spatial'][graph_property], axis=0))
 
@@ -239,19 +240,19 @@ for graph_property in graph_property_list:
         RESULTS[filter] = {}
         RESULTS[filter]['avg_mat'] = all_subjs_avg
         RESULTS[filter]['var_mat'] = across_subj_var
+        RESULTS[filter]['avg_div_var_mat'] = np.divide(all_subjs_avg, across_subj_var)
+        RESULTS[filter]['var_div_avg_mat'] = np.divide(across_subj_var, all_subjs_avg)
         RESULTS[filter]['name_lst'] = measure_name_lst
 
     ############ VISUALIZE ############
-    visualize_sim_mat(RESULTS, mat_key='avg_mat', title='spatial '+graph_property+' average', 
-                                    name_lst_key='name_lst', 
-                                    cmap='viridis',
-                                    save_image=save_image, output_root=output_root+'graph_based/'
-    )
-    visualize_sim_mat(RESULTS, mat_key='var_mat', title='spatial '+graph_property+' across subj var', 
-                                    name_lst_key='name_lst', 
-                                    cmap='viridis',
-                                    save_image=save_image, output_root=output_root+'graph_based/'
-    )
+    for key in RESULTS[filter]:
+        if key=='name_lst':
+            continue
+        visualize_sim_mat(RESULTS, mat_key=key, title='spatial '+graph_property+' '+key, 
+                                        name_lst_key='name_lst', 
+                                        cmap='viridis',
+                                        save_image=save_image, output_root=output_root+'graph_based/'+graph_property+'/'
+        )
     ############ Hierarchical Clustering ############
     for filter in ['default_values']:
         dist_mat = 1 - RESULTS[filter]['avg_mat']
@@ -260,7 +261,7 @@ for graph_property in graph_property_list:
         np.fill_diagonal(dist_mat, 0)
         dist_mat_dendo(dist_mat=dist_mat, labels=RESULTS[filter]['name_lst'], 
             title='Hierarchical Clustering of Methods ' + filter+' using '+ 'spatial '+ graph_property, 
-            save_image=save_image, output_root=output_root+'graph_based/'
+            save_image=save_image, output_root=output_root+'graph_based/'+graph_property+'/'
         )
 ###### temporal #####
 for graph_property in graph_property_list:
@@ -270,7 +271,7 @@ for graph_property in graph_property_list:
 
         all_subjs_sim_mat = list()
         for s in ALL_RECORDS:
-            SUBJs_output = np.load(assessment_results_root+'dFC_assessed/'+s, allow_pickle='True').item()
+            SUBJs_output = np.load(assessment_results_root+FOLDER_name+s, allow_pickle='True').item()
             # SUBJs_output[filter]['graph_based']['graph_temporal'][graph_property] = (1, method, method)
             all_subjs_sim_mat.append(np.squeeze(SUBJs_output[filter]['graph_based']['graph_temporal'][graph_property]))
 
@@ -282,19 +283,19 @@ for graph_property in graph_property_list:
         RESULTS[filter] = {}
         RESULTS[filter]['avg_mat'] = all_subjs_avg
         RESULTS[filter]['var_mat'] = across_subj_var
+        RESULTS[filter]['avg_div_var_mat'] = np.divide(all_subjs_avg, across_subj_var)
+        RESULTS[filter]['var_div_avg_mat'] = np.divide(across_subj_var, all_subjs_avg)
         RESULTS[filter]['name_lst'] = measure_name_lst
 
     ############ VISUALIZE ############
-    visualize_sim_mat(RESULTS, mat_key='avg_mat', title='temporal '+graph_property+' average', 
-                                    name_lst_key='name_lst', 
-                                    cmap='viridis',
-                                    save_image=save_image, output_root=output_root+'graph_based/'
-    )
-    visualize_sim_mat(RESULTS, mat_key='var_mat', title='temporal '+graph_property+' across subj var', 
-                                    name_lst_key='name_lst', 
-                                    cmap='viridis',
-                                    save_image=save_image, output_root=output_root+'graph_based/'
-    )
+    for key in RESULTS[filter]:
+        if key=='name_lst':
+            continue
+        visualize_sim_mat(RESULTS, mat_key=key, title='temporal '+graph_property+' '+key, 
+                                        name_lst_key='name_lst', 
+                                        cmap='viridis',
+                                        save_image=save_image, output_root=output_root+'graph_based/'+graph_property+'/'
+        )
     ############ Hierarchical Clustering ############
     for filter in ['default_values']:
         dist_mat = 1 - RESULTS[filter]['avg_mat']
@@ -303,14 +304,14 @@ for graph_property in graph_property_list:
         np.fill_diagonal(dist_mat, 0)
         dist_mat_dendo(dist_mat=dist_mat, labels=RESULTS[filter]['name_lst'], 
             title='Hierarchical Clustering of Methods ' + filter+' using '+ 'temporal '+ graph_property, 
-            save_image=save_image, output_root=output_root+'graph_based/'
+            save_image=save_image, output_root=output_root+'graph_based/'+graph_property+'/'
         )
 
 ################################# inter_subject similarity #################################
 
 '''
     - returns correspondence of inter-subject relation between results of dFC 
-        measures in each ssession
+        measures in each session
     - dendogram based on inter-subject similarity
 '''
 subj_lvl_feature_lst = [
@@ -322,7 +323,7 @@ for subj_lvl_feature in subj_lvl_feature_lst:
     for filter in FILTERS:
         features_subj = list()
         for s in ALL_RECORDS:
-            SUBJs_output = np.load(assessment_results_root+'dFC_assessed/'+s, allow_pickle='True').item()
+            SUBJs_output = np.load(assessment_results_root+FOLDER_name+s, allow_pickle='True').item()
 
             features_i = list()
             for i, measure_i in enumerate(SUBJs_output[filter]['measure_lst']):
@@ -373,7 +374,7 @@ for subj_lvl_feature in subj_lvl_feature_lst:
     visualize_sim_mat(RESULTS, mat_key='sim_mat', title='inter-subject similarity based on '+subj_lvl_feature, 
                                     name_lst_key='name_lst', 
                                     cmap='viridis',
-                                    save_image=save_image, output_root=output_root+'inter_subject/'
+                                    save_image=save_image, output_root=output_root+'inter_subject/'+subj_lvl_feature+'/'
     )
     ############ Hierarchical Clustering ############
     for filter in RESULTS:
@@ -383,8 +384,97 @@ for subj_lvl_feature in subj_lvl_feature_lst:
         np.fill_diagonal(dist_mat, 0)
         dist_mat_dendo(dist_mat=dist_mat, labels=RESULTS[filter]['name_lst'], 
         title='Hierarchical Clustering of Methods ' + filter+' using inter-subject similarity based on '+subj_lvl_feature, 
-        save_image=save_image, output_root=output_root+'inter_subject/'
+        save_image=save_image, output_root=output_root+'inter_subject/'+subj_lvl_feature+'/'
         )
+
+################################# inter-subject-corr similarity across session #################################
+
+'''
+    - returns correspondence of inter-subject relation between results of dFC 
+        measures across sessions
+'''
+
+subj_lvl_feature_lst = [
+    'dFC_values',
+    'FO'
+]
+for subj_lvl_feature in subj_lvl_feature_lst:
+    RESULTS = {}
+    inter_subj_sim_sessions = list()
+    session_name_lst = list()
+    for filter in FILTERS:
+        if filter=='default_values':
+            session_name_lst.append('session_Rest1_LR')
+        elif 'session' in filter:
+            session_name_lst.append(filter)
+        features_subj = list()
+        inter_subj_sim_session = list()
+        for s in ALL_RECORDS:
+            SUBJs_output = np.load(assessment_results_root+FOLDER_name+s, allow_pickle='True').item()
+            features_i = list()
+            for i, measure_i in enumerate(SUBJs_output[filter]['measure_lst']):
+
+                if subj_lvl_feature=='dFC_values':
+                    dFC_mat_i = SUBJs_output[filter]['dFCM_samples'][str(i)]
+                    # rank normalization
+                    dFC_mat_i = rank_norm(dFC_mat_i) 
+                    features_i.append(dFC_mat2vec(dFC_mat_i).flatten())
+                elif subj_lvl_feature=='FO':
+                    FO = SUBJs_output[filter]['FO'][i]
+                    if not measure_i.is_state_based:
+                        continue
+                    else:
+                        FO = [FO[FCS] for FCS in FO]
+                        FO = np.array(FO)
+                    features_i.append(FO)
+            features_i = np.array(features_i)
+            features_subj.append(features_i)
+
+        features_subj = np.array(features_subj) # features_subj = (subj, method, subj_lvl_feature)
+
+        for i in range(features_subj.shape[1]):
+
+            features_i = np.squeeze(features_subj[:,i,:]) # features_i = (subj, subj_lvl_feature)
+
+            # inter_subj_sim_i = np.corrcoef(features_i) # inter_subj_sim_i = (subj, subj)
+            inter_subj_sim_i, p_value = stats.spearmanr(features_i, axis=1) # inter_subj_sim_i = (subj, subj)
+
+            inter_subj_sim_i = dFC_mat2vec(inter_subj_sim_i)
+
+            inter_subj_sim_session.append(inter_subj_sim_i)
+
+        inter_subj_sim_session = np.array(inter_subj_sim_session) # (method, inter_subj_sim_values)
+        print(inter_subj_sim_session.shape)
+
+        inter_subj_sim_sessions.append(inter_subj_sim_session)
+
+    inter_subj_sim_sessions = np.array(inter_subj_sim_sessions) # (session, method, inter_subj_sim_values)
+    print(inter_subj_sim_sessions.shape)
+
+    if subj_lvl_feature=='dFC_values':
+        measure_name_lst = [measure.measure_name for measure in SUBJs_output[filter]['measure_lst']]
+    elif subj_lvl_feature=='FO': 
+        measure_name_lst = [measure.measure_name for measure in SUBJs_output[filter]['measure_lst'] if measure.is_state_based]
+
+    for measure_id, measure_name in enumerate(measure_name_lst):
+
+        sim_mat = np.zeros((inter_subj_sim_sessions.shape[0], inter_subj_sim_sessions.shape[0]))
+        for session_i in range(inter_subj_sim_sessions.shape[0]):
+            for session_j in range(inter_subj_sim_sessions.shape[0]):
+
+                spear_coef, p_value = stats.spearmanr(inter_subj_sim_sessions[session_i, measure_id,:], inter_subj_sim_sessions[session_j, measure_id,:])
+                sim_mat[session_i, session_j] = spear_coef
+
+        RESULTS[measure_name] = {}
+        RESULTS[measure_name]['sim_mat'] = sim_mat
+        RESULTS[measure_name]['name_lst'] = session_name_lst
+
+    ############ VISUALIZE ############
+    visualize_sim_mat(RESULTS, mat_key='sim_mat', title='inter-subject-corr similarity across session based on '+subj_lvl_feature, 
+                                    name_lst_key='name_lst', 
+                                    cmap='viridis',
+                                    save_image=save_image, output_root=output_root+'inter_subject/'
+    )
 
 ################################# dFC var #################################
 
@@ -394,7 +484,7 @@ for subj_lvl_feature in subj_lvl_feature_lst:
 for filter in ['default_values']:
     RESULTS = {}
     for s in ALL_RECORDS:
-        SUBJs_output = np.load(assessment_results_root+'dFC_assessed/'+s, allow_pickle='True').item()
+        SUBJs_output = np.load(assessment_results_root+FOLDER_name+s, allow_pickle='True').item()
         node_networks = node_info2network(SUBJs_output[filter]['TS_info_lst'][0]['nodes_info'])
         n_regions = SUBJs_output[filter]['TS_info_lst'][0]['n_regions']
 
@@ -424,7 +514,7 @@ for filter in ['default_values']:
 for filter in ['default_values']:
     RESULTS = {}
     for s in ALL_RECORDS:
-        SUBJs_output = np.load(assessment_results_root+'dFC_assessed/'+s, allow_pickle='True').item()
+        SUBJs_output = np.load(assessment_results_root+FOLDER_name+s, allow_pickle='True').item()
         node_networks = node_info2network(SUBJs_output[filter]['TS_info_lst'][0]['nodes_info'])
         n_regions = SUBJs_output[filter]['TS_info_lst'][0]['n_regions']
 
@@ -452,7 +542,7 @@ for filter in ['default_values']:
 for filter in ['default_values']:
     RESULTS = {}
     for s in ALL_RECORDS:
-        SUBJs_output = np.load(assessment_results_root+'dFC_assessed/'+s, allow_pickle='True').item()
+        SUBJs_output = np.load(assessment_results_root+FOLDER_name+s, allow_pickle='True').item()
         node_networks = node_info2network(SUBJs_output[filter]['TS_info_lst'][0]['nodes_info'])
         n_regions = SUBJs_output[filter]['TS_info_lst'][0]['n_regions']
 
@@ -497,7 +587,7 @@ for filter in ['default_values']:
     var_over_method = list()
     for s in ALL_RECORDS:
 
-        SUBJs_output = np.load(assessment_results_root+'dFC_assessed/'+s, allow_pickle='True').item()
+        SUBJs_output = np.load(assessment_results_root+FOLDER_name+s, allow_pickle='True').item()
         node_networks = node_info2network(SUBJs_output[filter]['TS_info_lst'][0]['nodes_info'])
 
         dFC_mat_lst = list()
@@ -551,7 +641,7 @@ for filter in ['default_values']:
     lag_1_diff_mat_dict = {}
     for s in ALL_RECORDS:
 
-        SUBJs_output = np.load(assessment_results_root+'dFC_assessed/'+s, allow_pickle='True').item()
+        SUBJs_output = np.load(assessment_results_root+FOLDER_name+s, allow_pickle='True').item()
 
         for i, measure_i in enumerate(SUBJs_output[filter]['measure_lst']):
             measure_name_i = measure_i.measure_name
@@ -617,7 +707,7 @@ for filter in ['default_values']:
         RESULTS['sim_high_var'+str(n)]['sim_mat'] = list()
     for s in ALL_RECORDS:
 
-        SUBJs_output = np.load(assessment_results_root+'dFC_assessed/'+s, allow_pickle='True').item()
+        SUBJs_output = np.load(assessment_results_root+FOLDER_name+s, allow_pickle='True').item()
 
         sim_mat = np.zeros((len(SUBJs_output[filter]['measure_lst']), len(SUBJs_output[filter]['measure_lst'])))
         sim_mat_high_var = np.zeros((num_var_band, len(SUBJs_output[filter]['measure_lst']), len(SUBJs_output[filter]['measure_lst'])))
@@ -683,7 +773,7 @@ for filter in ['default_values']:
     RESULTS['sim_mat_across_time']['sim_mat'] = list()
     for s in ALL_RECORDS:
 
-        SUBJs_output = np.load(assessment_results_root+'dFC_assessed/'+s, allow_pickle='True').item()
+        SUBJs_output = np.load(assessment_results_root+FOLDER_name+s, allow_pickle='True').item()
         n_time = SUBJs_output[filter]['dFCM_samples'][str(0)].shape[0]
 
         sim_mat = np.zeros((len(SUBJs_output[filter]['measure_lst']), len(SUBJs_output[filter]['measure_lst'])))
@@ -737,7 +827,7 @@ for filter in ['default_values']:
     avg_dFC_assess = {}
     # for SUBJs_output in SUBJs_output_lst:
     for s in ALL_RECORDS:
-        SUBJs_output = np.load(assessment_results_root+'dFC_assessed/'+s, allow_pickle='True').item()
+        SUBJs_output = np.load(assessment_results_root+FOLDER_name+s, allow_pickle='True').item()
 
         measure_name_lst = list()
         for measure_id in SUBJs_output[filter]['time_record_dict']:
