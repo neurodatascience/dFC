@@ -451,10 +451,11 @@ def node_info2network(nodes_info):
         node_networks.append(info[3])    
     return node_networks
 
-def visualize_sim_mat(data, mat_key, title='', \
-    name_lst_key=None, \
-    cmap='viridis',\
-    save_image=False, output_root=None, axes=None, fig=None, \
+def visualize_sim_mat(data, mat_key, title='', 
+    name_lst_key=None, 
+    cmap='viridis',
+    annot=True, fmt=".2f",
+    save_image=False, output_root=None, axes=None, fig=None, 
     ):
 
     '''
@@ -523,7 +524,7 @@ def visualize_sim_mat(data, mat_key, title='', \
         #     cbar_flag = True
 
         im = sns.heatmap(C, 
-            annot=True, fmt=".2f", cmap=cmap, 
+            annot=annot, fmt=fmt, cmap=cmap, 
             xticklabels=name_lst, yticklabels=name_lst, 
             ax=axes[i], cbar=cbar_flag,
             square=True, linewidth=2, linecolor='w'

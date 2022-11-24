@@ -316,87 +316,8 @@ for graph_property in graph_property_list:
 '''
 subj_lvl_feature_lst = [
     'dFC_values',
-    'FO'
-]
-for subj_lvl_feature in subj_lvl_feature_lst:
-    RESULTS = {}
-    for filter in FILTERS:
-        features_subj = list()
-        for s in ALL_RECORDS:
-            SUBJs_output = np.load(assessment_results_root+FOLDER_name+s, allow_pickle='True').item()
-
-            features_i = list()
-            for i, measure_i in enumerate(SUBJs_output[filter]['measure_lst']):
-
-                if subj_lvl_feature=='dFC_values':
-                    dFC_mat_i = SUBJs_output[filter]['dFCM_samples'][str(i)]
-                    # rank normalization
-                    dFC_mat_i = rank_norm(dFC_mat_i) 
-                    features_i.append(dFC_mat2vec(dFC_mat_i).flatten())
-                elif subj_lvl_feature=='FO':
-                    FO = SUBJs_output[filter]['FO'][i]
-                    if not measure_i.is_state_based:
-                        continue
-                    else:
-                        FO = [FO[FCS] for FCS in FO]
-                        FO = np.array(FO)
-                    features_i.append(FO)
-            features_i = np.array(features_i)
-            features_subj.append(features_i)
-
-        features_subj = np.array(features_subj) # features_subj = (subj, method, subj_lvl_feature)
-
-        sim_mat = np.zeros((features_subj.shape[1], features_subj.shape[1]))
-        for i in range(features_subj.shape[1]):
-            for j in range(features_subj.shape[1]):
-
-                features_i = np.squeeze(features_subj[:,i,:]) # features_i = (subj, subj_lvl_feature)
-                features_j = np.squeeze(features_subj[:,j,:]) # features_j = (subj, subj_lvl_feature)
-
-                inter_subj_sim_i = np.corrcoef(features_i) # inter_subj_sim_i = (subj, subj)
-                inter_subj_sim_j = np.corrcoef(features_j) # inter_subj_sim_j = (subj, subj)
-
-                inter_subj_sim_i = dFC_mat2vec(inter_subj_sim_i)
-                inter_subj_sim_j = dFC_mat2vec(inter_subj_sim_j)
-
-                spear_coef, p_value = stats.spearmanr(inter_subj_sim_i, inter_subj_sim_j)
-                sim_mat[i, j] = spear_coef
-
-        RESULTS[filter] = {}
-        RESULTS[filter]['sim_mat'] = sim_mat
-        if subj_lvl_feature=='dFC_values':
-            measure_name_lst = [measure.measure_name for measure in SUBJs_output[filter]['measure_lst']]
-        elif subj_lvl_feature=='FO': 
-            measure_name_lst = [measure.measure_name for measure in SUBJs_output[filter]['measure_lst'] if measure.is_state_based]
-        RESULTS[filter]['name_lst'] = measure_name_lst
-
-    ############ VISUALIZE ############
-    visualize_sim_mat(RESULTS, mat_key='sim_mat', title='inter-subject similarity based on '+subj_lvl_feature, 
-                                    name_lst_key='name_lst', 
-                                    cmap='viridis',
-                                    save_image=save_image, output_root=output_root+'inter_subject/'+subj_lvl_feature+'/'
-    )
-    ############ Hierarchical Clustering ############
-    for filter in RESULTS:
-        dist_mat = 1 - RESULTS[filter]['sim_mat']
-        dist_mat = 0.5*(dist_mat + dist_mat.T)
-        # diagonal values of dist_mat must equal exactly zero
-        np.fill_diagonal(dist_mat, 0)
-        dist_mat_dendo(dist_mat=dist_mat, labels=RESULTS[filter]['name_lst'], 
-        title='Hierarchical Clustering of Methods ' + filter+' using inter-subject similarity based on '+subj_lvl_feature, 
-        save_image=save_image, output_root=output_root+'inter_subject/'+subj_lvl_feature+'/'
-        )
-
-################################# inter-subject-corr similarity across session #################################
-
-'''
-    - returns correspondence of inter-subject relation between results of dFC 
-        measures across sessions
-'''
-
-subj_lvl_feature_lst = [
-    'dFC_values',
-    'FO'
+    'FO',
+    'dFC_var'
 ]
 for subj_lvl_feature in subj_lvl_feature_lst:
     RESULTS = {}
@@ -409,8 +330,11 @@ for subj_lvl_feature in subj_lvl_feature_lst:
             session_name_lst.append(filter)
         features_subj = list()
         inter_subj_sim_session = list()
+        subj_name_lst = list()
         for s in ALL_RECORDS:
             SUBJs_output = np.load(assessment_results_root+FOLDER_name+s, allow_pickle='True').item()
+            subj_name_lst.append(SUBJs_output[filter]['TS_info_lst'][0]['subj_id_lst'][0])
+
             features_i = list()
             for i, measure_i in enumerate(SUBJs_output[filter]['measure_lst']):
 
@@ -419,6 +343,15 @@ for subj_lvl_feature in subj_lvl_feature_lst:
                     # rank normalization
                     dFC_mat_i = rank_norm(dFC_mat_i) 
                     features_i.append(dFC_mat2vec(dFC_mat_i).flatten())
+                elif subj_lvl_feature=='dFC_var':
+                    dFC_mat_i = SUBJs_output[filter]['dFCM_samples'][str(i)]
+                    # rank normalization
+                    # dFC_mat_i = rank_norm(dFC_mat_i) 
+                    dFC_var = np.var(dFC_mat_i, axis=0)
+                    dFC_var = rank_norm(dFC_var)
+                    dFC_var = cat_data(dFC_var, N=10)
+                    dFC_var = np.where(dFC_var == np.max(dFC_var), 1, 0)
+                    features_i.append(dFC_mat2vec(dFC_var))
                 elif subj_lvl_feature=='FO':
                     FO = SUBJs_output[filter]['FO'][i]
                     if not measure_i.is_state_based:
@@ -431,50 +364,107 @@ for subj_lvl_feature in subj_lvl_feature_lst:
             features_subj.append(features_i)
 
         features_subj = np.array(features_subj) # features_subj = (subj, method, subj_lvl_feature)
+        num_subj = features_subj.shape[0]
 
         for i in range(features_subj.shape[1]):
 
             features_i = np.squeeze(features_subj[:,i,:]) # features_i = (subj, subj_lvl_feature)
 
-            # inter_subj_sim_i = np.corrcoef(features_i) # inter_subj_sim_i = (subj, subj)
-            inter_subj_sim_i, p_value = stats.spearmanr(features_i, axis=1) # inter_subj_sim_i = (subj, subj)
+            inter_subj_sim_i = np.corrcoef(features_i) # inter_subj_sim_i = (subj, subj)
+            # inter_subj_sim_i, p_value = stats.spearmanr(features_i, axis=1) # inter_subj_sim_i = (subj, subj)
 
             inter_subj_sim_i = dFC_mat2vec(inter_subj_sim_i)
 
             inter_subj_sim_session.append(inter_subj_sim_i)
 
         inter_subj_sim_session = np.array(inter_subj_sim_session) # (method, inter_subj_sim_values)
-        print(inter_subj_sim_session.shape)
 
         inter_subj_sim_sessions.append(inter_subj_sim_session)
 
     inter_subj_sim_sessions = np.array(inter_subj_sim_sessions) # (session, method, inter_subj_sim_values)
-    print(inter_subj_sim_sessions.shape)
 
     if subj_lvl_feature=='dFC_values':
         measure_name_lst = [measure.measure_name for measure in SUBJs_output[filter]['measure_lst']]
     elif subj_lvl_feature=='FO': 
         measure_name_lst = [measure.measure_name for measure in SUBJs_output[filter]['measure_lst'] if measure.is_state_based]
 
+    RESULTS['across_session'] = {}
     for measure_id, measure_name in enumerate(measure_name_lst):
-
         sim_mat = np.zeros((inter_subj_sim_sessions.shape[0], inter_subj_sim_sessions.shape[0]))
         for session_i in range(inter_subj_sim_sessions.shape[0]):
             for session_j in range(inter_subj_sim_sessions.shape[0]):
-
                 spear_coef, p_value = stats.spearmanr(inter_subj_sim_sessions[session_i, measure_id,:], inter_subj_sim_sessions[session_j, measure_id,:])
                 sim_mat[session_i, session_j] = spear_coef
 
-        RESULTS[measure_name] = {}
-        RESULTS[measure_name]['sim_mat'] = sim_mat
-        RESULTS[measure_name]['name_lst'] = session_name_lst
+        RESULTS['across_session'][measure_name] = {}
+        RESULTS['across_session'][measure_name]['sim_mat'] = sim_mat
+        RESULTS['across_session'][measure_name]['name_lst'] = session_name_lst
+
+    RESULTS['across_method'] = {}
+    for session_id, session in enumerate(session_name_lst):
+        sim_mat = np.zeros((len(measure_name_lst), len(measure_name_lst)))
+        for i in range(len(measure_name_lst)):
+            for j in range(len(measure_name_lst)):
+
+                spear_coef, p_value = stats.spearmanr(inter_subj_sim_sessions[session_id, i,:], inter_subj_sim_sessions[session_id, j,:])
+                sim_mat[i, j] = spear_coef
+
+        RESULTS['across_method'][session] = {}
+        RESULTS['across_method'][session]['sim_mat'] = sim_mat
+        RESULTS['across_method'][session]['name_lst'] = measure_name_lst
+
+    RESULTS['method_divide_session'] = {}
+    avg_across_method = np.mean(np.array([RESULTS['across_method'][session]['sim_mat'] for session in RESULTS['across_method']]), axis=0)
+    avg_across_session = np.zeros((len(measure_name_lst), len(measure_name_lst)))
+    for measure_i, measure_name_i in enumerate(measure_name_lst):
+        for measure_j, measure_name_j in enumerate(measure_name_lst):
+            across_session_measure_i = dFC_mat2vec(RESULTS['across_session'][measure_name_i]['sim_mat'])
+            across_session_measure_j = dFC_mat2vec(RESULTS['across_session'][measure_name_j]['sim_mat'])
+            avg_across_session[measure_i, measure_j] = np.mean(np.divide(across_session_measure_i + across_session_measure_j, 2))
+
+    RESULTS['method_divide_session']['avg_across_method'] = {}
+    RESULTS['method_divide_session']['avg_across_method']['sim_mat'] = avg_across_method
+    RESULTS['method_divide_session']['avg_across_method']['name_lst'] = measure_name_lst
+
+    RESULTS['method_divide_session']['avg_across_session'] = {}
+    RESULTS['method_divide_session']['avg_across_session']['sim_mat'] = avg_across_session
+    RESULTS['method_divide_session']['avg_across_session']['name_lst'] = measure_name_lst
+
+    RESULTS['method_divide_session']['divide'] = {}
+    RESULTS['method_divide_session']['divide']['sim_mat'] = np.divide(avg_across_method, avg_across_session, out=np.zeros_like(avg_across_method), where=avg_across_session!=0)
+    np.fill_diagonal(RESULTS['method_divide_session']['divide']['sim_mat'], np.nan)
+    RESULTS['method_divide_session']['divide']['name_lst'] = measure_name_lst
+
+    common_key = 'subj_corr_diff_methods_'
+    for session_id, session in enumerate(session_name_lst):
+        RESULTS[common_key+session] = {}
+        for measure_id, measure_name in enumerate(measure_name_lst):
+            RESULTS[common_key+session][measure_name] = {}
+            RESULTS[common_key+session][measure_name]['sim_mat'] = rank_norm(np.squeeze(dFC_vec2mat(np.expand_dims(inter_subj_sim_sessions[session_id, measure_id, :], axis=0), N=num_subj)))
+            np.fill_diagonal(RESULTS[common_key+session][measure_name]['sim_mat'], np.nan)
+            RESULTS[common_key+session][measure_name]['name_lst'] = subj_name_lst
 
     ############ VISUALIZE ############
-    visualize_sim_mat(RESULTS, mat_key='sim_mat', title='inter-subject-corr similarity across session based on '+subj_lvl_feature, 
-                                    name_lst_key='name_lst', 
-                                    cmap='viridis',
-                                    save_image=save_image, output_root=output_root+'inter_subject/'
-    )
+    for key in RESULTS:
+        annot = True
+        if common_key in key:
+            annot = False
+        visualize_sim_mat(RESULTS[key], mat_key='sim_mat', title='inter-subject-corr similarity '+key+ ' based on '+subj_lvl_feature, 
+                                        name_lst_key='name_lst', 
+                                        cmap='viridis',
+                                        annot=annot,
+                                        save_image=save_image, output_root=output_root+'inter_subject/'+subj_lvl_feature+'/'
+        )
+    ############ Hierarchical Clustering ############
+    for session in RESULTS['across_method']:
+        dist_mat = 1 - RESULTS['across_method'][session]['sim_mat']
+        dist_mat = 0.5*(dist_mat + dist_mat.T)
+        # diagonal values of dist_mat must equal exactly zero
+        np.fill_diagonal(dist_mat, 0)
+        dist_mat_dendo(dist_mat=dist_mat, labels=RESULTS['across_method'][session]['name_lst'], 
+        title='Hierarchical Clustering of Methods ' + filter+' using inter-subject similarity based on '+subj_lvl_feature, 
+        save_image=save_image, output_root=output_root+'inter_subject/'+subj_lvl_feature+'/'
+        )
 
 ################################# dFC var #################################
 
