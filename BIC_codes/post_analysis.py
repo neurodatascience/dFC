@@ -10,10 +10,10 @@ print('################################# POST ANALYSIS STARTED RUNNING ... #####
 
 ################################# LOAD RESULTS #################################
 
-assessment_results_root = './../../../../RESULTs/methods_implementation/server/methods_implementation/'
-# assessment_results_root = './'
-output_root = './../../../../RESULTs/methods_implementation/server/methods_implementation/out/'
-# output_root = './output/'
+# assessment_results_root = './../../../../RESULTs/methods_implementation/server/methods_implementation/'
+assessment_results_root = './'
+# output_root = './../../../../RESULTs/methods_implementation/server/methods_implementation/out/'
+output_root = './output/'
 FOLDER_name = 'similarity_measured/'
 save_image = True
 
@@ -123,7 +123,7 @@ for metric in metric_list:
         RESULTS[filter] = {}
         RESULTS[filter]['avg_mat'] = all_subjs_avg
         RESULTS[filter]['var_mat'] = across_subj_var
-        RESULTS[filter]['avg_div_var_mat'] = np.divide(all_subjs_avg, across_subj_var, out=np.zeros_like(all_subjs_avg), where=across_subj_var!=0)
+        RESULTS[filter]['avg_div_var_mat'] = np.divide(all_subjs_avg, np.sqrt(across_subj_var), out=np.zeros_like(all_subjs_avg), where=np.sqrt(across_subj_var)!=0)
         RESULTS[filter]['var_div_avg_mat'] = np.divide(across_subj_var, all_subjs_avg, out=np.zeros_like(across_subj_var), where=all_subjs_avg!=0)
         RESULTS[filter]['name_lst'] = measure_name_lst
 
@@ -185,7 +185,7 @@ for feature2extract in feature2extract_list:
         RESULTS[filter] = {}
         RESULTS[filter]['avg_mat'] = all_subjs_avg
         RESULTS[filter]['var_mat'] = across_subj_var
-        RESULTS[filter]['avg_div_var_mat'] = np.divide(all_subjs_avg, across_subj_var, out=np.zeros_like(all_subjs_avg), where=across_subj_var!=0)
+        RESULTS[filter]['avg_div_var_mat'] = np.divide(all_subjs_avg, np.sqrt(across_subj_var), out=np.zeros_like(all_subjs_avg), where=np.sqrt(across_subj_var)!=0)
         RESULTS[filter]['var_div_avg_mat'] = np.divide(across_subj_var, all_subjs_avg, out=np.zeros_like(across_subj_var), where=all_subjs_avg!=0)
         RESULTS[filter]['name_lst'] = measure_name_lst
 
@@ -240,7 +240,7 @@ for graph_property in graph_property_list:
         RESULTS[filter] = {}
         RESULTS[filter]['avg_mat'] = all_subjs_avg
         RESULTS[filter]['var_mat'] = across_subj_var
-        RESULTS[filter]['avg_div_var_mat'] = np.divide(all_subjs_avg, across_subj_var, out=np.zeros_like(all_subjs_avg), where=across_subj_var!=0)
+        RESULTS[filter]['avg_div_var_mat'] = np.divide(all_subjs_avg, np.sqrt(across_subj_var), out=np.zeros_like(all_subjs_avg), where=np.sqrt(across_subj_var)!=0)
         RESULTS[filter]['var_div_avg_mat'] = np.divide(across_subj_var, all_subjs_avg, out=np.zeros_like(across_subj_var), where=all_subjs_avg!=0)
         RESULTS[filter]['name_lst'] = measure_name_lst
 
@@ -283,7 +283,7 @@ for graph_property in graph_property_list:
         RESULTS[filter] = {}
         RESULTS[filter]['avg_mat'] = all_subjs_avg
         RESULTS[filter]['var_mat'] = across_subj_var
-        RESULTS[filter]['avg_div_var_mat'] = np.divide(all_subjs_avg, across_subj_var, out=np.zeros_like(all_subjs_avg), where=across_subj_var!=0)
+        RESULTS[filter]['avg_div_var_mat'] = np.divide(all_subjs_avg, np.sqrt(across_subj_var), out=np.zeros_like(all_subjs_avg), where=np.sqrt(across_subj_var)!=0)
         RESULTS[filter]['var_div_avg_mat'] = np.divide(across_subj_var, all_subjs_avg, out=np.zeros_like(across_subj_var), where=all_subjs_avg!=0)
         RESULTS[filter]['name_lst'] = measure_name_lst
 
@@ -473,25 +473,33 @@ for subj_lvl_feature in subj_lvl_feature_lst:
 '''
 for filter in ['default_values']:
     RESULTS = {}
+    RESULTS['avg_dFC_var'] = {}
+    RESULTS['var_dFC_var'] = {}
     for s in ALL_RECORDS:
         SUBJs_output = np.load(assessment_results_root+FOLDER_name+s, allow_pickle='True').item()
         node_networks = node_info2network(SUBJs_output[filter]['TS_info_lst'][0]['nodes_info'])
         n_regions = SUBJs_output[filter]['TS_info_lst'][0]['n_regions']
 
         for i, measure in enumerate(SUBJs_output[filter]['measure_lst']):
-            if not measure.measure_name in RESULTS:
-                RESULTS[measure.measure_name] = list()
+            if not measure.measure_name in RESULTS['avg_dFC_var']:
+                RESULTS['avg_dFC_var'][measure.measure_name] = list()
             # SUBJs_output[filter]['dFC_var'][i] = (1, connection)
             var_mat = np.squeeze(dFC_vec2mat(SUBJs_output[filter]['dFC_var'][i], N=n_regions)) # (ROI, ROI)
             np.fill_diagonal(var_mat, 0)
-            RESULTS[measure.measure_name].append(rank_norm(var_mat))
+            RESULTS['avg_dFC_var'][measure.measure_name].append(rank_norm(var_mat))
 
-    for key in RESULTS:
-        RESULTS[key] = np.array(RESULTS[key])
-        RESULTS[key] = np.mean(RESULTS[key], axis=0)
+    for key in RESULTS['avg_dFC_var']:
+        RESULTS['avg_dFC_var'][key] = np.array(RESULTS['avg_dFC_var'][key])
+        RESULTS['var_dFC_var'][key] = np.var(RESULTS['avg_dFC_var'][key], axis=0)
+        RESULTS['avg_dFC_var'][key] = np.mean(RESULTS['avg_dFC_var'][key], axis=0)
 
-    visualize_conn_mat_dict(RESULTS, node_networks=node_networks, 
-                title='dFC var ' + filter, 
+    visualize_conn_mat_dict(RESULTS['avg_dFC_var'], node_networks=node_networks, 
+                title='avg dFC var ' + filter, 
+                fix_lim=False, disp_diag=True, cmap='jet', normalize=False, 
+                save_image=save_image, output_root=output_root+'dFC_var/')
+
+    visualize_conn_mat_dict(RESULTS['var_dFC_var'], node_networks=node_networks, 
+                title='var of dFC var ' + filter, 
                 fix_lim=False, disp_diag=True, cmap='jet', normalize=False, 
                 save_image=save_image, output_root=output_root+'dFC_var/')
 
@@ -761,6 +769,8 @@ for filter in ['default_values']:
     RESULTS['sim_mat_across_method']['sim_mat'] = list()
     RESULTS['sim_mat_across_time'] = {}
     RESULTS['sim_mat_across_time']['sim_mat'] = list()
+    RESULTS['divide_method_time'] = {}
+    RESULTS['divide_method_time']['sim_mat'] = list()
     for s in ALL_RECORDS:
 
         SUBJs_output = np.load(assessment_results_root+FOLDER_name+s, allow_pickle='True').item()
@@ -791,13 +801,12 @@ for filter in ['default_values']:
         RESULTS['sim']['sim_mat'].append(sim_mat)
         RESULTS['sim_mat_across_method']['sim_mat'].append(np.mean(sim_mat_across_method, axis=0))
         RESULTS['sim_mat_across_time']['sim_mat'].append(np.mean(sim_mat_across_time, axis=0))
+        RESULTS['divide_method_time']['sim_mat'].append(np.mean(np.divide(sim_mat_across_method, sim_mat_across_time, out=np.zeros_like(sim_mat_across_method), where=sim_mat_across_time!=0), axis=0))
 
     measure_lst = [measure.measure_name for measure in SUBJs_output[filter]['measure_lst']]
     for key in RESULTS:
         RESULTS[key]['sim_mat'] = np.mean(np.array(RESULTS[key]['sim_mat']), axis=0)
         RESULTS[key]['name_lst'] = measure_lst
-
-    RESULTS['divide_method_time'] = {'sim_mat': np.divide(RESULTS['sim_mat_across_method']['sim_mat'], RESULTS['sim_mat_across_time']['sim_mat']) - 1, 'name_lst': measure_lst}
 
 ############ VISUALIZE ############
 
