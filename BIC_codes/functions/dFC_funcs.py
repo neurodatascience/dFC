@@ -738,7 +738,7 @@ def visualize_conn_mat_2D_dict(data, title='', \
     normalize=False,\
     disp_diag=True,\
     save_image=False, output_root=None, \
-    fix_lim=True, center_0=1.0, \
+    fix_lim=True, center_0=True, \
     node_networks=None \
     ):
 
