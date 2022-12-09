@@ -901,6 +901,34 @@ for filter in ['default_values']:
         save_image=save_image, output_root=output_root+'indiv_prop/'
         )
 
+################################# TRANSITION FREQUENCY #################################
+'''
+ - plot normalized transition frequency
+'''
+RESULTS = {}
+key_name = 'trans_freq'
+for filter in ['default_values']:
+    RESULTS[key_name] = list()
+    RESULTS['dFC_method'] = list()
+    for s in ALL_RECORDS:
+
+        SUBJs_output = np.load(assessment_results_root+FOLDER_name+s, allow_pickle='True').item()
+
+        for i, measure_i in enumerate(SUBJs_output[filter]['measure_lst']):
+
+            if SUBJs_output[filter]['trans_freq'][i] == {}:
+                continue
+            RESULTS[key_name].append(SUBJs_output[filter]['trans_freq'][i]['trans_norm'])
+            RESULTS['dFC_method'].append(measure_i.measure_name)
+
+############ VISUALIZE ############
+
+    cat_plot(data=RESULTS, x='dFC_method', y=key_name, 
+        kind='violin',
+        title=key_name + ' ' + filter,
+        save_image=save_image, output_root=output_root+'indiv_prop/'
+        )
+
 ################################# TIME RECORD #################################
 
 RESULTS = {}
