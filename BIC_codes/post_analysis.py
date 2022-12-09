@@ -873,35 +873,37 @@ for filter in ['default_values']:
 
 ################################# TIME RECORD #################################
 
+RESULTS = {}
 for filter in ['default_values']:
 
-    print('********** time record of ' + filter + '**********')
-
-    avg_FCS_fit = {}
-    avg_dFC_assess = {}
-    # for SUBJs_output in SUBJs_output_lst:
+    RESULTS['FCS_fit_time'] = list()
+    RESULTS['dFC_assess_time'] = list()
+    RESULTS['dFC_method'] = list()
     for s in ALL_RECORDS:
         SUBJs_output = np.load(assessment_results_root+FOLDER_name+s, allow_pickle='True').item()
 
-        measure_name_lst = list()
         for measure_id in SUBJs_output[filter]['time_record_dict']:
-            if not measure_id in avg_FCS_fit:
-                avg_FCS_fit[measure_id] = list()
-            if not measure_id in avg_dFC_assess:
-                avg_dFC_assess[measure_id] = list()
-            avg_FCS_fit[measure_id].append(SUBJs_output[filter]['time_record_dict'][measure_id]['FCS_fit'])
-            avg_dFC_assess[measure_id].append(SUBJs_output[filter]['time_record_dict'][measure_id]['dFC_assess'])
-            measure_name_lst.append(SUBJs_output[filter]['measure_lst'][int(measure_id)].measure_name)
-            
-    for measure_id in avg_FCS_fit:
-        if None in avg_FCS_fit[measure_id]:
-            FCS_result = measure_name_lst[int(measure_id)] + ': FCS_fit '+' = None'
-        else:
-            avg_FCS_fit[measure_id] = np.mean(avg_FCS_fit[measure_id])
-            FCS_result = measure_name_lst[int(measure_id)] + ': FCS_fit '+' = %0.3f' % (avg_FCS_fit[measure_id])
-        avg_dFC_assess[measure_id] = np.mean(avg_dFC_assess[measure_id])
-        dFC_result = 'dFC_assess '+' = %0.3f' % (avg_dFC_assess[measure_id])
-        print( FCS_result + ' , ' + dFC_result )
+
+            if SUBJs_output[filter]['time_record_dict'][measure_id]['FCS_fit'] is None:
+                RESULTS['FCS_fit_time'].append(0)
+            else:
+                RESULTS['FCS_fit_time'].append(SUBJs_output[filter]['time_record_dict'][measure_id]['FCS_fit'])
+            RESULTS['dFC_assess_time'].append(SUBJs_output[filter]['time_record_dict'][measure_id]['dFC_assess'])
+            RESULTS['dFC_method'].append(SUBJs_output[filter]['measure_lst'][int(measure_id)].measure_name)
+
+############ VISUALIZE ############
+
+    cat_plot(data=RESULTS, x='dFC_method', y='dFC_assess_time', 
+        kind='bar',
+        title='dFC assess time record of ' + filter,
+        save_image=save_image, output_root=output_root+'time/'
+        )
+
+    cat_plot(data=RESULTS, x='dFC_method', y='FCS_fit_time', 
+        kind='bar',
+        title='FCS fit time record of ' + filter,
+        save_image=save_image, output_root=output_root+'time/'
+        )
 
 if not save_image:
     plt.show()
