@@ -591,7 +591,10 @@ for filter in ['default_values']:
 
                 sim = list()
                 for func_conn in range(dFC_mat_i_vec.shape[1]):
-                    sim.append(np.corrcoef(dFC_mat_i_vec[:,func_conn], dFC_mat_j_vec[:,func_conn])[0,1])
+                    if np.var(dFC_mat_i_vec[:,func_conn])==0 or np.var(dFC_mat_j_vec[:,func_conn])==0:
+                        sim.append(0)
+                    else:
+                        sim.append(np.corrcoef(dFC_mat_i_vec[:,func_conn], dFC_mat_j_vec[:,func_conn])[0,1])
 
                 sim = np.array(sim)
                 if not measure_i.measure_name in RESULTS:
