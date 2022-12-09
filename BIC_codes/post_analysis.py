@@ -495,6 +495,7 @@ for subj_lvl_feature in subj_lvl_feature_lst:
 
 '''
     - avg(variance/fluctuations of dFC in one Subj)
+    - rank normed
 '''
 for filter in ['default_values']:
     RESULTS = {}
@@ -519,19 +520,20 @@ for filter in ['default_values']:
         RESULTS['avg_dFC_var'][key] = np.mean(RESULTS['avg_dFC_var'][key], axis=0)
 
     visualize_conn_mat_dict(RESULTS['avg_dFC_var'], node_networks=node_networks, 
-                title='avg dFC var ' + filter, 
-                fix_lim=False, disp_diag=True, cmap='jet', normalize=False, 
+                title='avg dFC var ' + filter, center_0=False,
+                fix_lim=False, disp_diag=True, cmap='plasma', normalize=False, 
                 save_image=save_image, output_root=output_root+'dFC_var/')
 
     visualize_conn_mat_dict(RESULTS['var_dFC_var'], node_networks=node_networks, 
-                title='var of dFC var ' + filter, 
-                fix_lim=False, disp_diag=True, cmap='jet', normalize=False, 
+                title='var of dFC var ' + filter, center_0=False,
+                fix_lim=False, disp_diag=True, cmap='plasma', normalize=False, 
                 save_image=save_image, output_root=output_root+'dFC_var/')
 
 ################################# dFC avg #################################
 
 '''
     - avg(avg of dFC -static FC- in one Subj)
+    - rank normed
 '''
 
 for filter in ['default_values']:
@@ -553,11 +555,11 @@ for filter in ['default_values']:
         RESULTS[key] = np.mean(RESULTS[key], axis=0)
 
     visualize_conn_mat_dict(RESULTS, node_networks=node_networks, 
-            title='dFC avg ' + filter, 
-            fix_lim=False, disp_diag=False, cmap='jet', normalize=False,
+            title='dFC avg ' + filter, center_0=False,
+            fix_lim=False, disp_diag=False, cmap='plasma', normalize=False,
             save_image=save_image, output_root=output_root+'dFC_avg/')
 
-################################# Across Node Temporal Correlation #################################
+################################# Across Node Spatial Correlation #################################
 
 '''
     - spearman_corr((dFConnection(node_i, node_j) timecourse using method m), (dFConnection(node_i, node_j) timecourse using method n))
@@ -608,7 +610,7 @@ for filter in ['default_values']:
 
     visualize_conn_mat_2D_dict(RESULTS, node_networks=node_networks, 
         title='across node spatial spearman corr ' + filter, fix_lim=False, 
-        disp_diag=False, cmap='jet', normalize=False, center_0=True,
+        disp_diag=False, cmap='seismic', normalize=False, center_0=True,
         save_image=save_image, output_root=output_root+'across_node/'
     )
 
@@ -652,7 +654,7 @@ for filter in ['default_values']:
             
     visualize_conn_mat_2D_dict(RESULTS, node_networks=node_networks, 
         title='across node temporal spearman corr ' + filter, fix_lim=False, 
-        disp_diag=False, cmap='jet', normalize=False,
+        disp_diag=False, cmap='seismic', normalize=False,
         save_image=save_image, output_root=output_root+'across_node/'
         )
 
