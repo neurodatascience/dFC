@@ -691,18 +691,24 @@ for filter in ['default_values']:
     var_over_method = np.mean(var_over_method, axis=0) # (ROI, ROI)
 
     RESULTS = {}
-    # RESULTS['var_over_time'] = rank_norm(var_over_time)
-    # RESULTS['var_over_method'] = rank_norm(var_over_method)
     RESULTS['var_over_time'] = np.divide(var_over_time, np.max(var_over_time))
     RESULTS['var_over_method'] = np.divide(var_over_method, np.max(var_over_method))
     RESULTS['var_over_method/var_over_time'] = np.divide(var_over_method, var_over_time) - 1
     RESULTS['var_over_method*var_over_time'] = np.multiply(var_over_method, var_over_time)
     for key in RESULTS:
         RESULTS[key] = rank_norm(RESULTS[key])
-        RESULTS[key] = cat_data(RESULTS[key], N=10)
-        RESULTS[key] = np.where(RESULTS[key] == np.max(RESULTS[key]), 1, 0)
 
 ############ VISUALIZE ############
+
+    visualize_conn_mat_dict(RESULTS, node_networks=node_networks, 
+        title='variation across regions '+filter, fix_lim=False, 
+        disp_diag=True, cmap='plasma', center_0=False,
+        save_image=save_image, output_root=output_root+'variation/'
+    )
+
+    for key in RESULTS:
+        RESULTS[key] = cat_data(RESULTS[key], N=10)
+        RESULTS[key] = np.where(RESULTS[key] == np.max(RESULTS[key]), 1, 0)
 
     visualize_conn_mat_dict(RESULTS, node_networks=node_networks, 
         title='high variation regions '+filter, fix_lim=False, 
