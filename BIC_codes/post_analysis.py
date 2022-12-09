@@ -871,6 +871,36 @@ for filter in ['default_values']:
                                     save_image=save_image, output_root=output_root+'variation/'
     )
 
+################################# SIMILARITY OF ADJACENT TIME POINTS #################################
+
+RESULTS = {}
+key_name = 'similarity of adjacent time points'
+for filter in ['default_values']:
+    RESULTS[key_name] = list()
+    RESULTS['dFC_method'] = list()
+    for s in ALL_RECORDS:
+
+        SUBJs_output = np.load(assessment_results_root+FOLDER_name+s, allow_pickle='True').item()
+        n_time = SUBJs_output[filter]['dFCM_samples'][str(0)].shape[0]
+
+        for i, measure_i in enumerate(SUBJs_output[filter]['measure_lst']):
+
+            dFC_mat_i = SUBJs_output[filter]['dFCM_samples'][str(i)]
+
+            for t in range(n_time-1):
+                sim_t, p = stats.spearmanr(dFC_mat_i[t,:,:].flatten(), dFC_mat_i[t+1,:,:].flatten())
+
+                RESULTS[key_name].append(sim_t)
+                RESULTS['dFC_method'].append(measure_i.measure_name)
+
+############ VISUALIZE ############
+
+    cat_plot(data=RESULTS, x='dFC_method', y=key_name, 
+        kind='violin',
+        title=key_name + ' ' + filter,
+        save_image=save_image, output_root=output_root+'indiv_prop/'
+        )
+
 ################################# TIME RECORD #################################
 
 RESULTS = {}
