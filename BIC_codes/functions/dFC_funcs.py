@@ -628,7 +628,7 @@ def visualize_sim_mat(data, mat_key, title='',
         plt.show()
 
 def visualize_conn_mat(C, axis=None, title='', \
-    cmap='jet',\
+    cmap='seismic',\
     V_MIN=None, V_MAX=None, \
     node_networks=None \
     ):
@@ -683,7 +683,7 @@ def visualize_conn_mat(C, axis=None, title='', \
     return im
 
 def visualize_conn_mat_dict(data, title='', \
-    cmap='jet',\
+    cmap='seismic',\
     normalize=False,\
     disp_diag=True,\
     save_image=False, output_root=None, axes=None, fig=None, \
@@ -806,7 +806,7 @@ def visualize_conn_mat_dict(data, title='', \
 
 
 def visualize_conn_mat_2D_dict(data, title='', \
-    cmap='jet',\
+    cmap='seismic',\
     normalize=False,\
     disp_diag=True,\
     save_image=False, output_root=None, \
