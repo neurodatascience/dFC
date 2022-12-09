@@ -24,11 +24,12 @@ import os
 import time
 import hdf5storage
 import scipy.io as sio
+import pandas as pd
 # np.seterr(invalid='ignore')
 
 # ########## bundled brain graph visualizer ##########
 
-# import pandas as pd
+
 # import panel as pn
 # import datashader as ds
 # import datashader.transfer_functions as tf
@@ -450,6 +451,37 @@ def node_info2network(nodes_info):
             continue
         node_networks.append(info[3])    
     return node_networks
+
+def cat_plot(data, x, y, 
+    kind='bar',
+    title='',
+    save_image=False, output_root=None
+    ):
+    '''
+    data is a dictionary with different vars as keys 
+    kind can be = box or violin or bar
+    '''
+
+    df = pd.DataFrame(data)
+
+    fig_width = 2*len(np.unique(data[x]))
+    fig_height = 5 
+    g = sns.catplot(data=df, x=x, y=y, kind=kind
+        # errorbar=("pi", 95)
+    )
+    g.fig.set_figwidth(fig_width)
+    g.fig.set_figheight(fig_height)
+    plt.title(title, fontsize=15)
+    if save_image:
+        folder = output_root[:output_root.rfind('/')]
+        if not os.path.exists(folder):
+            os.makedirs(folder)
+        plt.savefig(output_root+title+'.png', \
+            dpi=fig_dpi, bbox_inches=fig_bbox_inches, pad_inches=fig_pad \
+        ) 
+        plt.close()
+    else:
+        plt.show()
 
 def visualize_sim_mat(data, mat_key, title='', 
     name_lst_key=None, 
