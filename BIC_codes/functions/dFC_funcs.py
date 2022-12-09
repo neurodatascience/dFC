@@ -452,6 +452,46 @@ def node_info2network(nodes_info):
         node_networks.append(info[3])    
     return node_networks
 
+def joint_dist_plot(data,
+    title='',
+    save_image=False, output_root=None
+    ):
+    '''
+    data is a dictionary including list of dFC values
+    of each dFC method
+    '''
+    title = 'distributions'
+    df = pd.DataFrame(data)
+    fig_width = 5*len(data)
+    fig_height = 5*len(data)
+
+    sns.set_context("paper", 
+        font_scale=2.5, 
+        rc={"lines.linewidth": 3.0}
+    )
+
+    g = sns.PairGrid(df)
+
+    g.map_diag(sns.histplot)
+    g.map_offdiag(sns.histplot)
+
+    g.fig.set_figwidth(fig_width)
+    g.fig.set_figheight(fig_height)
+    g.fig.subplots_adjust(top=0.95)
+    plt.suptitle(title, fontsize=50, y=0.98)
+
+    if save_image:
+        folder = output_root[:output_root.rfind('/')]
+        if not os.path.exists(folder):
+            os.makedirs(folder)
+        plt.savefig(output_root+title+'.png', 
+            dpi=fig_dpi, bbox_inches=fig_bbox_inches, pad_inches=fig_pad
+        ) 
+        plt.close()
+    else:
+        plt.show()
+
+
 def cat_plot(data, x, y, 
     kind='bar',
     title='',

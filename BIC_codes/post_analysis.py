@@ -90,6 +90,31 @@ for filter in ['default_values']:
                     save_image=save_image, output_root=output_root+'FCS/'
                     )
 
+################################# dFC values distributions #################################
+
+RESULTS = {}
+for filter in ['default_values']:
+    for s in ALL_RECORDS:
+        SUBJs_output = np.load(assessment_results_root+FOLDER_name+s, allow_pickle='True').item()
+
+        for i, measure_i in enumerate(SUBJs_output[filter]['measure_lst']):
+
+            dFC_mat_i = SUBJs_output[filter]['dFCM_samples'][str(i)]
+
+            if not measure_i.measure_name in RESULTS:
+                RESULTS[measure_i.measure_name] = list()
+            RESULTS[measure_i.measure_name].append(dFC_mat2vec(dFC_mat_i).flatten())
+
+    for measure in RESULTS:
+        RESULTS[measure] = np.array(RESULTS[measure]).flatten()
+
+############ VISUALIZE ############
+
+    joint_dist_plot(data=RESULTS,
+        title='dFC values distributions',
+        save_image=save_image, output_root=output_root+'indiv_prop/'
+        )
+
 ################################# dFC Similarity #################################
 
 ################# whole subject #################
