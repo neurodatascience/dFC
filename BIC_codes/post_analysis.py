@@ -524,6 +524,11 @@ for filter in ['default_values']:
                 fix_lim=False, disp_diag=True, cmap='plasma', normalize=False, 
                 save_image=save_image, output_root=output_root+'dFC_var/')
 
+    visualize_conn_mat_dict(RESULTS['avg_dFC_var'], node_networks=node_networks, segmented=True,
+                title='segmented avg dFC var ' + filter, center_0=False,
+                fix_lim=False, disp_diag=True, cmap='plasma', normalize=False, 
+                save_image=save_image, output_root=output_root+'dFC_var/')
+
     visualize_conn_mat_dict(RESULTS['var_dFC_var'], node_networks=node_networks, 
                 title='var of dFC var ' + filter, center_0=False,
                 fix_lim=False, disp_diag=True, cmap='plasma', normalize=False, 
@@ -556,6 +561,11 @@ for filter in ['default_values']:
 
     visualize_conn_mat_dict(RESULTS, node_networks=node_networks, 
             title='dFC avg ' + filter, center_0=False,
+            fix_lim=False, disp_diag=False, cmap='plasma', normalize=False,
+            save_image=save_image, output_root=output_root+'dFC_avg/')
+
+    visualize_conn_mat_dict(RESULTS, node_networks=node_networks, segmented=True,
+            title='segmented dFC avg ' + filter, center_0=False,
             fix_lim=False, disp_diag=False, cmap='plasma', normalize=False,
             save_image=save_image, output_root=output_root+'dFC_avg/')
 
@@ -617,6 +627,12 @@ for filter in ['default_values']:
         save_image=save_image, output_root=output_root+'across_node/'
     )
 
+    visualize_conn_mat_2D_dict(RESULTS, node_networks=node_networks, segmented=True,
+        title='segmented across node spatial spearman corr ' + filter, fix_lim=False, 
+        disp_diag=False, cmap='seismic', normalize=False, center_0=True,
+        save_image=save_image, output_root=output_root+'across_node/'
+    )
+
 ################################# Across Node Temporal Correlation #################################
 
 '''
@@ -657,6 +673,12 @@ for filter in ['default_values']:
             
     visualize_conn_mat_2D_dict(RESULTS, node_networks=node_networks, 
         title='across node temporal spearman corr ' + filter, fix_lim=False, 
+        disp_diag=False, cmap='seismic', normalize=False,
+        save_image=save_image, output_root=output_root+'across_node/'
+        )
+
+    visualize_conn_mat_2D_dict(RESULTS, node_networks=node_networks, segmented=True,
+        title='segmented across node temporal spearman corr ' + filter, fix_lim=False, 
         disp_diag=False, cmap='seismic', normalize=False,
         save_image=save_image, output_root=output_root+'across_node/'
         )
@@ -705,6 +727,13 @@ for filter in ['default_values']:
 
     visualize_conn_mat_dict(RESULTS, node_networks=node_networks, 
         title='variation across regions '+filter, fix_lim=False, 
+        disp_diag=True, cmap='plasma', center_0=False,
+        save_image=save_image, output_root=output_root+'variation/'
+    )
+
+    # func conn segmented
+    visualize_conn_mat_dict(RESULTS, node_networks=node_networks, segmented=True,
+        title='segmented high variation regions '+filter, fix_lim=False, 
         disp_diag=True, cmap='plasma', center_0=False,
         save_image=save_image, output_root=output_root+'variation/'
     )
