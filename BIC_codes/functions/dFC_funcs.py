@@ -452,6 +452,22 @@ def node_info2network(nodes_info):
         node_networks.append(info[3])    
     return node_networks
 
+def segment_FC(FC, node_networks):
+    unique_node_networks = list(set(node_networks))
+    segmented = np.zeros_like(FC)
+    for network_i in unique_node_networks:
+        node_id_i = [idx for idx, value in enumerate(node_networks) if value==network_i]
+        for network_j in unique_node_networks:
+            node_id_j = [idx for idx, value in enumerate(node_networks) if value==network_j]
+            segmented[node_id_i[0]:node_id_i[-1]+1, node_id_j[0]:node_id_j[-1]+1] = np.mean(FC[node_id_i[0]:node_id_i[-1]+1, node_id_j[0]:node_id_j[-1]+1])
+    return segmented
+        
+def segment_FC_dict(FC_dict, node_networks):
+    segmented_dict = {}
+    for key in FC_dict:
+        segmented_dict[key] = segment_FC(FC_dict[key], node_networks)
+    return segmented_dict
+        
 def joint_dist_plot(data,
     title='',
     save_image=False, output_root=None
@@ -688,7 +704,7 @@ def visualize_conn_mat_dict(data, title='', \
     disp_diag=True,\
     save_image=False, output_root=None, axes=None, fig=None, \
     fix_lim=True, center_0=True, \
-    node_networks=None \
+    node_networks=None, segmented=False \
     ):
 
     '''
@@ -730,7 +746,10 @@ def visualize_conn_mat_dict(data, title='', \
     V_MAX_all = None
     for i, key in enumerate(data):
         
-        C = data[key]
+        if segmented:
+            C = segment_FC(data[key], node_networks)
+        else:
+            C = data[key]
 
         if normalize:
             C = dFC_mat_normalize(C[None,:,:], global_normalization=False, threshold=0.0)[0]
@@ -811,7 +830,7 @@ def visualize_conn_mat_2D_dict(data, title='', \
     disp_diag=True,\
     save_image=False, output_root=None, \
     fix_lim=True, center_0=True, \
-    node_networks=None \
+    node_networks=None, segmented=False \
     ):
 
     '''
@@ -858,7 +877,11 @@ def visualize_conn_mat_2D_dict(data, title='', \
     for i, key_i in enumerate(data):
         for j, key_j in enumerate(data[key_i]):
             
-            C = data[key_i][key_j]
+            if segmented:
+                C = segment_FC(data[key_i][key_j], node_networks)
+            else:
+                C = data[key_i][key_j]
+            
 
             if normalize:
                 C = dFC_mat_normalize(C[None,:,:], global_normalization=False, threshold=0.0)[0]
@@ -895,7 +918,10 @@ def visualize_conn_mat_2D_dict(data, title='', \
 
         for j, key_j in enumerate(data[key_i]):
 
-            C = data[key_i][key_j]
+            if segmented:
+                C = segment_FC(data[key_i][key_j], node_networks)
+            else:
+                C = data[key_i][key_j]
 
             if normalize:
                 C = dFC_mat_normalize(C[None,:,:], global_normalization=False, threshold=0.0)[0]
