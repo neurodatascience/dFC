@@ -518,6 +518,11 @@ def cat_plot(data, x, y,
     kind can be = box or violin or bar
     '''
 
+    sns.set_context("paper", 
+        font_scale=1.0, 
+        rc={"lines.linewidth": 1.0}
+    )
+
     df = pd.DataFrame(data)
 
     fig_width = 2*len(np.unique(data[x]))
@@ -571,11 +576,16 @@ def visualize_sim_mat(data, mat_key, title='',
             Clustering_pear_corr
     '''
 
+    sns.set_context("paper", 
+        font_scale=1.0, 
+        rc={"lines.linewidth": 1.0}
+    )
+    
     if name_lst_key is None:
         fig_width = int(25*(len(data)/10))
     else:
         fig_width = int(60*(len(data)/10) + 1)
-    fig_height = 5
+    fig_height = 5 
 
     fig_flag = True
     if axes is None or fig is None:
@@ -611,13 +621,23 @@ def visualize_sim_mat(data, mat_key, title='',
         # if i==(len(data)-1):
         #     cbar_flag = True
 
+        if annot:
+            C_forlabels = C.copy()
+            np.fill_diagonal(C_forlabels, np.nan)
+            df = pd.DataFrame(C_forlabels)
+            annot_labels = df.applymap(lambda v: '' if np.isnan(v) else str(round(v,2)))
+        else:
+            annot_labels = False
+
         im = sns.heatmap(C, 
-            annot=annot, fmt=fmt, cmap=cmap, 
+            annot=annot_labels, fmt='', cmap=cmap, 
             xticklabels=name_lst, yticklabels=name_lst, 
             ax=axes[i], cbar=cbar_flag,
             square=True, linewidth=2, linecolor='w'
         )
-        axes[i].set_title(key, fontsize=18)
+        axes[i].set_title(key, fontdict= { 'fontsize': 17, 'fontweight':'bold'})
+        im.set_xticklabels(im.get_xticklabels(), fontdict= { 'fontsize': 10, 'fontweight':'bold'})
+        im.set_yticklabels(im.get_yticklabels(), fontdict= { 'fontsize': 10, 'fontweight':'bold'})
 
     if not fig_flag:
         fig.subplots_adjust(

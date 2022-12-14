@@ -999,8 +999,8 @@ for filter in ['default_values']:
 RESULTS = {}
 for filter in ['default_values']:
 
-    RESULTS['FCS_fit_time'] = list()
-    RESULTS['dFC_assess_time'] = list()
+    RESULTS['FCS_fit_time (s)'] = list()
+    RESULTS['dFC_assess_time (s)'] = list()
     RESULTS['dFC_method'] = list()
     for s in ALL_RECORDS:
         SUBJs_output = np.load(assessment_results_root+FOLDER_name+s, allow_pickle='True').item()
@@ -1008,21 +1008,21 @@ for filter in ['default_values']:
         for measure_id in SUBJs_output[filter]['time_record_dict']:
 
             if SUBJs_output[filter]['time_record_dict'][measure_id]['FCS_fit'] is None:
-                RESULTS['FCS_fit_time'].append(0)
+                RESULTS['FCS_fit_time (s)'].append(0)
             else:
-                RESULTS['FCS_fit_time'].append(SUBJs_output[filter]['time_record_dict'][measure_id]['FCS_fit'])
-            RESULTS['dFC_assess_time'].append(SUBJs_output[filter]['time_record_dict'][measure_id]['dFC_assess'])
+                RESULTS['FCS_fit_time (s)'].append(SUBJs_output[filter]['time_record_dict'][measure_id]['FCS_fit'])
+            RESULTS['dFC_assess_time (s)'].append(SUBJs_output[filter]['time_record_dict'][measure_id]['dFC_assess'])
             RESULTS['dFC_method'].append(SUBJs_output[filter]['measure_lst'][int(measure_id)].measure_name)
 
 ############ VISUALIZE ############
 
-    cat_plot(data=RESULTS, x='dFC_method', y='dFC_assess_time', 
+    cat_plot(data=RESULTS, x='dFC_method', y='dFC_assess_time (s)', 
         kind='bar',
         title='dFC assess time record of ' + filter,
         save_image=save_image, output_root=output_root+'time/'
         )
 
-    cat_plot(data=RESULTS, x='dFC_method', y='FCS_fit_time', 
+    cat_plot(data=RESULTS, x='dFC_method', y='FCS_fit_time (s)', 
         kind='bar',
         title='FCS fit time record of ' + filter,
         save_image=save_image, output_root=output_root+'time/'
