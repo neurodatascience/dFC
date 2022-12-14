@@ -633,6 +633,18 @@ for filter in ['default_values']:
         save_image=save_image, output_root=output_root+'across_node/'
     )
 
+    visualize_conn_mat_2D_dict(RESULTS, node_networks=node_networks, 
+        title='across node spatial spearman corr normalized ' + filter, fix_lim=False, 
+        disp_diag=False, cmap='seismic', normalize=True, center_0=True,
+        save_image=save_image, output_root=output_root+'across_node/'
+    )
+
+    visualize_conn_mat_2D_dict(RESULTS, node_networks=node_networks, segmented=True,
+        title='segmented across node spatial spearman corr normalized ' + filter, fix_lim=False, 
+        disp_diag=False, cmap='seismic', normalize=True, center_0=True,
+        save_image=save_image, output_root=output_root+'across_node/'
+    )
+
 ################################# Across Node Temporal Correlation #################################
 
 '''
@@ -670,7 +682,9 @@ for filter in ['default_values']:
         for key_j in RESULTS[key_i]:
             RESULTS[key_i][key_j] = np.array(RESULTS[key_i][key_j])
             RESULTS[key_i][key_j] = np.mean(RESULTS[key_i][key_j], axis=0)
-            
+
+    ############ VISUALIZE ############
+    
     visualize_conn_mat_2D_dict(RESULTS, node_networks=node_networks, 
         title='across node temporal spearman corr ' + filter, fix_lim=False, 
         disp_diag=False, cmap='seismic', normalize=False,
@@ -680,6 +694,18 @@ for filter in ['default_values']:
     visualize_conn_mat_2D_dict(RESULTS, node_networks=node_networks, segmented=True,
         title='segmented across node temporal spearman corr ' + filter, fix_lim=False, 
         disp_diag=False, cmap='seismic', normalize=False,
+        save_image=save_image, output_root=output_root+'across_node/'
+        )
+
+    visualize_conn_mat_2D_dict(RESULTS, node_networks=node_networks, 
+        title='across node temporal spearman corr normalized ' + filter, fix_lim=False, 
+        disp_diag=False, cmap='seismic', normalize=True,
+        save_image=save_image, output_root=output_root+'across_node/'
+        )
+
+    visualize_conn_mat_2D_dict(RESULTS, node_networks=node_networks, segmented=True,
+        title='segmented across node temporal spearman corr normalized ' + filter, fix_lim=False, 
+        disp_diag=False, cmap='seismic', normalize=True,
         save_image=save_image, output_root=output_root+'across_node/'
         )
 
