@@ -507,6 +507,43 @@ def joint_dist_plot(data,
     else:
         plt.show()
 
+def scatter_plot(data, x, y,
+    labels=None,
+    title='',
+    save_image=False, output_root=None
+    ):
+    '''
+    data is a dictionary with different vars as keys 
+    '''
+    df = pd.DataFrame(data)
+
+    sns.set_context("paper", 
+        font_scale=1.5, 
+        rc={"lines.linewidth": 2.0}
+    )
+
+    fig_width = 10
+    fig_height = 10 
+    plt.figure(figsize=(fig_width, fig_height))
+    g = sns.scatterplot(data=df, x=x, y=y, s=50)
+    
+    if not labels is None:
+        for i in range(len(df[x])):
+            plt.text(x=df[x][i]-0.02, y=df[y][i]-0.02, s=df[labels][i], 
+                    fontdict=dict(color='black', size=10),
+            )
+    plt.title(title, fontsize=15)
+
+    if save_image:
+        folder = output_root[:output_root.rfind('/')]
+        if not os.path.exists(folder):
+            os.makedirs(folder)
+        plt.savefig(output_root+title+'.png', \
+            dpi=fig_dpi, bbox_inches=fig_bbox_inches, pad_inches=fig_pad \
+        ) 
+        plt.close()
+    else:
+        plt.show()
 
 def cat_plot(data, x, y, 
     kind='bar',
