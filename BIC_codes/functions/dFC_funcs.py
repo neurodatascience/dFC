@@ -518,19 +518,27 @@ def scatter_plot(data, x, y,
     df = pd.DataFrame(data)
 
     sns.set_context("paper", 
-        font_scale=1.5, 
-        rc={"lines.linewidth": 2.0}
+        font_scale=2.5, 
+        rc={"lines.linewidth": 3.0}
     )
 
-    fig_width = 10
-    fig_height = 10 
+    fig_width = 20
+    fig_height = 20 
     plt.figure(figsize=(fig_width, fig_height))
-    g = sns.scatterplot(data=df, x=x, y=y, s=50)
+    sns.set_style('darkgrid')
+    g = sns.scatterplot(data=df, x=x, y=y, s=100)
+    
     
     if not labels is None:
+        c = 0.015
+        mid_x = (np.max(df[x]) + np.min(df[x]))/2
+        mid_y = (np.max(df[y]) + np.min(df[y]))/2
         for i in range(len(df[x])):
-            plt.text(x=df[x][i]-0.02, y=df[y][i]-0.05, s=df[labels][i], 
-                    fontdict=dict(color='black', size=10),
+            plt.text(
+                x=df[x][i]-c*np.sign(df[x][i]-mid_x)-0.04, 
+                y=df[y][i]-c*np.sign(df[y][i]-mid_y)-0.005, 
+                s=df[labels][i], 
+                fontdict=dict(color='black', size=20),
             )
     plt.title(title, fontsize=15)
 
