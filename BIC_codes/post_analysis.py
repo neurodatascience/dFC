@@ -569,6 +569,83 @@ for filter in ['default_values']:
             fix_lim=False, disp_diag=False, cmap='plasma', normalize=False,
             save_image=save_image, output_root=output_root+'dFC_avg/')
 
+################################# Across Node total Correlation #################################
+
+'''
+    - spearman_corr((dFConnection(node_i, node_j) timecourse using method m), (dFConnection(node_i, node_j) timecourse using method n))
+'''
+RESULTS = {}
+for filter in ['default_values']:
+    for s in ALL_RECORDS:
+
+        SUBJs_output = np.load(assessment_results_root+FOLDER_name+s, allow_pickle='True').item()
+        node_networks = node_info2network(SUBJs_output[filter]['TS_info_lst'][0]['nodes_info'])
+        n_regions = SUBJs_output[filter]['TS_info_lst'][0]['n_regions']
+        n_time = SUBJs_output[filter]['dFCM_samples'][str(0)].shape[0]
+
+        for i, measure_i in enumerate(SUBJs_output[filter]['measure_lst']):
+
+            dFC_mat_i = SUBJs_output[filter]['dFCM_samples'][str(i)]
+            # rank normalization
+            dFC_mat_i_norm = stats.rankdata(dFC_mat_i.flatten()).reshape(n_time, n_regions, n_regions)
+            dFC_mat_i_vec = dFC_mat2vec(dFC_mat_i_norm)
+
+            for j, measure_j in enumerate(SUBJs_output[filter]['measure_lst']):
+
+                if j >= i :
+                    continue
+
+                dFC_mat_j = SUBJs_output[filter]['dFCM_samples'][str(j)]
+                # rank normalization
+                dFC_mat_j_norm = stats.rankdata(dFC_mat_j.flatten()).reshape(n_time, n_regions, n_regions)
+                dFC_mat_j_vec = dFC_mat2vec(dFC_mat_j_norm)
+
+                sim = list()
+                for func_conn in range(dFC_mat_i_vec.shape[1]):
+                    if np.var(dFC_mat_i_vec[:,func_conn])==0 or np.var(dFC_mat_j_vec[:,func_conn])==0:
+                        sim.append(0)
+                    else:
+                        sim.append(np.corrcoef(dFC_mat_i_vec[:,func_conn], dFC_mat_j_vec[:,func_conn])[0,1])
+
+                sim = np.array(sim)
+                if not measure_i.measure_name in RESULTS:
+                    RESULTS[measure_i.measure_name] = {}
+                if not measure_j.measure_name in RESULTS[measure_i.measure_name]:
+                    RESULTS[measure_i.measure_name][measure_j.measure_name] = list()
+
+                RESULTS[measure_i.measure_name][measure_j.measure_name].append(dFC_vec2mat(sim[None,:], N=n_regions)[0])
+
+    measure_lst = [measure.measure_name for measure in SUBJs_output[filter]['measure_lst']]
+    for key_i in RESULTS:
+        for key_j in RESULTS[key_i]:
+            RESULTS[key_i][key_j] = np.mean(np.array(RESULTS[key_i][key_j]), axis=0)
+
+############ VISUALIZE ############
+
+    visualize_conn_mat_2D_dict(RESULTS, node_networks=node_networks, 
+        title='across node total spearman corr ' + filter, fix_lim=False, 
+        disp_diag=False, cmap='seismic', normalize=False, center_0=True,
+        save_image=save_image, output_root=output_root+'across_node/total/'
+    )
+
+    visualize_conn_mat_2D_dict(RESULTS, node_networks=node_networks, segmented=True,
+        title='segmented across node total spearman corr ' + filter, fix_lim=False, 
+        disp_diag=False, cmap='seismic', normalize=False, center_0=True,
+        save_image=save_image, output_root=output_root+'across_node/total/'
+    )
+
+    visualize_conn_mat_2D_dict(RESULTS, node_networks=node_networks, 
+        title='across node total spearman corr normalized ' + filter, fix_lim=False, 
+        disp_diag=False, cmap='seismic', normalize=True, center_0=True,
+        save_image=save_image, output_root=output_root+'across_node/total/'
+    )
+
+    visualize_conn_mat_2D_dict(RESULTS, node_networks=node_networks, segmented=True,
+        title='segmented across node total spearman corr normalized ' + filter, fix_lim=False, 
+        disp_diag=False, cmap='seismic', normalize=True, center_0=True,
+        save_image=save_image, output_root=output_root+'across_node/total/'
+    )
+
 ################################# Across Node Spatial Correlation #################################
 
 '''
@@ -624,25 +701,25 @@ for filter in ['default_values']:
     visualize_conn_mat_2D_dict(RESULTS, node_networks=node_networks, 
         title='across node spatial spearman corr ' + filter, fix_lim=False, 
         disp_diag=False, cmap='seismic', normalize=False, center_0=True,
-        save_image=save_image, output_root=output_root+'across_node/'
+        save_image=save_image, output_root=output_root+'across_node/spatial/'
     )
 
     visualize_conn_mat_2D_dict(RESULTS, node_networks=node_networks, segmented=True,
         title='segmented across node spatial spearman corr ' + filter, fix_lim=False, 
         disp_diag=False, cmap='seismic', normalize=False, center_0=True,
-        save_image=save_image, output_root=output_root+'across_node/'
+        save_image=save_image, output_root=output_root+'across_node/spatial/'
     )
 
     visualize_conn_mat_2D_dict(RESULTS, node_networks=node_networks, 
         title='across node spatial spearman corr normalized ' + filter, fix_lim=False, 
         disp_diag=False, cmap='seismic', normalize=True, center_0=True,
-        save_image=save_image, output_root=output_root+'across_node/'
+        save_image=save_image, output_root=output_root+'across_node/spatial/'
     )
 
     visualize_conn_mat_2D_dict(RESULTS, node_networks=node_networks, segmented=True,
         title='segmented across node spatial spearman corr normalized ' + filter, fix_lim=False, 
         disp_diag=False, cmap='seismic', normalize=True, center_0=True,
-        save_image=save_image, output_root=output_root+'across_node/'
+        save_image=save_image, output_root=output_root+'across_node/spatial/'
     )
 
 ################################# Across Node Temporal Correlation #################################
@@ -684,29 +761,29 @@ for filter in ['default_values']:
             RESULTS[key_i][key_j] = np.mean(RESULTS[key_i][key_j], axis=0)
 
     ############ VISUALIZE ############
-    
+
     visualize_conn_mat_2D_dict(RESULTS, node_networks=node_networks, 
         title='across node temporal spearman corr ' + filter, fix_lim=False, 
         disp_diag=False, cmap='seismic', normalize=False,
-        save_image=save_image, output_root=output_root+'across_node/'
+        save_image=save_image, output_root=output_root+'across_node/temporal/'
         )
 
     visualize_conn_mat_2D_dict(RESULTS, node_networks=node_networks, segmented=True,
         title='segmented across node temporal spearman corr ' + filter, fix_lim=False, 
         disp_diag=False, cmap='seismic', normalize=False,
-        save_image=save_image, output_root=output_root+'across_node/'
+        save_image=save_image, output_root=output_root+'across_node/temporal/'
         )
 
     visualize_conn_mat_2D_dict(RESULTS, node_networks=node_networks, 
         title='across node temporal spearman corr normalized ' + filter, fix_lim=False, 
         disp_diag=False, cmap='seismic', normalize=True,
-        save_image=save_image, output_root=output_root+'across_node/'
+        save_image=save_image, output_root=output_root+'across_node/temporal/'
         )
 
     visualize_conn_mat_2D_dict(RESULTS, node_networks=node_networks, segmented=True,
         title='segmented across node temporal spearman corr normalized ' + filter, fix_lim=False, 
         disp_diag=False, cmap='seismic', normalize=True,
-        save_image=save_image, output_root=output_root+'across_node/'
+        save_image=save_image, output_root=output_root+'across_node/temporal/'
         )
 
 ################################# High Variation Regions #################################
