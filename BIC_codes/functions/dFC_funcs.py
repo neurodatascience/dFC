@@ -529,7 +529,7 @@ def scatter_plot(data, x, y,
     
     if not labels is None:
         for i in range(len(df[x])):
-            plt.text(x=df[x][i]-0.02, y=df[y][i]-0.02, s=df[labels][i], 
+            plt.text(x=df[x][i]-0.02, y=df[y][i]-0.05, s=df[labels][i], 
                     fontdict=dict(color='black', size=10),
             )
     plt.title(title, fontsize=15)

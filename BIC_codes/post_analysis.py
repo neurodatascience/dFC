@@ -233,6 +233,38 @@ for feature2extract in feature2extract_list:
             title='Hierarchical Clustering of Methods ' + filter+' using '+feature2extract, 
             save_image=save_image, output_root=output_root+'feature_based/'+feature2extract+'/'
         )
+
+############ Spatial vs. Temporal Scatter plot ############
+    
+RESULTS = {}
+for filter in ['default_values']:
+
+    all_subjs_spatial_sim_mat = list()
+    all_subjs_temporal_sim_mat = list()
+    for s in ALL_RECORDS:
+        SUBJs_output = np.load(assessment_results_root+FOLDER_name+s, allow_pickle='True').item()
+        # SUBJs_output[filter]['feature_based'][feature2extract] = (sample, method, method)
+        all_subjs_spatial_sim_mat.append(np.mean(SUBJs_output[filter]['feature_based']['spatial'], axis=0))
+        all_subjs_temporal_sim_mat.append(np.mean(SUBJs_output[filter]['feature_based']['temporal'], axis=0))
+
+    measure_name_lst = [measure.measure_name for measure in SUBJs_output[filter]['measure_lst']]
+    all_subjs_spatial_sim_mat = np.mean(np.array(all_subjs_spatial_sim_mat), axis=0)
+    all_subjs_temporal_sim_mat = np.mean(np.array(all_subjs_temporal_sim_mat), axis=0)
+
+    scatter_data = {'spatial':list(), 'temporal':list(), 'labels':list()}
+    for i in range(len(measure_name_lst)):
+        for j in range(i):
+            scatter_data['spatial'].append(all_subjs_spatial_sim_mat[i,j])
+            scatter_data['temporal'].append(all_subjs_temporal_sim_mat[i,j])
+            scatter_data['labels'].append(zip_name(measure_name_lst[i])+'-'+zip_name(measure_name_lst[j]))
+
+    ############ visualization ############
+    scatter_plot(
+        data=scatter_data, x='temporal', y='spatial', 
+        labels='labels', title='spatial similarity vs temporal similarity',
+        save_image=save_image, output_root=output_root+'variation/'
+    )
+    
 ################# graph-based #################
 '''
     - spatial
@@ -890,6 +922,7 @@ for filter in ['default_values']:
 
     measure_name_lst = [measure_key_i for measure_key_i in diff_mat_dict]
 
+    scatter_data = {'var_method':list(), 'var_time':list(), 'labels':list()}
     divide_temp = np.zeros((len(measure_name_lst),len(measure_name_lst)))
     divide_1_lag = np.zeros((len(measure_name_lst),len(measure_name_lst)))
     for i, measure_key_i in enumerate(measure_name_lst):
@@ -898,6 +931,12 @@ for filter in ['default_values']:
             A = np.mean(np.array(diff_mat_dict[measure_key_i][measure_key_j]), axis=0)
             B = np.mean(np.array(temp_var_dict[measure_key_i][measure_key_j]), axis=0)
             C = np.mean(np.array(lag_1_diff_mat_dict[measure_key_i][measure_key_j]), axis=0)
+
+            # collect data for scatter plot
+            if j<i:
+                scatter_data['var_method'].append(np.mean(A))
+                scatter_data['var_time'].append(np.mean(B))
+                scatter_data['labels'].append(zip_name(measure_key_i)+'-'+zip_name(measure_key_j))
 
             divide_temp[i, j] = np.mean(np.divide(A, B, out=np.zeros_like(A), where=B!=0))
             divide_1_lag[i, j] = np.mean(np.divide(A, C, out=np.zeros_like(A), where=C!=0))
@@ -911,6 +950,12 @@ for filter in ['default_values']:
                                     name_lst_key='name_lst', 
                                     cmap='viridis',
                                     save_image=save_image, output_root=output_root+'variation/'
+    )
+
+    scatter_plot(
+        data=scatter_data, x='var_method', y='var_time', 
+        labels='labels', title='var method vs time',
+        save_image=save_image, output_root=output_root+'variation/'
     )
 
 ################################# Similarity in different Variation Levels #################################
@@ -1037,6 +1082,18 @@ for filter in ['default_values']:
                                     name_lst_key='name_lst', 
                                     cmap='viridis',
                                     save_image=save_image, output_root=output_root+'variation/'
+    )
+
+    data = {'sim_mat_across_method':list(), 'sim_mat_across_time':list(), 'labels':list()}
+    for i in range(RESULTS['sim_mat_across_method']['sim_mat'].shape[0]):
+        for j in range(i):
+            data['sim_mat_across_method'].append(RESULTS['sim_mat_across_method']['sim_mat'][i,j])
+            data['sim_mat_across_time'].append(RESULTS['sim_mat_across_time']['sim_mat'][i,j])
+            data['labels'].append(zip_name(measure_lst[i])+'-'+zip_name(measure_lst[j]))
+
+    scatter_plot(data, x='sim_mat_across_method', y='sim_mat_across_time',
+        labels='labels', title='scatter',
+        save_image=save_image, output_root=output_root+'variation/'
     )
 
 ################################# SIMILARITY OF ADJACENT TIME POINTS #################################
