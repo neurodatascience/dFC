@@ -94,7 +94,7 @@ for filter in ['default_values']:
 
 RESULTS = {}
 for filter in ['default_values']:
-    for s in ALL_RECORDS:
+    for s in ALL_RECORDS[:100]:
         SUBJs_output = np.load(assessment_results_root+FOLDER_name+s, allow_pickle='True').item()
 
         for i, measure_i in enumerate(SUBJs_output[filter]['measure_lst']):
@@ -952,7 +952,7 @@ for filter in ['default_values']:
 
                 scatter_data_across_func_conn[zip_name(measure_key_i)][zip_name(measure_key_j)]['var_method'] = A.flatten()
                 scatter_data_across_func_conn[zip_name(measure_key_i)][zip_name(measure_key_j)]['var_time'] = B.flatten()
-                
+
                 scatter_data['var_method'].append(np.mean(A))
                 scatter_data['var_time'].append(np.mean(B))
                 scatter_data['labels'].append(zip_name(measure_key_i)+'-'+zip_name(measure_key_j))
