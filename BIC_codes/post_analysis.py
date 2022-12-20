@@ -850,6 +850,10 @@ for filter in ['default_values']:
     var_over_method = np.array(var_over_method) # (subj, ROI, ROI)
     var_over_method = np.mean(var_over_method, axis=0) # (ROI, ROI)
 
+    scatter_data = {'var_method':list(), 'var_time':list()}
+    scatter_data['var_method'] = var_over_method.flatten()
+    scatter_data['var_time'] = var_over_time.flatten()
+
     RESULTS = {}
     RESULTS['var_over_time'] = np.divide(var_over_time, np.max(var_over_time))
     RESULTS['var_over_method'] = np.divide(var_over_method, np.max(var_over_method))
@@ -859,6 +863,12 @@ for filter in ['default_values']:
         RESULTS[key] = rank_norm(RESULTS[key])
 
 ############ VISUALIZE ############
+
+    scatter_plot(
+        data=scatter_data, x='var_time', y='var_method', 
+        title='var method vs time across func conns',
+        save_image=save_image, output_root=output_root+'variation/'
+    )
 
     visualize_conn_mat_dict(RESULTS, node_networks=node_networks, 
         title='variation across regions '+filter, fix_lim=False, 
@@ -923,6 +933,7 @@ for filter in ['default_values']:
     measure_name_lst = [measure_key_i for measure_key_i in diff_mat_dict]
 
     scatter_data = {'var_method':list(), 'var_time':list(), 'labels':list()}
+    scatter_data_across_func_conn = {}
     divide_temp = np.zeros((len(measure_name_lst),len(measure_name_lst)))
     divide_1_lag = np.zeros((len(measure_name_lst),len(measure_name_lst)))
     for i, measure_key_i in enumerate(measure_name_lst):
@@ -934,6 +945,14 @@ for filter in ['default_values']:
 
             # collect data for scatter plot
             if j<i:
+                if not zip_name(measure_key_i) in scatter_data_across_func_conn:
+                    scatter_data_across_func_conn[zip_name(measure_key_i)] = {}
+                if not zip_name(measure_key_j) in scatter_data_across_func_conn[zip_name(measure_key_i)]:
+                    scatter_data_across_func_conn[zip_name(measure_key_i)][zip_name(measure_key_j)] = {'var_method':list(), 'var_time':list()}
+
+                scatter_data_across_func_conn[zip_name(measure_key_i)][zip_name(measure_key_j)]['var_method'] = A.flatten()
+                scatter_data_across_func_conn[zip_name(measure_key_i)][zip_name(measure_key_j)]['var_time'] = B.flatten()
+                
                 scatter_data['var_method'].append(np.mean(A))
                 scatter_data['var_time'].append(np.mean(B))
                 scatter_data['labels'].append(zip_name(measure_key_i)+'-'+zip_name(measure_key_j))
@@ -950,6 +969,12 @@ for filter in ['default_values']:
                                     name_lst_key='name_lst', 
                                     cmap='viridis',
                                     save_image=save_image, output_root=output_root+'variation/'
+    )
+
+    pairwise_scatter_plots(
+        data=scatter_data_across_func_conn, x='var_method', y='var_time', 
+        title='var method vs time across func conns across methods pairs', hist=True,
+        save_image=save_image, output_root=output_root+'variation/'
     )
 
     scatter_plot(

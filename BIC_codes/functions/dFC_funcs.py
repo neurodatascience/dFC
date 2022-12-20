@@ -485,6 +485,8 @@ def joint_dist_plot(data,
         font_scale=2.5, 
         rc={"lines.linewidth": 3.0}
     )
+    
+    sns.set_style('darkgrid')
 
     g = sns.PairGrid(df)
 
@@ -507,9 +509,64 @@ def joint_dist_plot(data,
     else:
         plt.show()
 
+def pairwise_scatter_plots(data, x, y,
+    title='', hist=False,
+    save_image=False, output_root=None
+    ):
+    '''
+    data is a dictionary with different vars as keys 
+    '''
+
+    sns.set_context("paper", 
+        font_scale=2.5, 
+        rc={"lines.linewidth": 3.0}
+    )
+
+    row_keys = [key for key in data]
+    n_rows = len(row_keys)
+    column_keys = [key for key in data[row_keys[-1]]]
+    n_columns = len(column_keys)
+
+    sns.set_style('darkgrid')
+
+    fig_width = n_columns * 5
+    fig_height = n_rows * 5
+    fig, axs = plt.subplots(n_rows, n_columns, figsize=(fig_width, fig_height), \
+        facecolor='w', edgecolor='k', sharex=True, sharey=True)
+    
+    axs_plotted = list()
+    for i, key_i in enumerate(data):
+        for j, key_j in enumerate(data[key_i]):
+            df = pd.DataFrame(data[key_i][key_j])
+            if hist:
+                g = sns.histplot(ax=axs[i, j], data=df, x=x, y=y, bins=50)
+            else:
+                g = sns.scatterplot(ax=axs[i, j], data=df, x=x, y=y, s=50)
+            axs[i, j].set_title(key_i+'-'+key_j)
+            axs_plotted.append(axs[i, j])
+
+    # remove extra subplots
+    for ax in axs.ravel():
+        if not ax in axs_plotted:
+            ax.set_axis_off()
+            ax.xaxis.set_tick_params(which='both', labelbottom=True)
+    
+    plt.suptitle(title, fontsize=15, y=0.90)
+
+    if save_image:
+        folder = output_root[:output_root.rfind('/')]
+        if not os.path.exists(folder):
+            os.makedirs(folder)
+        plt.savefig(output_root+title+'.png', \
+            dpi=fig_dpi, bbox_inches=fig_bbox_inches, pad_inches=fig_pad \
+        ) 
+        plt.close()
+    else:
+        plt.show()
+
 def scatter_plot(data, x, y,
-    labels=None,
-    title='',
+    labels=None, hue=None,
+    title='', hist=False,
     save_image=False, output_root=None
     ):
     '''
@@ -526,10 +583,13 @@ def scatter_plot(data, x, y,
     fig_height = 20 
     plt.figure(figsize=(fig_width, fig_height))
     sns.set_style('darkgrid')
-    g = sns.scatterplot(data=df, x=x, y=y, s=100)
+    if hist:
+        g = sns.histplot(data=df, x=x, y=y, hue=hue)
+    else:
+        g = sns.scatterplot(data=df, x=x, y=y, s=100, hue=hue)
     
     
-    if not labels is None:
+    if (not labels is None) and (not hist):
         c = 0.015
         mid_x = (np.max(df[x]) + np.min(df[x]))/2
         mid_y = (np.max(df[y]) + np.min(df[y]))/2
