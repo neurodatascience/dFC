@@ -1117,7 +1117,7 @@ for filter in ['default_values']:
             data['labels'].append(zip_name(measure_lst[i])+'-'+zip_name(measure_lst[j]))
 
     scatter_plot(data, x='sim_mat_across_method', y='sim_mat_across_time',
-        labels='labels', title='scatter',
+        labels='labels', title='scatter inter time vs mathod',
         save_image=save_image, output_root=output_root+'variation/'
     )
 
