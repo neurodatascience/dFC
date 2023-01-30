@@ -519,8 +519,8 @@ for subj_lvl_feature in subj_lvl_feature_lst:
         # diagonal values of dist_mat must equal exactly zero
         np.fill_diagonal(dist_mat, 0)
         dist_mat_dendo(dist_mat=dist_mat, labels=RESULTS['across_method'][session]['name_lst'], 
-        title='Hierarchical Clustering of Methods ' + filter+' using inter-subject similarity based on '+subj_lvl_feature, 
-        save_image=save_image, output_root=output_root+'inter_subject/'+subj_lvl_feature+'/'
+            title='Hierarchical Clustering of Methods ' + session +' using inter-subject similarity based on '+subj_lvl_feature, 
+            save_image=save_image, output_root=output_root+'inter_subject/'+subj_lvl_feature+'/'
         )
 
 ################################# dFC var #################################
