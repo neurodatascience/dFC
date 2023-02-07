@@ -1179,6 +1179,38 @@ for filter in ['default_values']:
         save_image=save_image, output_root=output_root+'indiv_prop/'
         )
 
+################################# DWELL TIME #################################
+'''
+ - plot normalized (not downsampled) dwell times
+ - the dwell times are not averaged wihtin each subj, they include all individual 
+ dwells
+'''
+RESULTS = {}
+key_name = 'dwell_time'
+for filter in ['default_values']:
+    RESULTS[key_name] = list()
+    RESULTS['dFC_method'] = list()
+    for s in ALL_RECORDS:
+
+        SUBJs_output = np.load(assessment_results_root+FOLDER_name+s, allow_pickle='True').item()
+
+        for i, measure_i in enumerate(SUBJs_output[filter]['measure_lst']):
+            if SUBJs_output[filter]['transition_stats'][i] == {}:
+                continue
+            dwell_time_lst = SUBJs_output[filter]['transition_stats'][i]['dwell_time_norm']
+            # add each of the ind dwell times to the list along with the method's name
+            for dwell_time in dwell_time_lst:
+                RESULTS[key_name].append(dwell_time)
+                RESULTS['dFC_method'].append(measure_i.measure_name)
+
+############ VISUALIZE ############
+
+    cat_plot(data=RESULTS, x='dFC_method', y=key_name, 
+        kind='violin',
+        title=key_name + ' ' + filter,
+        save_image=save_image, output_root=output_root+'indiv_prop/'
+        )
+
 ################################# TIME RECORD #################################
 
 RESULTS = {}
