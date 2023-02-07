@@ -1166,9 +1166,9 @@ for filter in ['default_values']:
 
         for i, measure_i in enumerate(SUBJs_output[filter]['measure_lst']):
 
-            if SUBJs_output[filter]['trans_freq'][i] == {}:
+            if SUBJs_output[filter]['transition_stats'][i] == {}:
                 continue
-            RESULTS[key_name].append(SUBJs_output[filter]['trans_freq'][i]['trans_norm'])
+            RESULTS[key_name].append(SUBJs_output[filter]['transition_stats'][i]['trans_norm'])
             RESULTS['dFC_method'].append(measure_i.measure_name)
 
 ############ VISUALIZE ############

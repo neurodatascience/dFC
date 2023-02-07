@@ -194,7 +194,7 @@ def calc_graph_propoerty(A, property, threshold=False, binarize=False):
     """
     N_edges = 200 # number of edges to keep 
     if property=='shortest_path' or property=='clustering_coef':
-        threshold==True
+        threshold=True
 
     G = nx.from_numpy_matrix(np.abs(A)) 
     G.remove_edges_from(nx.selfloop_edges(G))
@@ -1672,10 +1672,11 @@ class SIMILARITY_ASSESSMENT:
 
         return FO_list
 
-    def transition_freq(self, dFCM_lst, common_TRs=None):
+    def transition_stats(self, dFCM_lst, common_TRs=None):
         # returns the number of total state transition within common_TRs -> trans_freq
         # and the number of total state transitions regardless of common_TRs
         # but normalized by total number of TRs -> trans_norm
+        # and a list of all dwell times
 
         if common_TRs is None:
             common_TRs = TR_intersection(dFCM_lst)
@@ -1684,38 +1685,52 @@ class SIMILARITY_ASSESSMENT:
         for TR in common_TRs:
             TRs_lst.append('TR'+str(TR))
 
-        trans_freq_lst = list()
+        output_lst = list()
         for dFCM in dFCM_lst:
         
-            trans_freq_dict = {}
+            output_dict = {}
 
             if dFCM.measure.is_state_based:
 
+                #  downsampled 
                 trans_freq = 0
+                dwell_time_lst = list()
+                dwell_time = 0
                 last_TR = None
                 for TR in dFCM.FCS_idx:
                     if TR in TRs_lst:
                         if not last_TR is None:
                             if dFCM.FCS_idx[TR]!=dFCM.FCS_idx[last_TR]:
+                                dwell_time_lst.append(dwell_time)
+                                dwell_time = 0
                                 trans_freq += 1
+                        dwell_time += 1
                         last_TR = TR
 
-                trans_freq_dict['trans_freq'] = trans_freq
+                output_dict['dwell_time'] = dwell_time_lst
+                output_dict['trans_freq'] = trans_freq
 
+                # normalized (not downsampled) 
                 trans_norm = 0
+                dwell_time_lst = list()
+                dwell_time = 0
                 last_TR = None
                 for TR in dFCM.FCS_idx:
                     if not last_TR is None:
                         if dFCM.FCS_idx[TR]!=dFCM.FCS_idx[last_TR]:
+                            dwell_time_lst.append(dwell_time / len(dFCM.FCS_idx))
+                            dwell_time = 0
                             trans_norm += 1
+                    dwell_time += 1
                     last_TR = TR
                 trans_norm = trans_norm / len(dFCM.FCS_idx)
 
-                trans_freq_dict['trans_norm'] = trans_norm
+                output_dict['dwell_time_norm'] = dwell_time_lst
+                output_dict['trans_norm'] = trans_norm
 
-            trans_freq_lst.append(trans_freq_dict)
+            output_lst.append(output_dict)
 
-        return trans_freq_lst 
+        return output_lst 
 
     def feature_all(self, dFC_mat):
         vectorized_dFC = dFC_mat2vec(dFC_mat).flatten() # (time*connection, )
@@ -1983,10 +1998,10 @@ class SIMILARITY_ASSESSMENT:
 
         ########## transition frequency ##########
 
-        trans_freq_lst = self.transition_freq(dFCM_lst, \
+        transition_stats_lst = self.transition_stats(dFCM_lst, \
             common_TRs=common_TRs \
                 )
-        methods_assess['trans_freq'] = trans_freq_lst
+        methods_assess['transition_stats'] = transition_stats_lst
                 
         ##############################################
         return methods_assess
