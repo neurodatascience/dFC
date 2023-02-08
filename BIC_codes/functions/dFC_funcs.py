@@ -6,7 +6,6 @@ Created on Sun Jun 13 22:34:49 2021
 @author: mte
 """
 
-# from tkinter import N
 import numpy as np
 from scipy import signal
 import scipy.spatial.distance as ssd
