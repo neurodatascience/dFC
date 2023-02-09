@@ -1,10 +1,12 @@
 
 import sys
-sys.path.append('./BIC_codes/')
-from functions.dFC_funcs import *
 import numpy as np
 import matplotlib.pyplot as plt
 import os
+
+sys.path.append('./BIC_codes/')
+from functions.dFC_funcs import *
+from functions.post_analysis_funcs import *
 
 print('################################# POST ANALYSIS STARTED RUNNING ... #################################')
 
@@ -145,12 +147,22 @@ for metric in metric_list:
         all_subjs_avg = np.mean(all_subjs_sim_mat, axis=0)
         across_subj_var = np.var(all_subjs_sim_mat, axis=0)
 
-        RESULTS[filter] = {}
-        RESULTS[filter]['avg_mat'] = all_subjs_avg
-        RESULTS[filter]['var_mat'] = across_subj_var
-        RESULTS[filter]['avg_div_var_mat'] = np.divide(all_subjs_avg, np.sqrt(across_subj_var), out=np.zeros_like(all_subjs_avg), where=np.sqrt(across_subj_var)!=0)
-        RESULTS[filter]['var_div_avg_mat'] = np.divide(across_subj_var, all_subjs_avg, out=np.zeros_like(across_subj_var), where=all_subjs_avg!=0)
-        RESULTS[filter]['name_lst'] = measure_name_lst
+        # change default_values to session_Rest1_LR
+        if filter=='default_values':
+            new_filter = 'session_Rest1_LR'
+            RESULTS[new_filter] = {}
+            RESULTS[new_filter]['avg_mat'] = all_subjs_avg
+            RESULTS[new_filter]['var_mat'] = across_subj_var
+            RESULTS[new_filter]['avg_div_var_mat'] = np.divide(all_subjs_avg, np.sqrt(across_subj_var), out=np.zeros_like(all_subjs_avg), where=np.sqrt(across_subj_var)!=0)
+            RESULTS[new_filter]['var_div_avg_mat'] = np.divide(across_subj_var, all_subjs_avg, out=np.zeros_like(across_subj_var), where=all_subjs_avg!=0)
+            RESULTS[new_filter]['name_lst'] = measure_name_lst
+        else:
+            RESULTS[filter] = {}
+            RESULTS[filter]['avg_mat'] = all_subjs_avg
+            RESULTS[filter]['var_mat'] = across_subj_var
+            RESULTS[filter]['avg_div_var_mat'] = np.divide(all_subjs_avg, np.sqrt(across_subj_var), out=np.zeros_like(all_subjs_avg), where=np.sqrt(across_subj_var)!=0)
+            RESULTS[filter]['var_div_avg_mat'] = np.divide(across_subj_var, all_subjs_avg, out=np.zeros_like(across_subj_var), where=all_subjs_avg!=0)
+            RESULTS[filter]['name_lst'] = measure_name_lst
 
     ############ VISUALIZE ############
     for key in RESULTS[filter]:
@@ -162,7 +174,7 @@ for metric in metric_list:
                                         save_image=save_image, output_root=output_root+'dFC_similarity/'+metric+'/'
         )
     ############ Hierarchical Clustering ############
-    for filter in ['default_values']:
+    for filter in ['session_Rest1_LR']:
         if metric=='MI':
             normalized_mat = np.divide(RESULTS[filter]['avg_mat'], np.max(RESULTS[filter]['avg_mat']))
             dist_mat = 1 - normalized_mat
@@ -867,6 +879,7 @@ for filter in ['default_values']:
     scatter_plot(
         data=scatter_data, x='var_time', y='var_method', 
         title='var method vs time across func conns',
+        hist=True,
         save_image=save_image, output_root=output_root+'variation/'
     )
 
@@ -972,13 +985,13 @@ for filter in ['default_values']:
     )
 
     pairwise_scatter_plots(
-        data=scatter_data_across_func_conn, x='var_method', y='var_time', 
+        data=scatter_data_across_func_conn, x='var_time', y='var_method', 
         title='var method vs time across func conns across methods pairs', hist=True,
         save_image=save_image, output_root=output_root+'variation/'
     )
 
     scatter_plot(
-        data=scatter_data, x='var_method', y='var_time', 
+        data=scatter_data, x='var_time', y='var_method', 
         labels='labels', title='var method vs time',
         save_image=save_image, output_root=output_root+'variation/'
     )
@@ -1117,7 +1130,7 @@ for filter in ['default_values']:
             data['labels'].append(zip_name(measure_lst[i])+'-'+zip_name(measure_lst[j]))
 
     scatter_plot(data, x='sim_mat_across_method', y='sim_mat_across_time',
-        labels='labels', title='scatter inter time vs mathod',
+        labels='labels', title='scatter inter time vs method',
         save_image=save_image, output_root=output_root+'variation/'
     )
 
