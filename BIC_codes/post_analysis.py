@@ -143,6 +143,11 @@ for metric in metric_list:
             all_subjs_sim_mat.append(np.squeeze(SUBJs_output[filter]['all'][metric]))
 
         measure_name_lst = [measure.measure_name for measure in SUBJs_output[filter]['measure_lst']]
+        sim_distribution = make_sim_distribution(
+            sim_mats_lst=all_subjs_sim_mat, 
+            name_lst=measure_name_lst,
+            zip_names=True
+        )
         all_subjs_sim_mat = np.array(all_subjs_sim_mat)
         all_subjs_avg = np.mean(all_subjs_sim_mat, axis=0)
         across_subj_var = np.var(all_subjs_sim_mat, axis=0)
@@ -155,6 +160,7 @@ for metric in metric_list:
             RESULTS[new_filter]['var_mat'] = across_subj_var
             RESULTS[new_filter]['avg_div_var_mat'] = np.divide(all_subjs_avg, np.sqrt(across_subj_var), out=np.zeros_like(all_subjs_avg), where=np.sqrt(across_subj_var)!=0)
             RESULTS[new_filter]['var_div_avg_mat'] = np.divide(across_subj_var, all_subjs_avg, out=np.zeros_like(across_subj_var), where=all_subjs_avg!=0)
+            RESULTS[new_filter]['sim_distribution'] = sim_distribution
             RESULTS[new_filter]['name_lst'] = measure_name_lst
         else:
             RESULTS[filter] = {}
@@ -162,17 +168,23 @@ for metric in metric_list:
             RESULTS[filter]['var_mat'] = across_subj_var
             RESULTS[filter]['avg_div_var_mat'] = np.divide(all_subjs_avg, np.sqrt(across_subj_var), out=np.zeros_like(all_subjs_avg), where=np.sqrt(across_subj_var)!=0)
             RESULTS[filter]['var_div_avg_mat'] = np.divide(across_subj_var, all_subjs_avg, out=np.zeros_like(across_subj_var), where=all_subjs_avg!=0)
+            RESULTS[filter]['sim_distribution'] = sim_distribution
             RESULTS[filter]['name_lst'] = measure_name_lst
 
     ############ VISUALIZE ############
     for key in RESULTS[filter]:
-        if key=='name_lst':
+        if key=='name_lst' or key=='sim_distribution':
             continue
         visualize_sim_mat(RESULTS, mat_key=key, title=metric+' '+key, 
                                         name_lst_key='name_lst', 
                                         cmap='viridis',
                                         save_image=save_image, output_root=output_root+'dFC_similarity/'+metric+'/'
         )
+    for filter in ['session_Rest1_LR']:
+        pairwise_cat_plots(RESULTS[filter]['sim_distribution'], x='', y='sim',
+            title=metric+' total similarity distributions '+filter,
+            save_image=save_image, output_root=output_root+'dFC_similarity/'+metric+'/'
+            )
     ############ Hierarchical Clustering ############
     for filter in ['session_Rest1_LR']:
         if metric=='MI':
@@ -1246,7 +1258,7 @@ for filter in ['default_values']:
             
                 RESULTS[measure_i_name][measure_j_name]['sim'].extend(output[measure_i_name][measure_j_name]['sim'])
                 RESULTS[measure_i_name][measure_j_name][''].extend(output[measure_i_name][measure_j_name][''])
-                
+
 ############ VISUALIZE ############
     pairwise_cat_plots(RESULTS, x='', y='sim',
         title='random state time course dFC',

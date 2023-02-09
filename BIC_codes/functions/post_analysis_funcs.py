@@ -83,6 +83,36 @@ def pairwise_cat_plots(data, x, y,
 
 from scipy import stats
 
+############## STAT Functions ##############
+
+def make_sim_distribution(sim_mats_lst, name_lst, zip_names=True):
+    '''
+    each sim_mat in the sim_mat_lst corresponds
+    to a subj. the name_lst must correspond to the
+    columns and rows of sim_mats
+    '''
+    output = {}
+    for sim_mat in sim_mats_lst:
+        
+        for i, name_i in enumerate(name_lst):
+            for j, name_j in enumerate(name_lst):
+
+                if zip_names:
+                    name_i_used = zip_name(name_i)
+                    name_j_used = zip_name(name_j)
+                else:
+                    name_i_used = name_i
+                    name_j_used = name_j
+
+                if not name_i_used in output:
+                    output[name_i_used] = {}
+                if not name_j_used in output[name_i_used]:
+                    output[name_i_used][name_j_used] = {'sim':list(), '':list()}
+            
+                output[name_i_used][name_j_used]['sim'].append(sim_mat[i, j])
+                output[name_i_used][name_j_used][''].append('sim')
+    return output
+
 ############## Randomization Functions ##############
 
 def randomize_time(dFC_dict, N):
