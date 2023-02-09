@@ -1134,6 +1134,125 @@ for filter in ['default_values']:
         save_image=save_image, output_root=output_root+'variation/'
     )
 
+################################# Randomization Tests #################################
+'''
+find the similarity between the dFC obtained by each method 
+and a dFC which is a constant sequence of mean of all methods dFC
+'''
+for filter in ['default_values']:
+
+    RESULTS = {}
+    RESULTS['sim'] = list()
+    RESULTS['dFC_method'] = list()
+    for s in ALL_RECORDS:
+        SUBJs_output = np.load(assessment_results_root+FOLDER_name+s, allow_pickle='True').item()
+
+        dFC_dict = {}
+        for i, measure in enumerate(SUBJs_output[filter]['measure_lst']):
+            dFC_mat = SUBJs_output[filter]['dFCM_samples'][str(i)]
+            dFC_dict[measure.measure_name] = dFC_mat
+
+        dFC_mean = list()
+        for i, measure_name in enumerate(dFC_dict):
+            dFC_mat = dFC_dict[measure_name]
+            n_time = dFC_mat.shape[0]
+            dFC_mean.append(np.mean(dFC_mat, axis=0))
+        dFC_mean = np.mean(np.array(dFC_mean), axis=0)
+        dFC_mean = np.repeat(dFC_mean[None,:,:], n_time, axis=0)
+        dFC_mean_vec = dFC_mat2vec(dFC_mean)
+
+        for i, measure_i_name in enumerate(dFC_dict):
+
+            dFC_mat_i = dFC_dict[measure_i_name]
+            dFC_mat_i_vec = dFC_mat2vec(dFC_mat_i)
+
+            sim, p = stats.spearmanr(dFC_mat_i_vec.flatten(), dFC_mean_vec.flatten())
+            
+            RESULTS['sim'].append(sim)
+            RESULTS['dFC_method'].append(measure_i_name)
+
+############ VISUALIZE ############
+    cat_plot(data=RESULTS, x='dFC_method', y='sim', 
+            kind='violin',
+            title='similarity with constant static FC',
+            save_image=save_image, output_root=output_root+'randomization/'
+            )
+
+
+'''
+find the similarity between the dFC obtained by each method 
+but with randomized temporal order
+'''
+for filter in ['default_values']:
+
+    RESULTS = {}
+    for s in ALL_RECORDS:
+        SUBJs_output = np.load(assessment_results_root+FOLDER_name+s, allow_pickle='True').item()
+
+        dFC_dict = {}
+        for i, measure in enumerate(SUBJs_output[filter]['measure_lst']):
+
+            dFC_mat = SUBJs_output[filter]['dFCM_samples'][str(i)]
+            dFC_dict[zip_name(measure.measure_name)] = dFC_mat
+
+        output = randomize_time(dFC_dict, N=10)
+
+        for measure_i_name in output:
+            for measure_j_name in output[measure_i_name]:
+
+                if not measure_i_name in RESULTS:
+                    RESULTS[measure_i_name] = {}
+                if not measure_j_name in RESULTS[measure_i_name]:
+                    RESULTS[measure_i_name][measure_j_name] = {'sim':list(), '':list()}
+            
+                RESULTS[measure_i_name][measure_j_name]['sim'].extend(output[measure_i_name][measure_j_name]['sim'])
+                RESULTS[measure_i_name][measure_j_name][''].extend(output[measure_i_name][measure_j_name][''])
+
+############ VISUALIZE ############
+    pairwise_cat_plots(RESULTS, x='', y='sim',
+        title='randomized time similarity',
+        save_image=save_image, output_root=output_root+'randomization/'
+        )
+
+'''
+find the similarity between dFC matrices created using
+a random state time course but real FC patterns obtained 
+by each method; for SW and TF all FC patterns of each 
+subject are used
+'''
+for filter in ['default_values']:
+
+    RESULTS = {}
+    for s in ALL_RECORDS:
+        SUBJs_output = np.load(assessment_results_root+FOLDER_name+s, allow_pickle='True').item()
+        n_time = SUBJs_output[filter]['dFCM_samples'][str(0)].shape[0]
+        
+        FCS_dict = {}
+        for i, measure in enumerate(SUBJs_output[filter]['measure_lst']):
+            FCS = measure.FCS
+            if len(FCS)==0:
+                FCS = SUBJs_output[filter]['dFCM_samples'][str(i)]
+            FCS_dict[zip_name(measure.measure_name)] = FCS
+
+        output = dFC_rand_sim(FCS_dict, n_time, N=100)
+
+        for measure_i_name in output:
+            for measure_j_name in output[measure_i_name]:
+
+                if not measure_i_name in RESULTS:
+                    RESULTS[measure_i_name] = {}
+                if not measure_j_name in RESULTS[measure_i_name]:
+                    RESULTS[measure_i_name][measure_j_name] = {'sim':list(), '':list()}
+            
+                RESULTS[measure_i_name][measure_j_name]['sim'].extend(output[measure_i_name][measure_j_name]['sim'])
+                RESULTS[measure_i_name][measure_j_name][''].extend(output[measure_i_name][measure_j_name][''])
+                
+############ VISUALIZE ############
+    pairwise_cat_plots(RESULTS, x='', y='sim',
+        title='random state time course dFC',
+        save_image=save_image, output_root=output_root+'randomization/'
+        )
+
 ################################# SIMILARITY OF ADJACENT TIME POINTS #################################
 
 RESULTS = {}
