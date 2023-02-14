@@ -1207,7 +1207,7 @@ for filter in ['default_values']:
             dFC_mat = SUBJs_output[filter]['dFCM_samples'][str(i)]
             dFC_dict[zip_name(measure.measure_name)] = dFC_mat
 
-        output = randomize_time(dFC_dict, N=10)
+        output = randomize_time(dFC_dict, N=100)
 
         for measure_i_name in output:
             for measure_j_name in output[measure_i_name]:
