@@ -309,27 +309,21 @@ def zip_name(name):
 # test
 # pear_corr problem
 def unzip_name(name):
-    # zip measure names
-    flag=False
-    if not '_' in name:
-        name = name + '_'
-        flag=True
-    if 'CAP' in name:
-        new_name = 'CAP' + name[name.rfind('_'):]
+    # unzip measure names
     if 'SWC' in name:
-        new_name = 'Clustering' + name[name.rfind('_'):]
-    if 'CHMM' in name:
-        new_name = 'ContinuousHMM' + name[name.rfind('_'):]
-    if 'WL' in name:
-        new_name = 'Windowless' + name[name.rfind('_'):]
-    if 'DHMM' in name:
-        new_name = 'DiscreteHMM' + name[name.rfind('_'):]
-    if 'TF' in name:
-        new_name = 'Time-Freq' + name[name.rfind('_'):]
-    if 'SW_' in name:
-        new_name = 'SlidingWindow' + name[name.rfind('_'):]
-    if flag:
-        new_name = new_name[:-1]
+        new_name = 'Clustering' 
+    elif 'CAP' in name:
+        new_name = 'CAP' 
+    elif 'CHMM' in name:
+        new_name = 'ContinuousHMM' 
+    elif 'WL' in name:
+        new_name = 'Windowless' 
+    elif 'DHMM' in name:
+        new_name = 'DiscreteHMM' 
+    elif 'TF' in name:
+        new_name = 'Time-Freq' 
+    elif 'SW' in name:
+        new_name = 'SlidingWindow'
     return new_name
 
 #test
