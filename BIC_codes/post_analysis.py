@@ -1147,6 +1147,9 @@ for filter in ['default_values']:
     )
 
 ################################# Randomization Tests #################################
+
+metric = 'spearman'
+
 '''
 find the similarity between the dFC obtained by each method 
 and a dFC which is a constant sequence of mean of all methods dFC
@@ -1197,6 +1200,16 @@ but with randomized temporal order
 '''
 for filter in ['default_values']:
 
+    all_subjs_sim_mat = list()
+    for s in ALL_RECORDS:
+        SUBJs_output = np.load(assessment_results_root+FOLDER_name+s, allow_pickle='True').item()
+        # SUBJs_output[filter]['all']['metric'] = (1, method, method)
+        all_subjs_sim_mat.append(np.squeeze(SUBJs_output[filter]['all'][metric]))
+
+    all_subjs_sim_mat = np.array(all_subjs_sim_mat)
+    all_subjs_avg = np.mean(all_subjs_sim_mat, axis=0)
+    measure_name_lst = [measure.measure_name for measure in SUBJs_output[filter]['measure_lst']]
+
     RESULTS = {}
     for s in ALL_RECORDS:
         SUBJs_output = np.load(assessment_results_root+FOLDER_name+s, allow_pickle='True').item()
@@ -1220,8 +1233,16 @@ for filter in ['default_values']:
                 RESULTS[measure_i_name][measure_j_name]['sim'].extend(output[measure_i_name][measure_j_name]['sim'])
                 RESULTS[measure_i_name][measure_j_name][''].extend(output[measure_i_name][measure_j_name][''])
 
+    for measure_i_name in output:
+        for measure_j_name in output[measure_i_name]:
+            sim = all_subjs_avg[measure_name_lst.index(unzip_name(measure_i_name)), measure_name_lst.index(unzip_name(measure_j_name))]
+            # change diagonal from 0 to 1
+            if measure_i_name==measure_j_name:
+                sim = 1
+            RESULTS[measure_i_name][measure_j_name]['actual_sim'] = [sim for item in RESULTS[measure_i_name][measure_j_name]['sim']]
+
 ############ VISUALIZE ############
-    pairwise_cat_plots(RESULTS, x='', y='sim',
+    pairwise_cat_plots(RESULTS, x='', y='sim', z='actual_sim',
         title='randomized time similarity',
         save_image=save_image, output_root=output_root+'randomization/'
         )
@@ -1233,6 +1254,16 @@ by each method; for SW and TF all FC patterns of each
 subject are used
 '''
 for filter in ['default_values']:
+
+    all_subjs_sim_mat = list()
+    for s in ALL_RECORDS:
+        SUBJs_output = np.load(assessment_results_root+FOLDER_name+s, allow_pickle='True').item()
+        # SUBJs_output[filter]['all']['metric'] = (1, method, method)
+        all_subjs_sim_mat.append(np.squeeze(SUBJs_output[filter]['all'][metric]))
+
+    all_subjs_sim_mat = np.array(all_subjs_sim_mat)
+    all_subjs_avg = np.mean(all_subjs_sim_mat, axis=0)
+    measure_name_lst = [measure.measure_name for measure in SUBJs_output[filter]['measure_lst']]
 
     RESULTS = {}
     for s in ALL_RECORDS:
@@ -1259,8 +1290,16 @@ for filter in ['default_values']:
                 RESULTS[measure_i_name][measure_j_name]['sim'].extend(output[measure_i_name][measure_j_name]['sim'])
                 RESULTS[measure_i_name][measure_j_name][''].extend(output[measure_i_name][measure_j_name][''])
 
+    for measure_i_name in output:
+        for measure_j_name in output[measure_i_name]:
+            sim = all_subjs_avg[measure_name_lst.index(unzip_name(measure_i_name)), measure_name_lst.index(unzip_name(measure_j_name))]
+            # change diagonal from 0 to 1
+            if measure_i_name==measure_j_name:
+                sim = 1
+            RESULTS[measure_i_name][measure_j_name]['actual_sim'] = [sim for item in RESULTS[measure_i_name][measure_j_name]['sim']]
+
 ############ VISUALIZE ############
-    pairwise_cat_plots(RESULTS, x='', y='sim',
+    pairwise_cat_plots(RESULTS, x='', y='sim', z='actual_sim',
         title='random state time course dFC',
         save_image=save_image, output_root=output_root+'randomization/'
         )

@@ -7,6 +7,7 @@ Created on Wed Feb 8 2023
 """
 
 import numpy as np
+import scipy
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import seaborn as sns
@@ -26,12 +27,15 @@ fig_pad = 0.1
 
 ################################# Plotting Functions ####################################
 
-def pairwise_cat_plots(data, x, y,
+def pairwise_cat_plots(data, x, y, z=None,
     title='', 
     save_image=False, output_root=None
     ):
     '''
     data is a dictionary with different vars as keys 
+    if z is specidied, it will be used as a out of distribution 
+    sample, e.g. actual similarity when plotting randomized 
+    distribution.
     '''
 
     sns.set_context("paper", 
@@ -55,8 +59,24 @@ def pairwise_cat_plots(data, x, y,
     for i, key_i in enumerate(data):
         for j, key_j in enumerate(data[key_i]):
             df = pd.DataFrame(data[key_i][key_j])
-            g = sns.violinplot(ax=axs[i, j], data=df, x=x, y=y
-            )
+
+            # statistical significance
+            if not z is None:
+                stat, pvalue = scipy.stats.ttest_1samp(
+                        df[y], 
+                        df[z][0],
+                        alternative='less'
+                    )
+
+            if not z is None:
+                sns.stripplot(ax=axs[i, j], data=df, x=x, y=z, color='red', jitter=False, size=10)
+            sns.violinplot(ax=axs[i, j], data=df, x=x, y=y)
+
+            if not z is None:
+                y_position = 1.0
+                text_kwargs = dict(ha='center', va='center')
+                axs[i, j].text(x=0, y=y_position, s=convert_pvalue_to_asterisks(pvalue), **text_kwargs)
+
             axs[i, j].set_title(key_i+'-'+key_j)
             axs_plotted.append(axs[i, j])
 
@@ -112,6 +132,17 @@ def make_sim_distribution(sim_mats_lst, name_lst, zip_names=True):
                 output[name_i_used][name_j_used]['sim'].append(sim_mat[i, j])
                 output[name_i_used][name_j_used][''].append('sim')
     return output
+
+def convert_pvalue_to_asterisks(pvalue):
+    if pvalue <= 0.0001:
+        return "****"
+    elif pvalue <= 0.001:
+        return "***"
+    elif pvalue <= 0.01:
+        return "**"
+    elif pvalue <= 0.05:
+        return "*"
+    return "ns"
 
 ############## Randomization Functions ##############
 
@@ -171,17 +202,14 @@ def dFC_rand_sim(FCS_dict, n_time, N):
     '''
     output = {}
     for n in range(N):
-        dFC_dict = {}
-        for i, measure_name in enumerate(FCS_dict):
-            dFC_rand = dFC_rand_generator(FCS_dict[measure_name], n_time=n_time)
-            dFC_dict[measure_name] = dFC_rand
 
-        for i, measure_i_name in enumerate(dFC_dict):
+        for i, measure_i_name in enumerate(FCS_dict):
                 
-            dFC_mat_i = dFC_dict[measure_i_name]
+            dFC_rand = dFC_rand_generator(FCS_dict[measure_i_name], n_time=n_time)
+            dFC_mat_i = dFC_rand
             dFC_mat_i_vec = dFC_mat2vec(dFC_mat_i)
 
-            for j, measure_j_name in enumerate(dFC_dict):
+            for j, measure_j_name in enumerate(FCS_dict):
             
                 if j>i:
                     continue
@@ -190,7 +218,8 @@ def dFC_rand_sim(FCS_dict, n_time, N):
                 if not measure_j_name in output[measure_i_name]:
                     output[measure_i_name][measure_j_name] = {'sim':list(), '':list()}
 
-                dFC_mat_j = dFC_dict[measure_j_name]
+                dFC_rand = dFC_rand_generator(FCS_dict[measure_j_name], n_time=n_time)
+                dFC_mat_j = dFC_rand
                 dFC_mat_j_vec = dFC_mat2vec(dFC_mat_j)
 
                 sim, p = stats.spearmanr(dFC_mat_i_vec.flatten(), dFC_mat_j_vec.flatten())
