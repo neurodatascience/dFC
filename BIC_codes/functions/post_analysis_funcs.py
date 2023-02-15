@@ -117,6 +117,9 @@ def make_sim_distribution(sim_mats_lst, name_lst, zip_names=True):
         for i, name_i in enumerate(name_lst):
             for j, name_j in enumerate(name_lst):
 
+                if j>=i:
+                    continue
+
                 if zip_names:
                     name_i_used = zip_name(name_i)
                     name_j_used = zip_name(name_j)
