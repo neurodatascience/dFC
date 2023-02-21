@@ -25,9 +25,6 @@ import hdf5storage
 import scipy.io as sio
 import pandas as pd
 
-sys.path.append('./../git_codes/BIC_codes/')
-from functions.post_analysis_funcs import *
-
 # np.seterr(invalid='ignore')
 
 # ########## bundled brain graph visualizer ##########
@@ -290,45 +287,6 @@ def dFC_mask(dFC_mat, mask):
     dFC_vec_new = np.array(dFC_vec_new)
 
     return dFC_vec_new
-    
-# test
-def zip_name(name):
-    # zip measure names
-    if 'Clustering' in name:
-        new_name = 'SWC' 
-    if 'CAP' in name:
-        new_name = 'CAP' 
-    if 'ContinuousHMM' in name:
-        new_name = 'CHMM' 
-    if 'Windowless' in name:
-        new_name = 'WL' 
-    if 'DiscreteHMM' in name:
-        new_name = 'DHMM' 
-    if 'Time-Freq' in name:
-        new_name = 'TF' 
-    if 'SlidingWindow' in name:
-        new_name = 'SW'
-    return new_name
-
-# test
-# pear_corr problem
-def unzip_name(name):
-    # unzip measure names
-    if 'SWC' in name:
-        new_name = 'Clustering' 
-    elif 'CAP' in name:
-        new_name = 'CAP' 
-    elif 'CHMM' in name:
-        new_name = 'ContinuousHMM' 
-    elif 'WL' in name:
-        new_name = 'Windowless' 
-    elif 'DHMM' in name:
-        new_name = 'DiscreteHMM' 
-    elif 'TF' in name:
-        new_name = 'Time-Freq' 
-    elif 'SW' in name:
-        new_name = 'SlidingWindow'
-    return new_name
 
 #test
 def dFC_mat2vec(C_t):
@@ -429,6 +387,340 @@ def segment_FC_dict(FC_dict, node_networks):
     for key in FC_dict:
         segmented_dict[key] = segment_FC(FC_dict[key], node_networks)
     return segmented_dict
+    
+def visualize_conn_mat(C, axis=None, title='', \
+    cmap='seismic',\
+    V_MIN=None, V_MAX=None, \
+    node_networks=None \
+    ):
+    '''
+    C is (regions, regions)
+    '''
+
+    if axis is None:
+        fig, axis = plt.subplots(1, 1, figsize=(5, 5))
+
+    if node_networks is None:
+        axis.set_axis_off()
+
+    if V_MAX is None:
+        V_MAX = np.max(np.abs(C))
+    if V_MIN is None:
+        V_MIN = -1*V_MAX
+
+    im = axis.imshow(C, interpolation='nearest', aspect='equal', cmap=cmap,    # 'viridis' or 'jet'
+        vmin=V_MIN, vmax=V_MAX)
+    
+    # cluster node networks
+    if not node_networks is None:
+        
+        # finding unique network names wrt order
+        network_names = []
+        for node in node_networks:
+            if not node in network_names:
+                network_names.append(node)
+        network_labels = [network_names.index(node) for node in node_networks]
+
+        network_borders = np.argwhere(np.diff(network_labels)!=0)
+        ticks_position = []
+        last_line_position = 0
+        for i in network_borders:
+            # 0.5 is the visualization offset of imshow
+            line_position = i[0]+1-0.5
+            axis.axvline(x=line_position, color='k', linewidth=1)
+            axis.axhline(y=line_position, color='k', linewidth=1)
+            ticks_position.append((line_position+last_line_position)/2)
+            last_line_position = line_position
+        line_position = len(node_networks)+1-0.5
+        ticks_position.append((line_position+last_line_position)/2)
+
+        axis.set_xticks(ticks_position)
+        axis.set_yticks(ticks_position)
+        axis.set_xticklabels(network_names, rotation=90, fontsize=13)
+        axis.set_yticklabels(network_names, fontsize=13)
+    
+    axis.set_title(title, fontsize=18)
+
+    return im
+
+def visualize_conn_mat_dict(data, title='', \
+    cmap='seismic',\
+    normalize=False,\
+    disp_diag=True,\
+    save_image=False, output_root=None, axes=None, fig=None, \
+    fix_lim=True, center_0=True, \
+    node_networks=None, segmented=False \
+    ):
+
+    '''
+    - data must be a dict of connectivity matrices
+    sample:
+    Suptitle1
+        0.00 0.31 0.76 
+        0.31 0.00 0.43 
+        0.76 0.43 0.00 
+    Suptitle1
+        0.00 0.32 0.76 
+        0.32 0.00 0.45 
+        0.76 0.45 0.00 
+    '''
+
+    if node_networks is None:
+        fig_width = 25*(len(data)/10)
+    else:
+        fig_width = 60*(len(data)/10)
+    fig_height = 5
+
+    fig_flag = True
+    if axes is None or fig is None:
+        fig_flag = False
+
+    if not fig_flag:
+        fig, axes = plt.subplots(1, len(data), figsize=(fig_width, fig_height), \
+            facecolor='w', edgecolor='k')
+
+    if not type(axes) is np.ndarray:
+        axes = np.array([axes])
+
+    fig.suptitle(title, fontsize=20, y=0.98) #, fontsize=20, size=20
+
+    axes = axes.ravel()
+
+    # normalizing and scale
+    conn_mats = list()
+    V_MAX_all = None
+    for i, key in enumerate(data):
+        
+        if segmented:
+            C = segment_FC(data[key], node_networks)
+        else:
+            C = data[key]
+
+        if normalize:
+            C = dFC_mat_normalize(C[None,:,:], global_normalization=False, threshold=0.0)[0]
+
+        if not disp_diag:
+            C = np.multiply(C, 1-np.eye(len(C)))
+            C = C + np.mean(C.flatten()) * np.eye(len(C))
+
+        if V_MAX_all is None:
+            V_MAX_all = np.max(np.abs(C))
+        else:
+            V_MAX_all = max(V_MAX_all, np.max(np.abs(C)))
+
+        conn_mats.append(C)
+    conn_mats = np.array(conn_mats)
+
+    if np.any(conn_mats<0) or center_0: 
+        V_MIN = -1
+        V_MAX = 1
+    else: 
+        V_MIN = 0
+        V_MAX = 1
+
+    if not fix_lim:
+        V_MAX = V_MAX_all
+        if np.any(conn_mats<0) or center_0:
+            V_MIN = -1 * V_MAX_all
+        else:
+            V_MIN = 0
+
+    # plot
+    for i, key in enumerate(data):
+
+        C = conn_mats[i,:,:]
+
+        im = visualize_conn_mat(C, axis=axes[i], title=key, \
+            cmap=cmap,\
+            V_MIN=V_MIN, V_MAX=V_MAX, \
+            node_networks=node_networks \
+            )
+    if not fig_flag:
+        fig.subplots_adjust(
+            bottom=0.1, \
+            top=0.85, \
+            left=0.1, \
+            right=0.9,
+            # wspace=0.02, \
+            # hspace=0.02\
+        )
+
+        if not node_networks is None:
+            fig.subplots_adjust(
+                wspace=0.55 
+            )
+            
+    l, b, w, h = axes[-1].get_position().bounds
+    if fig_flag:
+        cb_ax = fig.add_axes([0.91, b, 0.007, h])
+    else:
+        cb_ax = fig.add_axes([0.91, b, 0.01, h])
+    cbar = fig.colorbar(im, cax=cb_ax, shrink=0.8) # shrink=0.8??
+
+    if save_image:
+        folder = output_root[:output_root.rfind('/')]
+        if not os.path.exists(folder):
+            os.makedirs(folder)
+        plt.savefig(output_root+title+'.png', \
+            dpi=fig_dpi, bbox_inches=fig_bbox_inches, pad_inches=fig_pad \
+        ) 
+        plt.close()
+    else:
+        plt.show()
+
+
+def visualize_conn_mat_2D_dict(data, title='', \
+    cmap='seismic',\
+    normalize=False,\
+    disp_diag=True,\
+    save_image=False, output_root=None, \
+    fix_lim=True, center_0=True, \
+    node_networks=None, segmented=False \
+    ):
+
+    '''
+    - data must be a 2D dict of connectivity matrices
+    sample:
+    ROW1 (method_1)
+        COLUMN1 (method_1)
+            data[method_1][method_1]
+                0.00 0.31 0.76 
+                0.31 0.00 0.43 
+                0.76 0.43 0.00 
+        COLUMN2 (method_2)
+            data[method_1][method_2]
+                0.00 0.31 0.76 
+                0.31 0.00 0.43 
+                0.76 0.43 0.00 
+    ROW2 (method_2)
+        COLUMN1 (method_1)
+            data[method_2][method_1]
+                0.00 0.31 0.76 
+                0.31 0.00 0.43 
+                0.76 0.43 0.00 
+    '''
+
+    if node_networks is None:
+        fig_width = 30*(len(data)/10)
+    else:
+        fig_width = 55*(len(data)/10) + 4
+    fig_height = fig_width * 1.0
+
+    fig, axs = plt.subplots(len(data), len(data), figsize=(fig_width, fig_height), \
+        facecolor='w', edgecolor='k')
+
+    if not type(axs) is np.ndarray:
+        axs = np.array([axs])
+
+    fig.suptitle(title, fontsize=25, y=0.98) #, fontsize=20, size=20
+
+    # axs = axs.ravel()
+
+    # normalizing and scale
+    conn_mats = list()
+    V_MAX_all = None
+    for i, key_i in enumerate(data):
+        for j, key_j in enumerate(data[key_i]):
+            
+            if segmented:
+                C = segment_FC(data[key_i][key_j], node_networks)
+            else:
+                C = data[key_i][key_j]
+            
+
+            if normalize:
+                C = dFC_mat_normalize(C[None,:,:], global_normalization=False, threshold=0.0)[0]
+
+            if not disp_diag:
+                C = np.multiply(C, 1-np.eye(len(C)))
+                C = C + np.mean(C.flatten()) * np.eye(len(C))
+
+            if V_MAX_all is None:
+                V_MAX_all = np.max(np.abs(C))
+            else:
+                V_MAX_all = max(V_MAX_all, np.max(np.abs(C)))
+
+            conn_mats.append(C)
+    conn_mats = np.array(conn_mats)
+
+    if np.any(conn_mats<0) or center_0: 
+        V_MIN = -1
+        V_MAX = 1
+    else: 
+        V_MIN = 0
+        V_MAX = 1
+
+    if not fix_lim:
+        V_MAX = V_MAX_all
+        if np.any(conn_mats<0) or center_0:
+            V_MIN = -1 * V_MAX_all
+        else:
+            V_MIN = 0
+    
+    # plot
+    axs_plotted = list()
+    for i, key_i in enumerate(data):
+
+        for j, key_j in enumerate(data[key_i]):
+
+            if segmented:
+                C = segment_FC(data[key_i][key_j], node_networks)
+            else:
+                C = data[key_i][key_j]
+
+            if normalize:
+                C = dFC_mat_normalize(C[None,:,:], global_normalization=False, threshold=0.0)[0]
+
+            if not disp_diag:
+                C = np.multiply(C, 1-np.eye(len(C)))
+                C = C + np.mean(C.flatten()) * np.eye(len(C))
+
+            im = visualize_conn_mat(C, axis=axs[i][j], title=key_i + ' and ' + key_j, \
+                cmap=cmap,\
+                V_MIN=V_MIN, V_MAX=V_MAX, \
+                node_networks=node_networks \
+                )
+
+            axs_plotted.append(axs[i][j])
+
+    # remove extra subplots
+    for ax in axs.ravel():
+        if not ax in axs_plotted:
+            ax.set_axis_off()
+            ax.xaxis.set_tick_params(which='both', labelbottom=True)
+
+    fig.subplots_adjust(
+        bottom=0.1, \
+        top=0.95, \
+        left=0.1, \
+        right=0.9,
+        wspace=0.001, \
+        hspace=0.4\
+    )
+
+    if not node_networks is None:
+        fig.subplots_adjust(
+            wspace=0.45, 
+            hspace=0.50
+        )
+        
+    l, b, w, h = axs[-1][-1].get_position().bounds
+    if node_networks is None:
+        cb_ax = fig.add_axes([0.91, 0.5-h/2, 0.007, h])
+    else:
+        cb_ax = fig.add_axes([0.91, 0.5-h/2, 0.015, h])
+    cbar = fig.colorbar(im, cax=cb_ax, shrink=0.8) # shrink=0.8??
+
+    if save_image:
+        folder = output_root[:output_root.rfind('/')]
+        if not os.path.exists(folder):
+            os.makedirs(folder)
+        plt.savefig(output_root+title+'.png', \
+            dpi=fig_dpi, bbox_inches=fig_bbox_inches, pad_inches=fig_pad \
+        ) 
+        plt.close()
+    else:
+        plt.show()
         
 
 '''
