@@ -1488,6 +1488,7 @@ for filter in ['default_values']:
         save_image=save_image, output_root=output_root+'time/'
         )
 
+np.save(output_root+'ALL_RESULTS.npy', ALL_RESULTS)
 
 if not save_image:
     plt.show()
