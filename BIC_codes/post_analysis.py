@@ -2,6 +2,7 @@
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
+from copy import deepcopy
 import os
 
 sys.path.append('./BIC_codes/')
@@ -46,6 +47,9 @@ for filter in FILTERS:
 #     if 'Fs' in filter:
 #         FILTERS_new.append(filter)
 # FILTERS = FILTERS_new
+
+# the dictionary that collects all RESULTS
+ALL_RESULTS = {} 
 
 ################################# dFC SAMPLES #################################
 
@@ -110,6 +114,8 @@ for filter in ['default_values']:
     for measure in RESULTS:
         RESULTS[measure] = np.array(RESULTS[measure]).flatten()
 
+    ALL_RESULTS['dFC_values_dist'] = deepcopy(RESULTS)
+
 ############ VISUALIZE ############
 
     joint_dist_plot(data=RESULTS,
@@ -125,6 +131,8 @@ for filter in ['default_values']:
     - spearman correlation, pearson correlation, Mutual Information (MI), Euclidean Distance
     - dendogram based on avg(corr)
 '''
+ALL_RESULTS['dFC_similarity_overall'] = {}
+
 metric_list = [
             'corr',
             'spearman',
@@ -171,6 +179,7 @@ for metric in metric_list:
             RESULTS[filter]['sim_distribution'] = sim_distribution
             RESULTS[filter]['name_lst'] = measure_name_lst
 
+    ALL_RESULTS['dFC_similarity_overall'][metric] = deepcopy(RESULTS)
     ############ VISUALIZE ############
     for key in RESULTS[filter]:
         if key=='name_lst' or key=='sim_distribution':
@@ -210,6 +219,8 @@ for metric in metric_list:
     - dFC-avg
     - dFC-var
 '''
+ALL_RESULTS['dFC_similarity_feature_based'] = {}
+
 feature2extract_list = [
             'spatial', 'temporal', 
             'inter_time_corr', 'inter_conn_corr', 
@@ -238,6 +249,8 @@ for feature2extract in feature2extract_list:
         RESULTS[filter]['var_div_avg_mat'] = np.divide(across_subj_var, all_subjs_avg, out=np.zeros_like(across_subj_var), where=all_subjs_avg!=0)
         RESULTS[filter]['name_lst'] = measure_name_lst
 
+    ALL_RESULTS['dFC_similarity_feature_based'][feature2extract] = deepcopy(RESULTS)
+
     ############ VISUALIZE ############
     for key in RESULTS[filter]:
         if key=='name_lst':
@@ -260,7 +273,6 @@ for feature2extract in feature2extract_list:
 
 ############ Spatial vs. Temporal Scatter plot ############
     
-RESULTS = {}
 for filter in ['default_values']:
 
     all_subjs_spatial_sim_mat = list()
@@ -288,6 +300,8 @@ for filter in ['default_values']:
         labels='labels', title='spatial similarity vs temporal similarity',
         save_image=save_image, output_root=output_root+'variation/'
     )
+
+ALL_RESULTS['spatial_vs_temporal_similarity'] = deepcopy(scatter_data)
     
 ################# graph-based #################
 '''
@@ -295,6 +309,9 @@ for filter in ['default_values']:
     - temporal-avg
     - ECM, shortest_path, degree, clustering_coef
 '''
+
+ALL_RESULTS['dFC_similarity_graph'] = {}
+
 graph_property_list = [
             'ECM',
             'shortest_path',
@@ -302,6 +319,8 @@ graph_property_list = [
             'clustering_coef'
 ]
 ###### spatial #####
+ALL_RESULTS['dFC_similarity_graph']['spatial'] = {}
+
 for graph_property in graph_property_list:
 
     RESULTS = {}
@@ -325,6 +344,8 @@ for graph_property in graph_property_list:
         RESULTS[filter]['var_div_avg_mat'] = np.divide(across_subj_var, all_subjs_avg, out=np.zeros_like(across_subj_var), where=all_subjs_avg!=0)
         RESULTS[filter]['name_lst'] = measure_name_lst
 
+    ALL_RESULTS['dFC_similarity_graph']['spatial'][graph_property] = deepcopy(RESULTS)
+
     ############ VISUALIZE ############
     for key in RESULTS[filter]:
         if key=='name_lst':
@@ -345,6 +366,8 @@ for graph_property in graph_property_list:
             save_image=save_image, output_root=output_root+'graph_based/'+graph_property+'/'
         )
 ###### temporal #####
+ALL_RESULTS['dFC_similarity_graph']['temporal'] = {}
+
 for graph_property in graph_property_list:
 
     RESULTS = {}
@@ -367,6 +390,8 @@ for graph_property in graph_property_list:
         RESULTS[filter]['avg_div_var_mat'] = np.divide(all_subjs_avg, np.sqrt(across_subj_var), out=np.zeros_like(all_subjs_avg), where=np.sqrt(across_subj_var)!=0)
         RESULTS[filter]['var_div_avg_mat'] = np.divide(across_subj_var, all_subjs_avg, out=np.zeros_like(across_subj_var), where=all_subjs_avg!=0)
         RESULTS[filter]['name_lst'] = measure_name_lst
+
+    ALL_RESULTS['dFC_similarity_graph']['temporal'][graph_property] = deepcopy(RESULTS)
 
     ############ VISUALIZE ############
     for key in RESULTS[filter]:
@@ -395,6 +420,8 @@ for graph_property in graph_property_list:
         measures in each session
     - dendogram based on inter-subject similarity
 '''
+ALL_RESULTS['subj_clustring'] = {}
+
 subj_lvl_feature_lst = [
     'dFC_values',
     'FO',
@@ -525,6 +552,8 @@ for subj_lvl_feature in subj_lvl_feature_lst:
             np.fill_diagonal(RESULTS[common_key+session][measure_name]['sim_mat'], np.nan)
             RESULTS[common_key+session][measure_name]['name_lst'] = subj_name_lst
 
+    ALL_RESULTS['subj_clustring'][subj_lvl_feature] = deepcopy(RESULTS)
+
     ############ VISUALIZE ############
     for key in RESULTS:
         annot = True
@@ -575,6 +604,8 @@ for filter in ['default_values']:
         RESULTS['var_dFC_var'][key] = np.var(RESULTS['avg_dFC_var'][key], axis=0)
         RESULTS['avg_dFC_var'][key] = np.mean(RESULTS['avg_dFC_var'][key], axis=0)
 
+    ALL_RESULTS['dFC_var'] = deepcopy(RESULTS)
+
     visualize_conn_mat_dict(RESULTS['avg_dFC_var'], node_networks=node_networks, 
                 title='avg dFC var ' + filter, center_0=False,
                 fix_lim=False, disp_diag=True, cmap='plasma', normalize=False, 
@@ -615,6 +646,8 @@ for filter in ['default_values']:
         RESULTS[key] = np.array(RESULTS[key])
         RESULTS[key] = np.mean(RESULTS[key], axis=0)
 
+    ALL_RESULTS['dFC_avg'] = deepcopy(RESULTS)
+
     visualize_conn_mat_dict(RESULTS, node_networks=node_networks, 
             title='dFC avg ' + filter, center_0=False,
             fix_lim=False, disp_diag=False, cmap='plasma', normalize=False,
@@ -630,8 +663,9 @@ for filter in ['default_values']:
 '''
     - spearman_corr((dFConnection(node_i, node_j) timecourse using method m), (dFConnection(node_i, node_j) timecourse using method n))
 '''
-RESULTS = {}
+
 for filter in ['default_values']:
+    RESULTS = {}
     for s in ALL_RECORDS:
 
         SUBJs_output = np.load(assessment_results_root+FOLDER_name+s, allow_pickle='True').item()
@@ -675,6 +709,8 @@ for filter in ['default_values']:
     for key_i in RESULTS:
         for key_j in RESULTS[key_i]:
             RESULTS[key_i][key_j] = np.mean(np.array(RESULTS[key_i][key_j]), axis=0)
+
+    ALL_RESULTS['across_func_conns'] = deepcopy(RESULTS)
 
 ############ VISUALIZE ############
 
@@ -886,6 +922,8 @@ for filter in ['default_values']:
     for key in RESULTS:
         RESULTS[key] = rank_norm(RESULTS[key])
 
+    ALL_RESULTS['high_var_func_conns'] = deepcopy(RESULTS)
+
 ############ VISUALIZE ############
 
     scatter_plot(
@@ -988,6 +1026,8 @@ for filter in ['default_values']:
     RESULTS['divide_temp'] = {'sim_mat': divide_temp, 'name_lst': measure_name_lst}
     RESULTS['divide_1_lag'] = {'sim_mat': divide_1_lag, 'name_lst': measure_name_lst}
 
+    ALL_RESULTS['var_comparison'] = deepcopy(RESULTS)
+
 ############ VISUALIZE ############
 
     visualize_sim_mat(RESULTS, mat_key='sim_mat', title='variation in different dimensions '+filter, 
@@ -1067,6 +1107,8 @@ for filter in ['default_values']:
         RESULTS[key]['sim_mat'] = np.mean(np.array(RESULTS[key]['sim_mat']), axis=0)
         RESULTS[key]['name_lst'] = [measure.measure_name for measure in SUBJs_output[filter]['measure_lst']]
 
+    ALL_RESULTS['sim_across_diff_var_lvls'] = deepcopy(RESULTS)
+
 ############ VISUALIZE ############
 
     visualize_sim_mat(RESULTS, mat_key='sim_mat', title='Similarity in different Variation Levels '+filter, 
@@ -1126,6 +1168,8 @@ for filter in ['default_values']:
         RESULTS[key]['sim_mat'] = np.mean(np.array(RESULTS[key]['sim_mat']), axis=0)
         RESULTS[key]['name_lst'] = measure_lst
 
+    ALL_RESULTS['sim_inter_time_vs_method'] = deepcopy(RESULTS)
+
 ############ VISUALIZE ############
 
     visualize_sim_mat(RESULTS, mat_key='sim_mat', title='Similarity inter Time vs. Method '+filter, 
@@ -1149,6 +1193,8 @@ for filter in ['default_values']:
 ################################# Randomization Tests #################################
 
 metric = 'spearman'
+
+ALL_RESULTS['randomization'] = {}
 
 '''
 find the similarity between the dFC obtained by each method 
@@ -1185,6 +1231,8 @@ for filter in ['default_values']:
             
             RESULTS['sim'].append(sim)
             RESULTS['dFC_method'].append(measure_i_name)
+
+    ALL_RESULTS['randomization']['sim_with_static_FC'] = deepcopy(RESULTS)
 
 ############ VISUALIZE ############
     cat_plot(data=RESULTS, x='dFC_method', y='sim', 
@@ -1240,6 +1288,8 @@ for filter in ['default_values']:
             if measure_i_name==measure_j_name:
                 sim = 1
             RESULTS[measure_i_name][measure_j_name]['actual_sim'] = [sim for item in RESULTS[measure_i_name][measure_j_name]['sim']]
+
+    ALL_RESULTS['randomization']['shuffled_time'] = deepcopy(RESULTS)
 
 ############ VISUALIZE ############
     pairwise_cat_plots(RESULTS, x='', y='sim', z='actual_sim',
@@ -1298,6 +1348,8 @@ for filter in ['default_values']:
                 sim = 1
             RESULTS[measure_i_name][measure_j_name]['actual_sim'] = [sim for item in RESULTS[measure_i_name][measure_j_name]['sim']]
 
+    ALL_RESULTS['randomization']['random_state_TC'] = deepcopy(RESULTS)
+
 ############ VISUALIZE ############
     pairwise_cat_plots(RESULTS, x='', y='sim', z='actual_sim',
         title='random state time course dFC',
@@ -1326,6 +1378,8 @@ for filter in ['default_values']:
                 RESULTS[key_name].append(sim_t)
                 RESULTS['dFC_method'].append(measure_i.measure_name)
 
+    ALL_RESULTS['adjacent_time_points'] = deepcopy(RESULTS)
+
 ############ VISUALIZE ############
 
     cat_plot(data=RESULTS, x='dFC_method', y=key_name, 
@@ -1353,6 +1407,8 @@ for filter in ['default_values']:
                 continue
             RESULTS[key_name].append(SUBJs_output[filter]['transition_stats'][i]['trans_norm'])
             RESULTS['dFC_method'].append(measure_i.measure_name)
+
+    ALL_RESULTS['transition_freq'] = deepcopy(RESULTS)
 
 ############ VISUALIZE ############
 
@@ -1386,6 +1442,8 @@ for filter in ['default_values']:
                 RESULTS[key_name].append(dwell_time)
                 RESULTS['dFC_method'].append(measure_i.measure_name)
 
+    ALL_RESULTS['dwell_time'] = deepcopy(RESULTS)
+
 ############ VISUALIZE ############
 
     cat_plot(data=RESULTS, x='dFC_method', y=key_name, 
@@ -1414,6 +1472,8 @@ for filter in ['default_values']:
             RESULTS['dFC_assess_time (s)'].append(SUBJs_output[filter]['time_record_dict'][measure_id]['dFC_assess'])
             RESULTS['dFC_method'].append(SUBJs_output[filter]['measure_lst'][int(measure_id)].measure_name)
 
+    ALL_RESULTS['time_record'] = deepcopy(RESULTS)
+
 ############ VISUALIZE ############
 
     cat_plot(data=RESULTS, x='dFC_method', y='dFC_assess_time (s)', 
@@ -1427,6 +1487,7 @@ for filter in ['default_values']:
         title='FCS fit time record of ' + filter,
         save_image=save_image, output_root=output_root+'time/'
         )
+
 
 if not save_image:
     plt.show()
