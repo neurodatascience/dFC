@@ -18,8 +18,8 @@ assessment_results_root = './'
 # output_root = './../../../../RESULTs/methods_implementation/server/methods_implementation/out/'
 output_root = './output/'
 FOLDER_name = 'similarity_measured/'
-num_randomization = 10
-num_subj2include = 3 # None -> all
+num_randomization = 100
+num_subj2include = None # None -> all
 
 ALL_RECORDS = os.listdir(assessment_results_root+FOLDER_name)
 ALL_RECORDS = [i for i in ALL_RECORDS if 'SUBJ_' in i]
