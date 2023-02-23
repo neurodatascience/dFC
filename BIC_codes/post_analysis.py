@@ -64,7 +64,10 @@ ALL_RESULTS['num_subj'] = len(ALL_RECORDS)
 
 
 ################################# dFC SAMPLES #################################
-
+'''
+only the first 10 time points are visualized
+the rank_norm is performed globally (all time points of each subject together)
+'''
 for filter in ['default_values']:
 
     RESULTS = {}
@@ -75,11 +78,16 @@ for filter in ['default_values']:
 
         for measure_id in SUBJs_output[filter]['dFCM_samples']:
             TRs = SUBJs_output[filter]['common_TRs'][:10]
+
+            # rank the whole dFC
+            dFC_mat = SUBJs_output[filter]['dFCM_samples'][measure_id]
+            dFC_mat_ranked = rank_norm(dFC_mat, global_norm=True)
+
             samples = {}
             samples_ranked = {}
             for tr in TRs:
-                samples['TR'+str(tr)] = SUBJs_output[filter]['dFCM_samples'][measure_id][SUBJs_output[filter]['common_TRs'].index(tr), :, :]
-                samples_ranked['TR'+str(tr)] = rank_norm(SUBJs_output[filter]['dFCM_samples'][measure_id][SUBJs_output[filter]['common_TRs'].index(tr), :, :])
+                samples['TR'+str(tr)] = dFC_mat[SUBJs_output[filter]['common_TRs'].index(tr), :, :]
+                samples_ranked['TR'+str(tr)] = dFC_mat_ranked[SUBJs_output[filter]['common_TRs'].index(tr), :, :]
             
             measure_name = SUBJs_output[filter]['measure_lst'][int(measure_id)].measure_name
 

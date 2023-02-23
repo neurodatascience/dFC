@@ -235,27 +235,40 @@ def calc_graph_propoerty(A, property, threshold=False, binarize=False):
 
     return graph_property
 
-def rank_norm(dFC_mat):
+def rank_norm(dFC_mat, global_norm=True):
     '''
     dFC_mat = (n_time, n_region, n_region)
     dFC_mat_norm = rank_norm(dFC_mat)
+    if global_norm=True, all time points ranked together, ow separately
+    if dFC_mat = (n_region, n_region) -> dFC_mat_new = (n_region, n_region)
     '''
-    dFC_mat_new = deepcopy(dFC_mat)
+    dFC_mat_copy = deepcopy(dFC_mat)
     flag_dim = False
-    if len(dFC_mat_new.shape)<3:
-        dFC_mat_new = np.expand_dims(dFC_mat_new, axis=0)
+    if len(dFC_mat_copy.shape)<3:
+        dFC_mat_copy = np.expand_dims(dFC_mat_copy, axis=0)
         flag_dim = True
-    assert dFC_mat_new.shape[1]==dFC_mat_new.shape[2], \
+    assert dFC_mat_copy.shape[1]==dFC_mat_copy.shape[2], \
         'dimension mismatch.'
-    n_region = dFC_mat_new.shape[1]
-    dFC_vecs = dFC_mat2vec(dFC_mat_new)
-    dFC_vecs_new = list()
-    for i, vec in enumerate(dFC_vecs):
-        dFC_vecs_new.append(stats.rankdata(vec))
-    dFC_vecs_new = np.array(dFC_vecs_new)
-    dFC_mat_new = dFC_vec2mat(dFC_vecs_new, N=n_region)
+    n_time = dFC_mat_copy.shape[0]
+    n_region = dFC_mat_copy.shape[1]
+    dFC_vecs = dFC_mat2vec(dFC_mat_copy) # (n_time, (n_region*(n_region-1))/2)
+    if global_norm:
+        dFC_vecs_flatten = dFC_vecs.flatten() # (n_time*(n_region*(n_region-1))/2,)
+        dFC_vecs_flatten_ranked = stats.rankdata(dFC_vecs_flatten)
+        dFC_vecs_ranked = dFC_vecs_flatten_ranked.reshape((n_time, -1)) # (n_time, (n_region*(n_region-1))/2)
+        dFC_mat_ranked = dFC_vec2mat(dFC_vecs_ranked, N=n_region) # (n_time, n_region, n_region)
+        dFC_mat_new = dFC_mat_ranked
+    else:
+        # normalize time point-wise
+        dFC_vecs_new = list()
+        for i, vec in enumerate(dFC_vecs):
+            vec_ranked = stats.rankdata(vec) # (n_region*(n_region-1))/2,)
+            dFC_vecs_new.append(vec_ranked)
+        dFC_vecs_new = np.array(dFC_vecs_new) # (n_time, (n_region*(n_region-1))/2)
+        dFC_mat_new = dFC_vec2mat(dFC_vecs_new, N=n_region) # (n_time, n_region, n_region)
     if flag_dim:
-        dFC_mat_new = np.squeeze(dFC_mat_new)
+        dFC_mat_new = np.squeeze(dFC_mat_new) # (n_region, n_region)
+
     return dFC_mat_new
 
 def cat_data(X_t, N):
