@@ -276,27 +276,27 @@ RESULTS = ALL_RESULTS['across_func_conns']
 ############ VISUALIZE ############
 
 visualize_conn_mat_2D_dict(RESULTS, node_networks=node_networks, 
-    title='across node total spearman corr', fix_lim=False, 
+    title='across func conn total spearman corr', fix_lim=False, 
     disp_diag=False, cmap='seismic', normalize=False, center_0=True,
-    save_image=save_image, output_root=output_root+'across_node/total/'
+    save_image=save_image, output_root=output_root+'across_func_conn/total/'
 )
 
 visualize_conn_mat_2D_dict(RESULTS, node_networks=node_networks, segmented=True,
-    title='segmented across node total spearman corr', fix_lim=False, 
+    title='segmented across func conn total spearman corr', fix_lim=False, 
     disp_diag=False, cmap='seismic', normalize=False, center_0=True,
-    save_image=save_image, output_root=output_root+'across_node/total/'
+    save_image=save_image, output_root=output_root+'across_func_conn/total/'
 )
 
 visualize_conn_mat_2D_dict(RESULTS, node_networks=node_networks, 
-    title='across node total spearman corr normalized', fix_lim=False, 
+    title='across func conn total spearman corr normalized', fix_lim=False, 
     disp_diag=False, cmap='seismic', normalize=True, center_0=True,
-    save_image=save_image, output_root=output_root+'across_node/total/'
+    save_image=save_image, output_root=output_root+'across_func_conn/total/'
 )
 
 visualize_conn_mat_2D_dict(RESULTS, node_networks=node_networks, segmented=True,
-    title='segmented across node total spearman corr normalized', fix_lim=False, 
+    title='segmented across func conn total spearman corr normalized', fix_lim=False, 
     disp_diag=False, cmap='seismic', normalize=True, center_0=True,
-    save_image=save_image, output_root=output_root+'across_node/total/'
+    save_image=save_image, output_root=output_root+'across_func_conn/total/'
 )
 
 ################################# High Variation Regions #################################
