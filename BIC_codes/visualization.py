@@ -9,12 +9,12 @@ sys.path.append('./BIC_codes/')
 from functions.dFC_funcs import *
 from functions.post_analysis_funcs import *
 
-print('################################# POST ANALYSIS STARTED RUNNING ... #################################')
+print(' VISUALIZATION IN PROGRESS ... ')
 
 ################################# LOAD RESULTS #################################
 
-# output_root = './../../../../RESULTs/methods_implementation/server/methods_implementation/out/'
-output_root = './output/'
+output_root = './../../../../RESULTs/methods_implementation/server/methods_implementation/out/'
+# output_root = './output/'
 save_image = True
 
 # the dictionary that collects all RESULTS
@@ -31,13 +31,13 @@ RESULTS = ALL_RESULTS['dFC_sample']
 for measure_name in RESULTS:
     
     visualize_conn_mat_dict(RESULTS[measure_name]['samples'], node_networks=node_networks, 
-        title=measure_name+'_'+filter, 
+        title=measure_name, 
         normalize=False, fix_lim=False, 
         disp_diag=False,
         save_image=save_image, output_root=output_root+'dFC_sample/'
         )
     visualize_conn_mat_dict(RESULTS[measure_name]['samples_ranked'], node_networks=node_networks, 
-        title=measure_name+'_ranked_'+filter, 
+        title=measure_name+'_ranked', 
         normalize=False, fix_lim=False, 
         disp_diag=False, cmap='plasma', center_0=False,
         save_image=save_image, output_root=output_root+'dFC_sample/'
@@ -58,10 +58,10 @@ RESULTS = ALL_RESULTS['dFC_values_dist']
 
 ############ VISUALIZE ############
 
-    joint_dist_plot(data=RESULTS,
-        title='dFC values distributions',
-        save_image=save_image, output_root=output_root+'indiv_prop/'
-        )
+joint_dist_plot(data=RESULTS,
+    title='dFC values distributions',
+    save_image=save_image, output_root=output_root+'indiv_prop/'
+    )
 
 ################################# dFC Similarity #################################
 
@@ -75,9 +75,11 @@ RESULTS = ALL_RESULTS['dFC_values_dist']
 for metric in ALL_RESULTS['dFC_similarity_overall'] :
 
     RESULTS = ALL_RESULTS['dFC_similarity_overall'][metric]
+    filters_lst = [filter for filter in RESULTS]
+    keys_lst = [key for key in RESULTS[filters_lst[0]]]
 
     ############ VISUALIZE ############
-    for key in RESULTS[filter]:
+    for key in keys_lst:
         if key=='name_lst' or key=='sim_distribution':
             continue
         visualize_sim_mat(RESULTS, mat_key=key, title=metric+' '+key, 
@@ -119,9 +121,11 @@ for metric in ALL_RESULTS['dFC_similarity_overall'] :
 for feature2extract in ALL_RESULTS['dFC_similarity_feature_based']:
 
     RESULTS = ALL_RESULTS['dFC_similarity_feature_based'][feature2extract]
+    filters_lst = [filter for filter in RESULTS]
+    keys_lst = [key for key in RESULTS[filters_lst[0]]]
 
     ############ VISUALIZE ############
-    for key in RESULTS[filter]:
+    for key in keys_lst:
         if key=='name_lst':
             continue
         visualize_sim_mat(RESULTS, mat_key=key, title=feature2extract+' '+key, 
@@ -163,9 +167,11 @@ scatter_plot(
 for graph_property in ALL_RESULTS['dFC_similarity_graph']['spatial']:
 
     RESULTS = ALL_RESULTS['dFC_similarity_graph']['spatial'][graph_property]
+    filters_lst = [filter for filter in RESULTS]
+    keys_lst = [key for key in RESULTS[filters_lst[0]]]
 
     ############ VISUALIZE ############
-    for key in RESULTS[filter]:
+    for key in keys_lst:
         if key=='name_lst':
             continue
         visualize_sim_mat(RESULTS, mat_key=key, title='spatial '+graph_property+' '+key, 
@@ -226,17 +232,17 @@ for subj_lvl_feature in ALL_RESULTS['subj_clustring']:
 RESULTS = ALL_RESULTS['dFC_var']
 
 visualize_conn_mat_dict(RESULTS['avg_dFC_var'], node_networks=node_networks, 
-            title='avg dFC var ' + filter, center_0=False,
+            title='avg dFC var', center_0=False,
             fix_lim=False, disp_diag=True, cmap='plasma', normalize=False, 
             save_image=save_image, output_root=output_root+'dFC_var/')
 
 visualize_conn_mat_dict(RESULTS['avg_dFC_var'], node_networks=node_networks, segmented=True,
-            title='segmented avg dFC var ' + filter, center_0=False,
+            title='segmented avg dFC var', center_0=False,
             fix_lim=False, disp_diag=True, cmap='plasma', normalize=False, 
             save_image=save_image, output_root=output_root+'dFC_var/')
 
 visualize_conn_mat_dict(RESULTS['var_dFC_var'], node_networks=node_networks, 
-            title='var of dFC var ' + filter, center_0=False,
+            title='var of dFC var', center_0=False,
             fix_lim=False, disp_diag=True, cmap='plasma', normalize=False, 
             save_image=save_image, output_root=output_root+'dFC_var/')
 
@@ -250,12 +256,12 @@ visualize_conn_mat_dict(RESULTS['var_dFC_var'], node_networks=node_networks,
 RESULTS = ALL_RESULTS['dFC_avg'] 
 
 visualize_conn_mat_dict(RESULTS, node_networks=node_networks, 
-        title='dFC avg ' + filter, center_0=False,
+        title='dFC avg', center_0=False,
         fix_lim=False, disp_diag=False, cmap='plasma', normalize=False,
         save_image=save_image, output_root=output_root+'dFC_avg/')
 
 visualize_conn_mat_dict(RESULTS, node_networks=node_networks, segmented=True,
-        title='segmented dFC avg ' + filter, center_0=False,
+        title='segmented dFC avg', center_0=False,
         fix_lim=False, disp_diag=False, cmap='plasma', normalize=False,
         save_image=save_image, output_root=output_root+'dFC_avg/')
 
@@ -265,30 +271,30 @@ visualize_conn_mat_dict(RESULTS, node_networks=node_networks, segmented=True,
     - spearman_corr((dFConnection(node_i, node_j) timecourse using method m), (dFConnection(node_i, node_j) timecourse using method n))
 '''
 
-RESULTS = ALL_RESULTS['across_func_conns'] = deepcopy(RESULTS)
+RESULTS = ALL_RESULTS['across_func_conns']
 
 ############ VISUALIZE ############
 
 visualize_conn_mat_2D_dict(RESULTS, node_networks=node_networks, 
-    title='across node total spearman corr ' + filter, fix_lim=False, 
+    title='across node total spearman corr', fix_lim=False, 
     disp_diag=False, cmap='seismic', normalize=False, center_0=True,
     save_image=save_image, output_root=output_root+'across_node/total/'
 )
 
 visualize_conn_mat_2D_dict(RESULTS, node_networks=node_networks, segmented=True,
-    title='segmented across node total spearman corr ' + filter, fix_lim=False, 
+    title='segmented across node total spearman corr', fix_lim=False, 
     disp_diag=False, cmap='seismic', normalize=False, center_0=True,
     save_image=save_image, output_root=output_root+'across_node/total/'
 )
 
 visualize_conn_mat_2D_dict(RESULTS, node_networks=node_networks, 
-    title='across node total spearman corr normalized ' + filter, fix_lim=False, 
+    title='across node total spearman corr normalized', fix_lim=False, 
     disp_diag=False, cmap='seismic', normalize=True, center_0=True,
     save_image=save_image, output_root=output_root+'across_node/total/'
 )
 
 visualize_conn_mat_2D_dict(RESULTS, node_networks=node_networks, segmented=True,
-    title='segmented across node total spearman corr normalized ' + filter, fix_lim=False, 
+    title='segmented across node total spearman corr normalized', fix_lim=False, 
     disp_diag=False, cmap='seismic', normalize=True, center_0=True,
     save_image=save_image, output_root=output_root+'across_node/total/'
 )
@@ -311,14 +317,14 @@ scatter_plot(
 )
 
 visualize_conn_mat_dict(RESULTS, node_networks=node_networks, 
-    title='variation across regions '+filter, fix_lim=False, 
+    title='variation across regions', fix_lim=False, 
     disp_diag=True, cmap='plasma', center_0=False,
     save_image=save_image, output_root=output_root+'variation/'
 )
 
 # func conn segmented
 visualize_conn_mat_dict(RESULTS, node_networks=node_networks, segmented=True,
-    title='segmented high variation regions '+filter, fix_lim=False, 
+    title='segmented high variation regions', fix_lim=False, 
     disp_diag=True, cmap='plasma', center_0=False,
     save_image=save_image, output_root=output_root+'variation/'
 )
@@ -326,7 +332,7 @@ visualize_conn_mat_dict(RESULTS, node_networks=node_networks, segmented=True,
 RESULTS = ALL_RESULTS['high_var_func_conns'] 
 
 visualize_conn_mat_dict(RESULTS, node_networks=node_networks, 
-    title='high variation regions '+filter, fix_lim=False, 
+    title='high variation regions', fix_lim=False, 
     disp_diag=True, cmap='plasma', center_0=False,
     save_image=save_image, output_root=output_root+'variation/'
 )
@@ -342,7 +348,7 @@ scatter_data = ALL_RESULTS['var_method_vs_time_method_pairs']
 
 ############ VISUALIZE ############
 
-visualize_sim_mat(RESULTS, mat_key='sim_mat', title='variation in different dimensions '+filter, 
+visualize_sim_mat(RESULTS, mat_key='sim_mat', title='variation in different dimensions', 
                                 name_lst_key='name_lst', 
                                 cmap='viridis',
                                 save_image=save_image, output_root=output_root+'variation/'
@@ -421,7 +427,7 @@ RESULTS = ALL_RESULTS['adjacent_time_points']
 
 cat_plot(data=RESULTS, x='dFC_method', y=key_name, 
     kind='violin',
-    title=key_name + ' ' + filter,
+    title=key_name,
     save_image=save_image, output_root=output_root+'indiv_prop/'
     )
 
@@ -437,7 +443,7 @@ RESULTS = ALL_RESULTS['transition_freq']
 
 cat_plot(data=RESULTS, x='dFC_method', y=key_name, 
     kind='violin',
-    title=key_name + ' ' + filter,
+    title=key_name,
     save_image=save_image, output_root=output_root+'indiv_prop/'
     )
 
@@ -455,13 +461,15 @@ RESULTS = ALL_RESULTS['dwell_time']
 
 cat_plot(data=RESULTS, x='dFC_method', y=key_name, 
     kind='violin',
-    title=key_name + ' ' + filter,
+    scale_dist=True,
+    title=key_name,
     save_image=save_image, output_root=output_root+'indiv_prop/'
     )
 
 ################################# TIME RECORD #################################
 
 RESULTS = ALL_RESULTS['time_record'] 
+filter = 'session_Rest1_LR'
 
 ############ VISUALIZE ############
 

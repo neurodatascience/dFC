@@ -274,12 +274,14 @@ def scatter_plot(data, x, y,
 
 def cat_plot(data, x, y, 
     kind='bar',
+    scale_dist=False,
     title='',
     save_image=False, output_root=None
     ):
     '''
     data is a dictionary with different vars as keys 
     kind can be = box or violin or bar
+    scale_dist is only for kind=='violin'
     '''
 
     sns.set_context("paper", 
@@ -293,10 +295,17 @@ def cat_plot(data, x, y,
 
     fig_width = 2*len(np.unique(data[x]))
     fig_height = 5 
-    g = sns.catplot(data=df, x=x, y=y, kind=kind,
-        scale='width'
-        # errorbar=("pi", 95)
-    )
+
+    if kind=='violin' and scale_dist:
+        g = sns.catplot(data=df, x=x, y=y, kind=kind,
+            scale='width'
+            # errorbar=("pi", 95)
+        )
+    else:
+        g = sns.catplot(data=df, x=x, y=y, kind=kind,
+            # errorbar=("pi", 95)
+        )
+
     g.fig.set_figwidth(fig_width)
     g.fig.set_figheight(fig_height)
     plt.title(title, fontsize=15)
