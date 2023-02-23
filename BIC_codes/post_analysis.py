@@ -695,7 +695,7 @@ for filter in ['default_values']:
             dFC_mat = SUBJs_output[filter]['dFCM_samples'][str(i)]
             dFC_dict[zip_name(measure.measure_name)] = dFC_mat
 
-        output = randomize_time(dFC_dict, N=100)
+        output = randomize_time(dFC_dict, N=num_randomization)
 
         for measure_i_name in output:
             for measure_j_name in output[measure_i_name]:
@@ -750,7 +750,7 @@ for filter in ['default_values']:
                 FCS = SUBJs_output[filter]['dFCM_samples'][str(i)]
             FCS_dict[zip_name(measure.measure_name)] = FCS
 
-        output = dFC_rand_sim(FCS_dict, n_time, N=100)
+        output = dFC_rand_sim(FCS_dict, n_time, N=num_randomization)
 
         for measure_i_name in output:
             for measure_j_name in output[measure_i_name]:
