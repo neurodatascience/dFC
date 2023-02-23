@@ -418,6 +418,20 @@ pairwise_cat_plots(RESULTS, x='', y='sim', z='actual_sim',
     save_image=save_image, output_root=output_root+'randomization/'
     )
 
+################################# inter-state spatial similarity #################################
+
+key_name = 'inter-state_spatial_sim'
+RESULTS = ALL_RESULTS[key_name]
+
+############ VISUALIZE ############
+
+cat_plot(data=RESULTS, x='dFC_method', y='sim', 
+    kind='violin',
+    scale_dist=False,
+    title=key_name,
+    save_image=save_image, output_root=output_root+'indiv_prop/'
+    )
+
 ################################# SIMILARITY OF ADJACENT TIME POINTS #################################
 
 key_name = 'similarity of adjacent time points'

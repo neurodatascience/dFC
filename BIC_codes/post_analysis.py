@@ -781,6 +781,30 @@ for filter in ['default_values']:
 
 ALL_RESULTS['randomization']['random_state_TC'] = deepcopy(RESULTS)
 
+################################# inter-state spatial similarity #################################
+
+key_name = 'inter-state_spatial_sim'
+RESULTS = {'sim':list(), 'dFC_method':list()}
+for measure in ALL_RESULTS['measure_lst']:
+
+    if len(measure.FCS)==0:
+        continue
+    FCSs = np.array(measure.FCS)
+    
+    for i, FCS_i in enumerate(FCSs):
+        for j, FCS_j in enumerate(FCSs):
+
+            if j>=i:
+                continue
+
+            vec_i = dFC_mat2vec(FCS_i)
+            vec_j = dFC_mat2vec(FCS_j)
+
+            RESULTS['sim'].append(np.corrcoef(vec_i, vec_j)[0, 1])
+            RESULTS['dFC_method'].append(measure.measure_name)
+
+ALL_RESULTS[key_name] = deepcopy(RESULTS)
+
 ################################# SIMILARITY OF ADJACENT TIME POINTS #################################
 
 RESULTS = {}
