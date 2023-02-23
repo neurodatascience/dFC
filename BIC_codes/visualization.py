@@ -26,47 +26,31 @@ node_networks = ALL_RESULTS['node_networks']
 
 ################################# dFC SAMPLES #################################
 
-for filter in ['default_values']:
+RESULTS = ALL_RESULTS['dFC_sample']
 
-    # for SUBJs_output in SUBJs_output_lst:
-    for s in ALL_RECORDS[:1]:
-        SUBJs_output = np.load(assessment_results_root+FOLDER_name+s, allow_pickle='True').item()
-        node_networks = node_info2network(SUBJs_output[filter]['TS_info_lst'][0]['nodes_info'])
-
-        for measure_id in SUBJs_output[filter]['dFCM_samples']:
-            TRs = SUBJs_output[filter]['common_TRs'][:10]
-            samples = {}
-            samples_ranked = {}
-            for tr in TRs:
-                samples['TR'+str(tr)] = SUBJs_output[filter]['dFCM_samples'][measure_id][SUBJs_output[filter]['common_TRs'].index(tr), :, :]
-                samples_ranked['TR'+str(tr)] = rank_norm(SUBJs_output[filter]['dFCM_samples'][measure_id][SUBJs_output[filter]['common_TRs'].index(tr), :, :])
-            visualize_conn_mat_dict(samples, node_networks=node_networks, 
-                title=SUBJs_output[filter]['measure_lst'][int(measure_id)].measure_name+'_'+filter, 
-                normalize=False, fix_lim=False, 
-                disp_diag=False,
-                save_image=save_image, output_root=output_root+'dFC_sample/'
-                )
-            visualize_conn_mat_dict(samples_ranked, node_networks=node_networks, 
-                title=SUBJs_output[filter]['measure_lst'][int(measure_id)].measure_name+'_ranked_'+filter, 
-                normalize=False, fix_lim=False, 
-                disp_diag=False, cmap='plasma', center_0=False,
-                save_image=save_image, output_root=output_root+'dFC_sample/'
-                )
+for measure_name in RESULTS:
+    
+    visualize_conn_mat_dict(RESULTS[measure_name]['samples'], node_networks=node_networks, 
+        title=measure_name+'_'+filter, 
+        normalize=False, fix_lim=False, 
+        disp_diag=False,
+        save_image=save_image, output_root=output_root+'dFC_sample/'
+        )
+    visualize_conn_mat_dict(RESULTS[measure_name]['samples_ranked'], node_networks=node_networks, 
+        title=measure_name+'_ranked_'+filter, 
+        normalize=False, fix_lim=False, 
+        disp_diag=False, cmap='plasma', center_0=False,
+        save_image=save_image, output_root=output_root+'dFC_sample/'
+        )
 
 ################################# FCS visualization #################################
 
-for filter in ['default_values']:
+for measure in ALL_RESULTS['measure_lst']:
 
-    # for SUBJs_output in SUBJs_output_lst:
-    for s in ALL_RECORDS[:1]:
-        SUBJs_output = np.load(assessment_results_root+FOLDER_name+s, allow_pickle='True').item()
-
-        for measure in SUBJs_output[filter]['measure_lst']:
-
-            measure.visualize_FCS(
-                    normalize=True, fix_lim=False, 
-                    save_image=save_image, output_root=output_root+'FCS/'
-                    )
+    measure.visualize_FCS(
+            normalize=True, fix_lim=False, 
+            save_image=save_image, output_root=output_root+'FCS/'
+            )
 
 ################################# dFC values distributions #################################
 

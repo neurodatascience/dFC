@@ -18,6 +18,8 @@ assessment_results_root = './'
 # output_root = './../../../../RESULTs/methods_implementation/server/methods_implementation/out/'
 output_root = './output/'
 FOLDER_name = 'similarity_measured/'
+num_randomization = 10
+num_subj2include = 3 # None -> all
 
 ALL_RECORDS = os.listdir(assessment_results_root+FOLDER_name)
 ALL_RECORDS = [i for i in ALL_RECORDS if 'SUBJ_' in i]
@@ -26,6 +28,10 @@ for s in ALL_RECORDS[:1]:
     output = np.load(assessment_results_root+FOLDER_name+s, allow_pickle='True').item()
 
 print('*** %d subjects were found.' % (len(ALL_RECORDS)))
+
+if not num_subj2include is None:
+    ALL_RECORDS = ALL_RECORDS[:num_subj2include]
+    print('*** %d subjects were included.' % (num_subj2include))
 
 FILTERS = [key for key in output]
 print(FILTERS)
@@ -61,10 +67,11 @@ ALL_RESULTS['num_subj'] = len(ALL_RECORDS)
 
 for filter in ['default_values']:
 
+    RESULTS = {}
+
     # for SUBJs_output in SUBJs_output_lst:
     for s in ALL_RECORDS[:1]:
         SUBJs_output = np.load(assessment_results_root+FOLDER_name+s, allow_pickle='True').item()
-        node_networks = node_info2network(SUBJs_output[filter]['TS_info_lst'][0]['nodes_info'])
 
         for measure_id in SUBJs_output[filter]['dFCM_samples']:
             TRs = SUBJs_output[filter]['common_TRs'][:10]
@@ -73,18 +80,16 @@ for filter in ['default_values']:
             for tr in TRs:
                 samples['TR'+str(tr)] = SUBJs_output[filter]['dFCM_samples'][measure_id][SUBJs_output[filter]['common_TRs'].index(tr), :, :]
                 samples_ranked['TR'+str(tr)] = rank_norm(SUBJs_output[filter]['dFCM_samples'][measure_id][SUBJs_output[filter]['common_TRs'].index(tr), :, :])
-            visualize_conn_mat_dict(samples, node_networks=node_networks, 
-                title=SUBJs_output[filter]['measure_lst'][int(measure_id)].measure_name+'_'+filter, 
-                normalize=False, fix_lim=False, 
-                disp_diag=False,
-                save_image=save_image, output_root=output_root+'dFC_sample/'
-                )
-            visualize_conn_mat_dict(samples_ranked, node_networks=node_networks, 
-                title=SUBJs_output[filter]['measure_lst'][int(measure_id)].measure_name+'_ranked_'+filter, 
-                normalize=False, fix_lim=False, 
-                disp_diag=False, cmap='plasma', center_0=False,
-                save_image=save_image, output_root=output_root+'dFC_sample/'
-                )
+            
+            measure_name = SUBJs_output[filter]['measure_lst'][int(measure_id)].measure_name
+
+            if not measure_name in RESULTS:
+                RESULTS[measure_name] = {}
+
+            RESULTS[measure_name]['samples'] = samples
+            RESULTS[measure_name]['samples_ranked'] = samples_ranked
+
+ALL_RESULTS['dFC_sample'] = deepcopy(RESULTS)
 
 ################################# FCS visualization #################################
 
@@ -94,12 +99,7 @@ for filter in ['default_values']:
     for s in ALL_RECORDS[:1]:
         SUBJs_output = np.load(assessment_results_root+FOLDER_name+s, allow_pickle='True').item()
 
-        for measure in SUBJs_output[filter]['measure_lst']:
-
-            measure.visualize_FCS(
-                    normalize=True, fix_lim=False, 
-                    save_image=save_image, output_root=output_root+'FCS/'
-                    )
+ALL_RESULTS['measure_lst'] = SUBJs_output[filter]['measure_lst']
 
 ################################# dFC values distributions #################################
 
@@ -119,7 +119,7 @@ for filter in ['default_values']:
     for measure in RESULTS:
         RESULTS[measure] = np.array(RESULTS[measure]).flatten()
 
-    ALL_RESULTS['dFC_values_dist'] = deepcopy(RESULTS)
+ALL_RESULTS['dFC_values_dist'] = deepcopy(RESULTS)
 
 ################################# dFC Similarity #################################
 
@@ -410,7 +410,7 @@ for filter in ['default_values']:
         RESULTS['var_dFC_var'][key] = np.var(RESULTS['avg_dFC_var'][key], axis=0)
         RESULTS['avg_dFC_var'][key] = np.mean(RESULTS['avg_dFC_var'][key], axis=0)
 
-    ALL_RESULTS['dFC_var'] = deepcopy(RESULTS)
+ALL_RESULTS['dFC_var'] = deepcopy(RESULTS)
 
 ################################# dFC avg #################################
 
@@ -437,7 +437,7 @@ for filter in ['default_values']:
         RESULTS[key] = np.array(RESULTS[key])
         RESULTS[key] = np.mean(RESULTS[key], axis=0)
 
-    ALL_RESULTS['dFC_avg'] = deepcopy(RESULTS)
+ALL_RESULTS['dFC_avg'] = deepcopy(RESULTS)
 
 ################################# Across Func Conn total Correlation #################################
 
@@ -491,7 +491,7 @@ for filter in ['default_values']:
         for key_j in RESULTS[key_i]:
             RESULTS[key_i][key_j] = np.mean(np.array(RESULTS[key_i][key_j]), axis=0)
 
-    ALL_RESULTS['across_func_conns'] = deepcopy(RESULTS)
+ALL_RESULTS['across_func_conns'] = deepcopy(RESULTS)
 
 ################################# High Variation Regions #################################
 '''
@@ -546,7 +546,7 @@ for filter in ['default_values']:
         RESULTS[key] = cat_data(RESULTS[key], N=10)
         RESULTS[key] = np.where(RESULTS[key] == np.max(RESULTS[key]), 1, 0)
 
-    ALL_RESULTS['high_var_func_conns'] = deepcopy(RESULTS)
+ALL_RESULTS['high_var_func_conns'] = deepcopy(RESULTS)
 
 ################################# Variation Value Comparison #################################
 '''
@@ -618,9 +618,9 @@ for filter in ['default_values']:
     RESULTS['var_method_divide_temp'] = {'sim_mat': divide_temp, 'name_lst': measure_name_lst}
     RESULTS['var_method_divide_1_lag'] = {'sim_mat': divide_1_lag, 'name_lst': measure_name_lst}
 
-    ALL_RESULTS['var_comparison'] = deepcopy(RESULTS)
-    ALL_RESULTS['var_method_vs_time_method_pairs_across_func_conns'] = deepcopy(scatter_data_across_func_conn)
-    ALL_RESULTS['var_method_vs_time_method_pairs'] = deepcopy(scatter_data)
+ALL_RESULTS['var_comparison'] = deepcopy(RESULTS)
+ALL_RESULTS['var_method_vs_time_method_pairs_across_func_conns'] = deepcopy(scatter_data_across_func_conn)
+ALL_RESULTS['var_method_vs_time_method_pairs'] = deepcopy(scatter_data)
 
 ################################# Randomization Tests #################################
 
@@ -628,6 +628,7 @@ metric = 'spearman'
 
 ALL_RESULTS['randomization'] = {}
 
+########### Similarity with static FC ###########
 '''
 find the similarity between the dFC obtained by each method 
 and a dFC which is a constant sequence of mean of all methods dFC
@@ -664,7 +665,9 @@ for filter in ['default_values']:
             RESULTS['sim'].append(sim)
             RESULTS['dFC_method'].append(measure_i_name)
 
-    ALL_RESULTS['randomization']['sim_with_static_FC'] = deepcopy(RESULTS)
+ALL_RESULTS['randomization']['sim_with_static_FC'] = deepcopy(RESULTS)
+
+########### Shuffled time ###########
 
 '''
 find the similarity between the dFC obtained by each method 
@@ -713,7 +716,9 @@ for filter in ['default_values']:
                 sim = 1
             RESULTS[measure_i_name][measure_j_name]['actual_sim'] = [sim for item in RESULTS[measure_i_name][measure_j_name]['sim']]
 
-    ALL_RESULTS['randomization']['shuffled_time'] = deepcopy(RESULTS)
+ALL_RESULTS['randomization']['shuffled_time'] = deepcopy(RESULTS)
+
+########### Random state time course ###########
 
 '''
 find the similarity between dFC matrices created using
@@ -766,7 +771,7 @@ for filter in ['default_values']:
                 sim = 1
             RESULTS[measure_i_name][measure_j_name]['actual_sim'] = [sim for item in RESULTS[measure_i_name][measure_j_name]['sim']]
 
-    ALL_RESULTS['randomization']['random_state_TC'] = deepcopy(RESULTS)
+ALL_RESULTS['randomization']['random_state_TC'] = deepcopy(RESULTS)
 
 ################################# SIMILARITY OF ADJACENT TIME POINTS #################################
 
