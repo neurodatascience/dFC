@@ -167,7 +167,6 @@ for metric in metric_list:
             RESULTS[new_filter]['avg_mat'] = all_subjs_avg
             RESULTS[new_filter]['var_mat'] = across_subj_var
             RESULTS[new_filter]['avg_div_var_mat'] = np.divide(all_subjs_avg, np.sqrt(across_subj_var), out=np.zeros_like(all_subjs_avg), where=np.sqrt(across_subj_var)!=0)
-            RESULTS[new_filter]['var_div_avg_mat'] = np.divide(across_subj_var, all_subjs_avg, out=np.zeros_like(across_subj_var), where=all_subjs_avg!=0)
             RESULTS[new_filter]['sim_distribution'] = sim_distribution
             RESULTS[new_filter]['name_lst'] = measure_name_lst
         else:
@@ -175,7 +174,6 @@ for metric in metric_list:
             RESULTS[filter]['avg_mat'] = all_subjs_avg
             RESULTS[filter]['var_mat'] = across_subj_var
             RESULTS[filter]['avg_div_var_mat'] = np.divide(all_subjs_avg, np.sqrt(across_subj_var), out=np.zeros_like(all_subjs_avg), where=np.sqrt(across_subj_var)!=0)
-            RESULTS[filter]['var_div_avg_mat'] = np.divide(across_subj_var, all_subjs_avg, out=np.zeros_like(across_subj_var), where=all_subjs_avg!=0)
             RESULTS[filter]['sim_distribution'] = sim_distribution
             RESULTS[filter]['name_lst'] = measure_name_lst
 
@@ -246,7 +244,6 @@ for feature2extract in feature2extract_list:
         RESULTS[filter]['avg_mat'] = all_subjs_avg
         RESULTS[filter]['var_mat'] = across_subj_var
         RESULTS[filter]['avg_div_var_mat'] = np.divide(all_subjs_avg, np.sqrt(across_subj_var), out=np.zeros_like(all_subjs_avg), where=np.sqrt(across_subj_var)!=0)
-        RESULTS[filter]['var_div_avg_mat'] = np.divide(across_subj_var, all_subjs_avg, out=np.zeros_like(across_subj_var), where=all_subjs_avg!=0)
         RESULTS[filter]['name_lst'] = measure_name_lst
 
     ALL_RESULTS['dFC_similarity_feature_based'][feature2extract] = deepcopy(RESULTS)
@@ -341,7 +338,6 @@ for graph_property in graph_property_list:
         RESULTS[filter]['avg_mat'] = all_subjs_avg
         RESULTS[filter]['var_mat'] = across_subj_var
         RESULTS[filter]['avg_div_var_mat'] = np.divide(all_subjs_avg, np.sqrt(across_subj_var), out=np.zeros_like(all_subjs_avg), where=np.sqrt(across_subj_var)!=0)
-        RESULTS[filter]['var_div_avg_mat'] = np.divide(across_subj_var, all_subjs_avg, out=np.zeros_like(across_subj_var), where=all_subjs_avg!=0)
         RESULTS[filter]['name_lst'] = measure_name_lst
 
     ALL_RESULTS['dFC_similarity_graph']['spatial'][graph_property] = deepcopy(RESULTS)
@@ -363,53 +359,6 @@ for graph_property in graph_property_list:
         np.fill_diagonal(dist_mat, 0)
         dist_mat_dendo(dist_mat=dist_mat, labels=RESULTS[filter]['name_lst'], 
             title='Hierarchical Clustering of Methods ' + filter+' using '+ 'spatial '+ graph_property, 
-            save_image=save_image, output_root=output_root+'graph_based/'+graph_property+'/'
-        )
-###### temporal #####
-ALL_RESULTS['dFC_similarity_graph']['temporal'] = {}
-
-for graph_property in graph_property_list:
-
-    RESULTS = {}
-    for filter in FILTERS:
-
-        all_subjs_sim_mat = list()
-        for s in ALL_RECORDS:
-            SUBJs_output = np.load(assessment_results_root+FOLDER_name+s, allow_pickle='True').item()
-            # SUBJs_output[filter]['graph_based']['graph_temporal'][graph_property] = (1, method, method)
-            all_subjs_sim_mat.append(np.squeeze(SUBJs_output[filter]['graph_based']['graph_temporal'][graph_property]))
-
-        measure_name_lst = [measure.measure_name for measure in SUBJs_output[filter]['measure_lst']]
-        all_subjs_sim_mat = np.array(all_subjs_sim_mat)
-        all_subjs_avg = np.mean(all_subjs_sim_mat, axis=0)
-        across_subj_var = np.var(all_subjs_sim_mat, axis=0)
-
-        RESULTS[filter] = {}
-        RESULTS[filter]['avg_mat'] = all_subjs_avg
-        RESULTS[filter]['var_mat'] = across_subj_var
-        RESULTS[filter]['avg_div_var_mat'] = np.divide(all_subjs_avg, np.sqrt(across_subj_var), out=np.zeros_like(all_subjs_avg), where=np.sqrt(across_subj_var)!=0)
-        RESULTS[filter]['var_div_avg_mat'] = np.divide(across_subj_var, all_subjs_avg, out=np.zeros_like(across_subj_var), where=all_subjs_avg!=0)
-        RESULTS[filter]['name_lst'] = measure_name_lst
-
-    ALL_RESULTS['dFC_similarity_graph']['temporal'][graph_property] = deepcopy(RESULTS)
-
-    ############ VISUALIZE ############
-    for key in RESULTS[filter]:
-        if key=='name_lst':
-            continue
-        visualize_sim_mat(RESULTS, mat_key=key, title='temporal '+graph_property+' '+key, 
-                                        name_lst_key='name_lst', 
-                                        cmap='viridis',
-                                        save_image=save_image, output_root=output_root+'graph_based/'+graph_property+'/'
-        )
-    ############ Hierarchical Clustering ############
-    for filter in ['default_values']:
-        dist_mat = 1 - RESULTS[filter]['avg_mat']
-        dist_mat = 0.5*(dist_mat + dist_mat.T)
-        # diagonal values of dist_mat must equal exactly zero
-        np.fill_diagonal(dist_mat, 0)
-        dist_mat_dendo(dist_mat=dist_mat, labels=RESULTS[filter]['name_lst'], 
-            title='Hierarchical Clustering of Methods ' + filter+' using '+ 'temporal '+ graph_property, 
             save_image=save_image, output_root=output_root+'graph_based/'+graph_property+'/'
         )
 
@@ -496,18 +445,6 @@ for subj_lvl_feature in subj_lvl_feature_lst:
     elif subj_lvl_feature=='FO': 
         measure_name_lst = [measure.measure_name for measure in SUBJs_output[filter]['measure_lst'] if measure.is_state_based]
 
-    RESULTS['across_session'] = {}
-    for measure_id, measure_name in enumerate(measure_name_lst):
-        sim_mat = np.zeros((inter_subj_sim_sessions.shape[0], inter_subj_sim_sessions.shape[0]))
-        for session_i in range(inter_subj_sim_sessions.shape[0]):
-            for session_j in range(inter_subj_sim_sessions.shape[0]):
-                spear_coef, p_value = stats.spearmanr(inter_subj_sim_sessions[session_i, measure_id,:], inter_subj_sim_sessions[session_j, measure_id,:])
-                sim_mat[session_i, session_j] = spear_coef
-
-        RESULTS['across_session'][measure_name] = {}
-        RESULTS['across_session'][measure_name]['sim_mat'] = sim_mat
-        RESULTS['across_session'][measure_name]['name_lst'] = session_name_lst
-
     RESULTS['across_method'] = {}
     for session_id, session in enumerate(session_name_lst):
         sim_mat = np.zeros((len(measure_name_lst), len(measure_name_lst)))
@@ -521,44 +458,11 @@ for subj_lvl_feature in subj_lvl_feature_lst:
         RESULTS['across_method'][session]['sim_mat'] = sim_mat
         RESULTS['across_method'][session]['name_lst'] = measure_name_lst
 
-    RESULTS['method_divide_session'] = {}
-    avg_across_method = np.mean(np.array([RESULTS['across_method'][session]['sim_mat'] for session in RESULTS['across_method']]), axis=0)
-    avg_across_session = np.zeros((len(measure_name_lst), len(measure_name_lst)))
-    for measure_i, measure_name_i in enumerate(measure_name_lst):
-        for measure_j, measure_name_j in enumerate(measure_name_lst):
-            across_session_measure_i = dFC_mat2vec(RESULTS['across_session'][measure_name_i]['sim_mat'])
-            across_session_measure_j = dFC_mat2vec(RESULTS['across_session'][measure_name_j]['sim_mat'])
-            avg_across_session[measure_i, measure_j] = np.mean(np.divide(across_session_measure_i + across_session_measure_j, 2))
-
-    RESULTS['method_divide_session']['avg_across_method'] = {}
-    RESULTS['method_divide_session']['avg_across_method']['sim_mat'] = avg_across_method
-    RESULTS['method_divide_session']['avg_across_method']['name_lst'] = measure_name_lst
-
-    RESULTS['method_divide_session']['avg_across_session'] = {}
-    RESULTS['method_divide_session']['avg_across_session']['sim_mat'] = avg_across_session
-    RESULTS['method_divide_session']['avg_across_session']['name_lst'] = measure_name_lst
-
-    RESULTS['method_divide_session']['divide'] = {}
-    RESULTS['method_divide_session']['divide']['sim_mat'] = np.divide(avg_across_method, avg_across_session, out=np.zeros_like(avg_across_method), where=avg_across_session!=0)
-    np.fill_diagonal(RESULTS['method_divide_session']['divide']['sim_mat'], np.nan)
-    RESULTS['method_divide_session']['divide']['name_lst'] = measure_name_lst
-
-    common_key = 'subj_corr_diff_methods_'
-    for session_id, session in enumerate(session_name_lst):
-        RESULTS[common_key+session] = {}
-        for measure_id, measure_name in enumerate(measure_name_lst):
-            RESULTS[common_key+session][measure_name] = {}
-            RESULTS[common_key+session][measure_name]['sim_mat'] = rank_norm(np.squeeze(dFC_vec2mat(np.expand_dims(inter_subj_sim_sessions[session_id, measure_id, :], axis=0), N=num_subj)))
-            np.fill_diagonal(RESULTS[common_key+session][measure_name]['sim_mat'], np.nan)
-            RESULTS[common_key+session][measure_name]['name_lst'] = subj_name_lst
-
     ALL_RESULTS['subj_clustring'][subj_lvl_feature] = deepcopy(RESULTS)
 
     ############ VISUALIZE ############
     for key in RESULTS:
         annot = True
-        if common_key in key:
-            annot = False
         visualize_sim_mat(RESULTS[key], mat_key='sim_mat', title='inter-subject-corr similarity '+key+ ' based on '+subj_lvl_feature, 
                                         name_lst_key='name_lst', 
                                         cmap='viridis',
@@ -658,7 +562,7 @@ for filter in ['default_values']:
             fix_lim=False, disp_diag=False, cmap='plasma', normalize=False,
             save_image=save_image, output_root=output_root+'dFC_avg/')
 
-################################# Across Node total Correlation #################################
+################################# Across Func Conn total Correlation #################################
 
 '''
     - spearman_corr((dFConnection(node_i, node_j) timecourse using method m), (dFConnection(node_i, node_j) timecourse using method n))
@@ -737,146 +641,6 @@ for filter in ['default_values']:
         disp_diag=False, cmap='seismic', normalize=True, center_0=True,
         save_image=save_image, output_root=output_root+'across_node/total/'
     )
-
-################################# Across Node Spatial Correlation #################################
-
-'''
-    - spearman_corr((dFConnection(node_i, node_j) timecourse using method m), (dFConnection(node_i, node_j) timecourse using method n))
-'''
-RESULTS = {}
-for filter in ['default_values']:
-    for s in ALL_RECORDS:
-
-        SUBJs_output = np.load(assessment_results_root+FOLDER_name+s, allow_pickle='True').item()
-        node_networks = node_info2network(SUBJs_output[filter]['TS_info_lst'][0]['nodes_info'])
-        n_regions = SUBJs_output[filter]['TS_info_lst'][0]['n_regions']
-
-        for i, measure_i in enumerate(SUBJs_output[filter]['measure_lst']):
-
-            dFC_mat_i = SUBJs_output[filter]['dFCM_samples'][str(i)]
-            # rank normalization
-            dFC_mat_i = rank_norm(dFC_mat_i)
-            dFC_mat_i_vec = dFC_mat2vec(dFC_mat_i)
-
-            for j, measure_j in enumerate(SUBJs_output[filter]['measure_lst']):
-
-                if j >= i :
-                    continue
-
-                dFC_mat_j = SUBJs_output[filter]['dFCM_samples'][str(j)]
-                # rank normalization
-                dFC_mat_j = rank_norm(dFC_mat_j)
-                dFC_mat_j_vec = dFC_mat2vec(dFC_mat_j)
-
-                sim = list()
-                for func_conn in range(dFC_mat_i_vec.shape[1]):
-                    if np.var(dFC_mat_i_vec[:,func_conn])==0 or np.var(dFC_mat_j_vec[:,func_conn])==0:
-                        sim.append(0)
-                    else:
-                        sim.append(np.corrcoef(dFC_mat_i_vec[:,func_conn], dFC_mat_j_vec[:,func_conn])[0,1])
-
-                sim = np.array(sim)
-                if not measure_i.measure_name in RESULTS:
-                    RESULTS[measure_i.measure_name] = {}
-                if not measure_j.measure_name in RESULTS[measure_i.measure_name]:
-                    RESULTS[measure_i.measure_name][measure_j.measure_name] = list()
-
-                RESULTS[measure_i.measure_name][measure_j.measure_name].append(dFC_vec2mat(sim[None,:], N=n_regions)[0])
-
-    measure_lst = [measure.measure_name for measure in SUBJs_output[filter]['measure_lst']]
-    for key_i in RESULTS:
-        for key_j in RESULTS[key_i]:
-            RESULTS[key_i][key_j] = np.mean(np.array(RESULTS[key_i][key_j]), axis=0)
-
-############ VISUALIZE ############
-
-    visualize_conn_mat_2D_dict(RESULTS, node_networks=node_networks, 
-        title='across node spatial spearman corr ' + filter, fix_lim=False, 
-        disp_diag=False, cmap='seismic', normalize=False, center_0=True,
-        save_image=save_image, output_root=output_root+'across_node/spatial/'
-    )
-
-    visualize_conn_mat_2D_dict(RESULTS, node_networks=node_networks, segmented=True,
-        title='segmented across node spatial spearman corr ' + filter, fix_lim=False, 
-        disp_diag=False, cmap='seismic', normalize=False, center_0=True,
-        save_image=save_image, output_root=output_root+'across_node/spatial/'
-    )
-
-    visualize_conn_mat_2D_dict(RESULTS, node_networks=node_networks, 
-        title='across node spatial spearman corr normalized ' + filter, fix_lim=False, 
-        disp_diag=False, cmap='seismic', normalize=True, center_0=True,
-        save_image=save_image, output_root=output_root+'across_node/spatial/'
-    )
-
-    visualize_conn_mat_2D_dict(RESULTS, node_networks=node_networks, segmented=True,
-        title='segmented across node spatial spearman corr normalized ' + filter, fix_lim=False, 
-        disp_diag=False, cmap='seismic', normalize=True, center_0=True,
-        save_image=save_image, output_root=output_root+'across_node/spatial/'
-    )
-
-################################# Across Node Temporal Correlation #################################
-
-'''
-    - spearman_corr((dFConnection(node_i, node_j) timecourse using method m), (dFConnection(node_i, node_j) timecourse using method n))
-'''
-for filter in ['default_values']:
-    RESULTS = {}
-    for s in ALL_RECORDS:
-        SUBJs_output = np.load(assessment_results_root+FOLDER_name+s, allow_pickle='True').item()
-        node_networks = node_info2network(SUBJs_output[filter]['TS_info_lst'][0]['nodes_info'])
-        n_regions = SUBJs_output[filter]['TS_info_lst'][0]['n_regions']
-
-        # SUBJs_output[filter]['feature_based']['temporal'] = (connection, method, method)
-
-        for i in range(SUBJs_output[filter]['feature_based']['temporal'].shape[1]):
-            for j in range(i):
-                measure_name_i = zip_name(SUBJs_output[filter]['measure_lst'][i].measure_name)
-                measure_name_j = zip_name(SUBJs_output[filter]['measure_lst'][j].measure_name)
-                if not measure_name_i in RESULTS:
-                    RESULTS[measure_name_i] = {}
-                if not measure_name_j in RESULTS[measure_name_i]:
-                    RESULTS[measure_name_i][measure_name_j] = list()
-                mat = np.squeeze(
-                    dFC_vec2mat(
-                        np.expand_dims(
-                            SUBJs_output[filter]['feature_based']['temporal'][:, i, j], 
-                            axis=0
-                        ), 
-                        N=n_regions
-                    )
-                ) # (ROI, ROI)
-                RESULTS[measure_name_i][measure_name_j].append(mat)
-
-    for key_i in RESULTS:
-        for key_j in RESULTS[key_i]:
-            RESULTS[key_i][key_j] = np.array(RESULTS[key_i][key_j])
-            RESULTS[key_i][key_j] = np.mean(RESULTS[key_i][key_j], axis=0)
-
-    ############ VISUALIZE ############
-
-    visualize_conn_mat_2D_dict(RESULTS, node_networks=node_networks, 
-        title='across node temporal spearman corr ' + filter, fix_lim=False, 
-        disp_diag=False, cmap='seismic', normalize=False,
-        save_image=save_image, output_root=output_root+'across_node/temporal/'
-        )
-
-    visualize_conn_mat_2D_dict(RESULTS, node_networks=node_networks, segmented=True,
-        title='segmented across node temporal spearman corr ' + filter, fix_lim=False, 
-        disp_diag=False, cmap='seismic', normalize=False,
-        save_image=save_image, output_root=output_root+'across_node/temporal/'
-        )
-
-    visualize_conn_mat_2D_dict(RESULTS, node_networks=node_networks, 
-        title='across node temporal spearman corr normalized ' + filter, fix_lim=False, 
-        disp_diag=False, cmap='seismic', normalize=True,
-        save_image=save_image, output_root=output_root+'across_node/temporal/'
-        )
-
-    visualize_conn_mat_2D_dict(RESULTS, node_networks=node_networks, segmented=True,
-        title='segmented across node temporal spearman corr normalized ' + filter, fix_lim=False, 
-        disp_diag=False, cmap='seismic', normalize=True,
-        save_image=save_image, output_root=output_root+'across_node/temporal/'
-        )
 
 ################################# High Variation Regions #################################
 '''
@@ -1189,6 +953,8 @@ for filter in ['default_values']:
         labels='labels', title='scatter inter time vs method',
         save_image=save_image, output_root=output_root+'variation/'
     )
+
+    ALL_RESULTS['sim_inter_time_vs_method_scatter'] = deepcopy(data)
 
 ################################# Randomization Tests #################################
 
