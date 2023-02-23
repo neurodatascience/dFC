@@ -18,7 +18,6 @@ assessment_results_root = './'
 # output_root = './../../../../RESULTs/methods_implementation/server/methods_implementation/out/'
 output_root = './output/'
 FOLDER_name = 'similarity_measured/'
-save_image = True
 
 ALL_RECORDS = os.listdir(assessment_results_root+FOLDER_name)
 ALL_RECORDS = [i for i in ALL_RECORDS if 'SUBJ_' in i]
@@ -42,17 +41,23 @@ for filter in FILTERS:
             assert measure_name_lst==[measure.measure_name for measure in SUBJs_output[filter]['measure_lst']], \
                 'measures order mismatch'
 
-# FILTERS_new = list()
-# for filter in FILTERS:
-#     if 'Fs' in filter:
-#         FILTERS_new.append(filter)
-# FILTERS = FILTERS_new
-
 # the dictionary that collects all RESULTS
 ALL_RESULTS = {} 
 
-################################# dFC SAMPLES #################################
+################################ common variables #################################
 
+for filter in ['default_values']:
+
+    # for SUBJs_output in SUBJs_output_lst:
+    for s in ALL_RECORDS[:1]:
+        SUBJs_output = np.load(assessment_results_root+FOLDER_name+s, allow_pickle='True').item()
+        node_networks = node_info2network(SUBJs_output[filter]['TS_info_lst'][0]['nodes_info'])
+
+ALL_RESULTS['node_networks'] = node_networks
+ALL_RESULTS['num_subj'] = len(ALL_RECORDS)
+
+
+################################# dFC SAMPLES #################################
 
 for filter in ['default_values']:
 
@@ -116,13 +121,6 @@ for filter in ['default_values']:
 
     ALL_RESULTS['dFC_values_dist'] = deepcopy(RESULTS)
 
-############ VISUALIZE ############
-
-    joint_dist_plot(data=RESULTS,
-        title='dFC values distributions',
-        save_image=save_image, output_root=output_root+'indiv_prop/'
-        )
-
 ################################# dFC Similarity #################################
 
 ################# whole subject #################
@@ -178,36 +176,7 @@ for metric in metric_list:
             RESULTS[filter]['name_lst'] = measure_name_lst
 
     ALL_RESULTS['dFC_similarity_overall'][metric] = deepcopy(RESULTS)
-    ############ VISUALIZE ############
-    for key in RESULTS[filter]:
-        if key=='name_lst' or key=='sim_distribution':
-            continue
-        visualize_sim_mat(RESULTS, mat_key=key, title=metric+' '+key, 
-                                        name_lst_key='name_lst', 
-                                        cmap='viridis',
-                                        save_image=save_image, output_root=output_root+'dFC_similarity/'+metric+'/'
-        )
-    for filter in ['session_Rest1_LR']:
-        pairwise_cat_plots(RESULTS[filter]['sim_distribution'], x='', y='sim',
-            title=metric+' total similarity distributions '+filter,
-            save_image=save_image, output_root=output_root+'dFC_similarity/'+metric+'/'
-            )
-    ############ Hierarchical Clustering ############
-    for filter in ['session_Rest1_LR']:
-        if metric=='MI':
-            normalized_mat = np.divide(RESULTS[filter]['avg_mat'], np.max(RESULTS[filter]['avg_mat']))
-            dist_mat = 1 - normalized_mat
-        elif metric=='euclidean_distance':
-            dist_mat = RESULTS[filter]['avg_mat']
-        else:
-            dist_mat = 1 - RESULTS[filter]['avg_mat']
-        dist_mat = 0.5*(dist_mat + dist_mat.T)
-        # diagonal values of dist_mat must equal exactly zero
-        np.fill_diagonal(dist_mat, 0)
-        dist_mat_dendo(dist_mat=dist_mat, labels=RESULTS[filter]['name_lst'], 
-            title='Hierarchical Clustering of Methods ' + filter+' using '+metric, 
-            save_image=save_image, output_root=output_root+'dFC_similarity/'+metric+'/'
-        )
+    
 ################# feature-based #################
 '''
     - spatial
@@ -248,26 +217,6 @@ for feature2extract in feature2extract_list:
 
     ALL_RESULTS['dFC_similarity_feature_based'][feature2extract] = deepcopy(RESULTS)
 
-    ############ VISUALIZE ############
-    for key in RESULTS[filter]:
-        if key=='name_lst':
-            continue
-        visualize_sim_mat(RESULTS, mat_key=key, title=feature2extract+' '+key, 
-                                        name_lst_key='name_lst', 
-                                        cmap='viridis',
-                                        save_image=save_image, output_root=output_root+'feature_based/'+feature2extract+'/'
-        )
-    ############ Hierarchical Clustering ############
-    for filter in ['default_values']:
-        dist_mat = 1 - RESULTS[filter]['avg_mat']
-        dist_mat = 0.5*(dist_mat + dist_mat.T)
-        # diagonal values of dist_mat must equal exactly zero
-        np.fill_diagonal(dist_mat, 0)
-        dist_mat_dendo(dist_mat=dist_mat, labels=RESULTS[filter]['name_lst'], 
-            title='Hierarchical Clustering of Methods ' + filter+' using '+feature2extract, 
-            save_image=save_image, output_root=output_root+'feature_based/'+feature2extract+'/'
-        )
-
 ############ Spatial vs. Temporal Scatter plot ############
     
 for filter in ['default_values']:
@@ -290,13 +239,6 @@ for filter in ['default_values']:
             scatter_data['spatial'].append(all_subjs_spatial_sim_mat[i,j])
             scatter_data['temporal'].append(all_subjs_temporal_sim_mat[i,j])
             scatter_data['labels'].append(zip_name(measure_name_lst[i])+'-'+zip_name(measure_name_lst[j]))
-
-    ############ visualization ############
-    scatter_plot(
-        data=scatter_data, x='temporal', y='spatial', 
-        labels='labels', title='spatial similarity vs temporal similarity',
-        save_image=save_image, output_root=output_root+'variation/'
-    )
 
 ALL_RESULTS['spatial_vs_temporal_similarity'] = deepcopy(scatter_data)
     
@@ -341,26 +283,6 @@ for graph_property in graph_property_list:
         RESULTS[filter]['name_lst'] = measure_name_lst
 
     ALL_RESULTS['dFC_similarity_graph']['spatial'][graph_property] = deepcopy(RESULTS)
-
-    ############ VISUALIZE ############
-    for key in RESULTS[filter]:
-        if key=='name_lst':
-            continue
-        visualize_sim_mat(RESULTS, mat_key=key, title='spatial '+graph_property+' '+key, 
-                                        name_lst_key='name_lst', 
-                                        cmap='viridis',
-                                        save_image=save_image, output_root=output_root+'graph_based/'+graph_property+'/'
-        )
-    ############ Hierarchical Clustering ############
-    for filter in ['default_values']:
-        dist_mat = 1 - RESULTS[filter]['avg_mat']
-        dist_mat = 0.5*(dist_mat + dist_mat.T)
-        # diagonal values of dist_mat must equal exactly zero
-        np.fill_diagonal(dist_mat, 0)
-        dist_mat_dendo(dist_mat=dist_mat, labels=RESULTS[filter]['name_lst'], 
-            title='Hierarchical Clustering of Methods ' + filter+' using '+ 'spatial '+ graph_property, 
-            save_image=save_image, output_root=output_root+'graph_based/'+graph_property+'/'
-        )
 
 ################################# inter_subject similarity #################################
 
@@ -460,26 +382,6 @@ for subj_lvl_feature in subj_lvl_feature_lst:
 
     ALL_RESULTS['subj_clustring'][subj_lvl_feature] = deepcopy(RESULTS)
 
-    ############ VISUALIZE ############
-    for key in RESULTS:
-        annot = True
-        visualize_sim_mat(RESULTS[key], mat_key='sim_mat', title='inter-subject-corr similarity '+key+ ' based on '+subj_lvl_feature, 
-                                        name_lst_key='name_lst', 
-                                        cmap='viridis',
-                                        annot=annot,
-                                        save_image=save_image, output_root=output_root+'inter_subject/'+subj_lvl_feature+'/'
-        )
-    ############ Hierarchical Clustering ############
-    for session in RESULTS['across_method']:
-        dist_mat = 1 - RESULTS['across_method'][session]['sim_mat']
-        dist_mat = 0.5*(dist_mat + dist_mat.T)
-        # diagonal values of dist_mat must equal exactly zero
-        np.fill_diagonal(dist_mat, 0)
-        dist_mat_dendo(dist_mat=dist_mat, labels=RESULTS['across_method'][session]['name_lst'], 
-            title='Hierarchical Clustering of Methods ' + session +' using inter-subject similarity based on '+subj_lvl_feature, 
-            save_image=save_image, output_root=output_root+'inter_subject/'+subj_lvl_feature+'/'
-        )
-
 ################################# dFC var #################################
 
 '''
@@ -510,21 +412,6 @@ for filter in ['default_values']:
 
     ALL_RESULTS['dFC_var'] = deepcopy(RESULTS)
 
-    visualize_conn_mat_dict(RESULTS['avg_dFC_var'], node_networks=node_networks, 
-                title='avg dFC var ' + filter, center_0=False,
-                fix_lim=False, disp_diag=True, cmap='plasma', normalize=False, 
-                save_image=save_image, output_root=output_root+'dFC_var/')
-
-    visualize_conn_mat_dict(RESULTS['avg_dFC_var'], node_networks=node_networks, segmented=True,
-                title='segmented avg dFC var ' + filter, center_0=False,
-                fix_lim=False, disp_diag=True, cmap='plasma', normalize=False, 
-                save_image=save_image, output_root=output_root+'dFC_var/')
-
-    visualize_conn_mat_dict(RESULTS['var_dFC_var'], node_networks=node_networks, 
-                title='var of dFC var ' + filter, center_0=False,
-                fix_lim=False, disp_diag=True, cmap='plasma', normalize=False, 
-                save_image=save_image, output_root=output_root+'dFC_var/')
-
 ################################# dFC avg #################################
 
 '''
@@ -551,16 +438,6 @@ for filter in ['default_values']:
         RESULTS[key] = np.mean(RESULTS[key], axis=0)
 
     ALL_RESULTS['dFC_avg'] = deepcopy(RESULTS)
-
-    visualize_conn_mat_dict(RESULTS, node_networks=node_networks, 
-            title='dFC avg ' + filter, center_0=False,
-            fix_lim=False, disp_diag=False, cmap='plasma', normalize=False,
-            save_image=save_image, output_root=output_root+'dFC_avg/')
-
-    visualize_conn_mat_dict(RESULTS, node_networks=node_networks, segmented=True,
-            title='segmented dFC avg ' + filter, center_0=False,
-            fix_lim=False, disp_diag=False, cmap='plasma', normalize=False,
-            save_image=save_image, output_root=output_root+'dFC_avg/')
 
 ################################# Across Func Conn total Correlation #################################
 
@@ -616,32 +493,6 @@ for filter in ['default_values']:
 
     ALL_RESULTS['across_func_conns'] = deepcopy(RESULTS)
 
-############ VISUALIZE ############
-
-    visualize_conn_mat_2D_dict(RESULTS, node_networks=node_networks, 
-        title='across node total spearman corr ' + filter, fix_lim=False, 
-        disp_diag=False, cmap='seismic', normalize=False, center_0=True,
-        save_image=save_image, output_root=output_root+'across_node/total/'
-    )
-
-    visualize_conn_mat_2D_dict(RESULTS, node_networks=node_networks, segmented=True,
-        title='segmented across node total spearman corr ' + filter, fix_lim=False, 
-        disp_diag=False, cmap='seismic', normalize=False, center_0=True,
-        save_image=save_image, output_root=output_root+'across_node/total/'
-    )
-
-    visualize_conn_mat_2D_dict(RESULTS, node_networks=node_networks, 
-        title='across node total spearman corr normalized ' + filter, fix_lim=False, 
-        disp_diag=False, cmap='seismic', normalize=True, center_0=True,
-        save_image=save_image, output_root=output_root+'across_node/total/'
-    )
-
-    visualize_conn_mat_2D_dict(RESULTS, node_networks=node_networks, segmented=True,
-        title='segmented across node total spearman corr normalized ' + filter, fix_lim=False, 
-        disp_diag=False, cmap='seismic', normalize=True, center_0=True,
-        save_image=save_image, output_root=output_root+'across_node/total/'
-    )
-
 ################################# High Variation Regions #################################
 '''
     - high variation regions over methods and over time.
@@ -663,20 +514,22 @@ for filter in ['default_values']:
             dFC_mat_i = rank_norm(dFC_mat_i)
 
             # dFC mat
-            var_over_time.append(np.var(dFC_mat_i, axis=0))
             dFC_mat_lst.append(dFC_mat_i)
 
-        dFC_mat_lst = np.array(dFC_mat_lst)
+        dFC_mat_lst = np.array(dFC_mat_lst) # (method, time, ROI, ROI)
         var_over_method.append(np.mean(np.var(dFC_mat_lst, axis=0), axis=0))
+        var_over_time.append(np.mean(np.var(dFC_mat_lst, axis=1), axis=0))
 
-    var_over_time = np.array(var_over_time) # (subj*method, ROI, ROI)
-    var_over_time = np.mean(var_over_time, axis=0) # (ROI, ROI)
+    var_over_time = np.array(var_over_time) # (subj, ROI, ROI)
     var_over_method = np.array(var_over_method) # (subj, ROI, ROI)
-    var_over_method = np.mean(var_over_method, axis=0) # (ROI, ROI)
 
+    # collect var over method and time across all func conns of all subjects
     scatter_data = {'var_method':list(), 'var_time':list()}
-    scatter_data['var_method'] = var_over_method.flatten()
-    scatter_data['var_time'] = var_over_time.flatten()
+    scatter_data['var_method'] = dFC_mat2vec(var_over_method).flatten() # (subj*(ROI)*(ROI-1)/2,)
+    scatter_data['var_time'] = dFC_mat2vec(var_over_time).flatten() # (subj*(ROI)*(ROI-1)/2,)
+
+    var_over_time = np.mean(var_over_time, axis=0) # (ROI, ROI)
+    var_over_method = np.mean(var_over_method, axis=0) # (ROI, ROI)
 
     RESULTS = {}
     RESULTS['var_over_time'] = np.divide(var_over_time, np.max(var_over_time))
@@ -686,39 +539,14 @@ for filter in ['default_values']:
     for key in RESULTS:
         RESULTS[key] = rank_norm(RESULTS[key])
 
-    ALL_RESULTS['high_var_func_conns'] = deepcopy(RESULTS)
-
-############ VISUALIZE ############
-
-    scatter_plot(
-        data=scatter_data, x='var_time', y='var_method', 
-        title='var method vs time across func conns',
-        hist=True,
-        save_image=save_image, output_root=output_root+'variation/'
-    )
-
-    visualize_conn_mat_dict(RESULTS, node_networks=node_networks, 
-        title='variation across regions '+filter, fix_lim=False, 
-        disp_diag=True, cmap='plasma', center_0=False,
-        save_image=save_image, output_root=output_root+'variation/'
-    )
-
-    # func conn segmented
-    visualize_conn_mat_dict(RESULTS, node_networks=node_networks, segmented=True,
-        title='segmented high variation regions '+filter, fix_lim=False, 
-        disp_diag=True, cmap='plasma', center_0=False,
-        save_image=save_image, output_root=output_root+'variation/'
-    )
+    ALL_RESULTS['var_across_func_conns'] = deepcopy(RESULTS)
+    ALL_RESULTS['var_method_vs_time_across_func_conns_scatter'] = deepcopy(scatter_data)
 
     for key in RESULTS:
         RESULTS[key] = cat_data(RESULTS[key], N=10)
         RESULTS[key] = np.where(RESULTS[key] == np.max(RESULTS[key]), 1, 0)
 
-    visualize_conn_mat_dict(RESULTS, node_networks=node_networks, 
-        title='high variation regions '+filter, fix_lim=False, 
-        disp_diag=True, cmap='plasma', center_0=False,
-        save_image=save_image, output_root=output_root+'variation/'
-    )
+    ALL_RESULTS['high_var_func_conns'] = deepcopy(RESULTS)
 
 ################################# Variation Value Comparison #################################
 '''
@@ -787,174 +615,12 @@ for filter in ['default_values']:
             divide_temp[i, j] = np.mean(np.divide(A, B, out=np.zeros_like(A), where=B!=0))
             divide_1_lag[i, j] = np.mean(np.divide(A, C, out=np.zeros_like(A), where=C!=0))
 
-    RESULTS['divide_temp'] = {'sim_mat': divide_temp, 'name_lst': measure_name_lst}
-    RESULTS['divide_1_lag'] = {'sim_mat': divide_1_lag, 'name_lst': measure_name_lst}
+    RESULTS['var_method_divide_temp'] = {'sim_mat': divide_temp, 'name_lst': measure_name_lst}
+    RESULTS['var_method_divide_1_lag'] = {'sim_mat': divide_1_lag, 'name_lst': measure_name_lst}
 
     ALL_RESULTS['var_comparison'] = deepcopy(RESULTS)
-
-############ VISUALIZE ############
-
-    visualize_sim_mat(RESULTS, mat_key='sim_mat', title='variation in different dimensions '+filter, 
-                                    name_lst_key='name_lst', 
-                                    cmap='viridis',
-                                    save_image=save_image, output_root=output_root+'variation/'
-    )
-
-    pairwise_scatter_plots(
-        data=scatter_data_across_func_conn, x='var_time', y='var_method', 
-        title='var method vs time across func conns across methods pairs', hist=True,
-        save_image=save_image, output_root=output_root+'variation/'
-    )
-
-    scatter_plot(
-        data=scatter_data, x='var_time', y='var_method', 
-        labels='labels', title='var method vs time',
-        save_image=save_image, output_root=output_root+'variation/'
-    )
-
-################################# Similarity in different Variation Levels #################################
-'''
-    - measure spearman correlation similarity in different variation levels.
-'''
-num_var_band = 10
-
-RESULTS = {}
-for filter in ['default_values']:
-    RESULTS['sim'] = {}
-    RESULTS['sim']['sim_mat'] = list()
-    for n in range(1, num_var_band+1):
-        RESULTS['sim_high_var'+str(n)] = {}
-        RESULTS['sim_high_var'+str(n)]['sim_mat'] = list()
-    for s in ALL_RECORDS:
-
-        SUBJs_output = np.load(assessment_results_root+FOLDER_name+s, allow_pickle='True').item()
-
-        sim_mat = np.zeros((len(SUBJs_output[filter]['measure_lst']), len(SUBJs_output[filter]['measure_lst'])))
-        sim_mat_high_var = np.zeros((num_var_band, len(SUBJs_output[filter]['measure_lst']), len(SUBJs_output[filter]['measure_lst'])))
-        for i, measure_i in enumerate(SUBJs_output[filter]['measure_lst']):
-
-            dFC_mat_i = SUBJs_output[filter]['dFCM_samples'][str(i)]
-
-            temp_var_mat_i = np.var(dFC_mat_i, axis=0)
-
-            for j, measure_j in enumerate(SUBJs_output[filter]['measure_lst']):
-
-                dFC_mat_j = SUBJs_output[filter]['dFCM_samples'][str(j)]
-
-                # all similarity
-                sim, p = stats.spearmanr(dFC_mat_i.flatten(), dFC_mat_j.flatten())
-                sim_mat[i, j] = sim
-
-                # var band similarity
-                temp_var_mat_j = np.var(dFC_mat_j, axis=0)
-                temp_var_mat = np.divide(temp_var_mat_i + temp_var_mat_j, 2)
-                for n in range(1, num_var_band+1):
-                    var_mask = rank_norm(temp_var_mat)
-                    var_mask = cat_data(var_mask, N=num_var_band)
-                    var_mask = np.where(var_mask == n, 1, 0) # (roi, roi)
-                    # high_var_func_conns is not syymetric!
-                    var_mask = np.divide(var_mask + var_mask.T, 2)
-                    var_mask = np.where(var_mask == 0, 0, 1)
-
-                    masked_i = dFC_mask(dFC_mat_i, var_mask==1)
-                    masked_j = dFC_mask(dFC_mat_j, var_mask==1)
-
-                    sim, p = stats.spearmanr(masked_i.flatten(), masked_j.flatten())
-
-                    sim_mat_high_var[n-1, i, j] = sim
-
-        RESULTS['sim']['sim_mat'].append(sim_mat)
-        for n in range(1,num_var_band+1):
-            RESULTS['sim_high_var'+str(n)]['sim_mat'].append(sim_mat_high_var[n-1,:,:])
-
-    for key in RESULTS:
-        RESULTS[key]['sim_mat'] = np.mean(np.array(RESULTS[key]['sim_mat']), axis=0)
-        RESULTS[key]['name_lst'] = [measure.measure_name for measure in SUBJs_output[filter]['measure_lst']]
-
-    ALL_RESULTS['sim_across_diff_var_lvls'] = deepcopy(RESULTS)
-
-############ VISUALIZE ############
-
-    visualize_sim_mat(RESULTS, mat_key='sim_mat', title='Similarity in different Variation Levels '+filter, 
-                                    name_lst_key='name_lst', 
-                                    cmap='viridis',
-                                    save_image=save_image, output_root=output_root+'variation/'
-    )
-
-################################# Similarity inter Time vs. Method #################################
-'''
-    - compare spearman correlation similarity between consecutive time points and between methods.
-'''
-RESULTS = {}
-for filter in ['default_values']:
-    RESULTS['sim'] = {}
-    RESULTS['sim']['sim_mat'] = list()
-    RESULTS['sim_mat_across_method'] = {}
-    RESULTS['sim_mat_across_method']['sim_mat'] = list()
-    RESULTS['sim_mat_across_time'] = {}
-    RESULTS['sim_mat_across_time']['sim_mat'] = list()
-    RESULTS['divide_method_time'] = {}
-    RESULTS['divide_method_time']['sim_mat'] = list()
-    for s in ALL_RECORDS:
-
-        SUBJs_output = np.load(assessment_results_root+FOLDER_name+s, allow_pickle='True').item()
-        n_time = SUBJs_output[filter]['dFCM_samples'][str(0)].shape[0]
-
-        sim_mat = np.zeros((len(SUBJs_output[filter]['measure_lst']), len(SUBJs_output[filter]['measure_lst'])))
-        sim_mat_across_method = np.zeros((n_time-1, len(SUBJs_output[filter]['measure_lst']), len(SUBJs_output[filter]['measure_lst'])))
-        sim_mat_across_time = np.zeros((n_time-1, len(SUBJs_output[filter]['measure_lst']), len(SUBJs_output[filter]['measure_lst'])))
-        for i, measure_i in enumerate(SUBJs_output[filter]['measure_lst']):
-
-            dFC_mat_i = SUBJs_output[filter]['dFCM_samples'][str(i)]
-
-            for j, measure_j in enumerate(SUBJs_output[filter]['measure_lst']):
-
-                dFC_mat_j = SUBJs_output[filter]['dFCM_samples'][str(j)]
-
-                # all similarity
-                sim, p = stats.spearmanr(dFC_mat_i.flatten(), dFC_mat_j.flatten())
-                sim_mat[i, j] = sim
-
-                for t in range(n_time-1):
-                    sim, p = stats.spearmanr(dFC_mat_i[t,:,:].flatten(), dFC_mat_j[t,:,:].flatten())
-                    sim_mat_across_method[t, i, j] = sim
-                    sim_i, p = stats.spearmanr(dFC_mat_i[t,:,:].flatten(), dFC_mat_i[t+1,:,:].flatten())
-                    sim_j, p = stats.spearmanr(dFC_mat_j[t,:,:].flatten(), dFC_mat_j[t+1,:,:].flatten())
-                    sim_mat_across_time[t, i, j] = (sim_i + sim_j) / 2
-
-        RESULTS['sim']['sim_mat'].append(sim_mat)
-        RESULTS['sim_mat_across_method']['sim_mat'].append(np.mean(sim_mat_across_method, axis=0))
-        RESULTS['sim_mat_across_time']['sim_mat'].append(np.mean(sim_mat_across_time, axis=0))
-        RESULTS['divide_method_time']['sim_mat'].append(np.mean(np.divide(sim_mat_across_method, sim_mat_across_time, out=np.zeros_like(sim_mat_across_method), where=sim_mat_across_time!=0), axis=0))
-
-    measure_lst = [measure.measure_name for measure in SUBJs_output[filter]['measure_lst']]
-    for key in RESULTS:
-        RESULTS[key]['sim_mat'] = np.mean(np.array(RESULTS[key]['sim_mat']), axis=0)
-        RESULTS[key]['name_lst'] = measure_lst
-
-    ALL_RESULTS['sim_inter_time_vs_method'] = deepcopy(RESULTS)
-
-############ VISUALIZE ############
-
-    visualize_sim_mat(RESULTS, mat_key='sim_mat', title='Similarity inter Time vs. Method '+filter, 
-                                    name_lst_key='name_lst', 
-                                    cmap='viridis',
-                                    save_image=save_image, output_root=output_root+'variation/'
-    )
-
-    data = {'sim_mat_across_method':list(), 'sim_mat_across_time':list(), 'labels':list()}
-    for i in range(RESULTS['sim_mat_across_method']['sim_mat'].shape[0]):
-        for j in range(i):
-            data['sim_mat_across_method'].append(RESULTS['sim_mat_across_method']['sim_mat'][i,j])
-            data['sim_mat_across_time'].append(RESULTS['sim_mat_across_time']['sim_mat'][i,j])
-            data['labels'].append(zip_name(measure_lst[i])+'-'+zip_name(measure_lst[j]))
-
-    scatter_plot(data, x='sim_mat_across_method', y='sim_mat_across_time',
-        labels='labels', title='scatter inter time vs method',
-        save_image=save_image, output_root=output_root+'variation/'
-    )
-
-    ALL_RESULTS['sim_inter_time_vs_method_scatter'] = deepcopy(data)
+    ALL_RESULTS['var_method_vs_time_method_pairs_across_func_conns'] = deepcopy(scatter_data_across_func_conn)
+    ALL_RESULTS['var_method_vs_time_method_pairs'] = deepcopy(scatter_data)
 
 ################################# Randomization Tests #################################
 
@@ -999,14 +665,6 @@ for filter in ['default_values']:
             RESULTS['dFC_method'].append(measure_i_name)
 
     ALL_RESULTS['randomization']['sim_with_static_FC'] = deepcopy(RESULTS)
-
-############ VISUALIZE ############
-    cat_plot(data=RESULTS, x='dFC_method', y='sim', 
-            kind='violin',
-            title='similarity with constant static FC',
-            save_image=save_image, output_root=output_root+'randomization/'
-            )
-
 
 '''
 find the similarity between the dFC obtained by each method 
@@ -1056,12 +714,6 @@ for filter in ['default_values']:
             RESULTS[measure_i_name][measure_j_name]['actual_sim'] = [sim for item in RESULTS[measure_i_name][measure_j_name]['sim']]
 
     ALL_RESULTS['randomization']['shuffled_time'] = deepcopy(RESULTS)
-
-############ VISUALIZE ############
-    pairwise_cat_plots(RESULTS, x='', y='sim', z='actual_sim',
-        title='randomized time similarity',
-        save_image=save_image, output_root=output_root+'randomization/'
-        )
 
 '''
 find the similarity between dFC matrices created using
@@ -1116,12 +768,6 @@ for filter in ['default_values']:
 
     ALL_RESULTS['randomization']['random_state_TC'] = deepcopy(RESULTS)
 
-############ VISUALIZE ############
-    pairwise_cat_plots(RESULTS, x='', y='sim', z='actual_sim',
-        title='random state time course dFC',
-        save_image=save_image, output_root=output_root+'randomization/'
-        )
-
 ################################# SIMILARITY OF ADJACENT TIME POINTS #################################
 
 RESULTS = {}
@@ -1146,14 +792,6 @@ for filter in ['default_values']:
 
     ALL_RESULTS['adjacent_time_points'] = deepcopy(RESULTS)
 
-############ VISUALIZE ############
-
-    cat_plot(data=RESULTS, x='dFC_method', y=key_name, 
-        kind='violin',
-        title=key_name + ' ' + filter,
-        save_image=save_image, output_root=output_root+'indiv_prop/'
-        )
-
 ################################# TRANSITION FREQUENCY #################################
 '''
  - plot normalized transition frequency
@@ -1175,14 +813,6 @@ for filter in ['default_values']:
             RESULTS['dFC_method'].append(measure_i.measure_name)
 
     ALL_RESULTS['transition_freq'] = deepcopy(RESULTS)
-
-############ VISUALIZE ############
-
-    cat_plot(data=RESULTS, x='dFC_method', y=key_name, 
-        kind='violin',
-        title=key_name + ' ' + filter,
-        save_image=save_image, output_root=output_root+'indiv_prop/'
-        )
 
 ################################# DWELL TIME #################################
 '''
@@ -1210,14 +840,6 @@ for filter in ['default_values']:
 
     ALL_RESULTS['dwell_time'] = deepcopy(RESULTS)
 
-############ VISUALIZE ############
-
-    cat_plot(data=RESULTS, x='dFC_method', y=key_name, 
-        kind='violin',
-        title=key_name + ' ' + filter,
-        save_image=save_image, output_root=output_root+'indiv_prop/'
-        )
-
 ################################# TIME RECORD #################################
 
 RESULTS = {}
@@ -1240,22 +862,9 @@ for filter in ['default_values']:
 
     ALL_RESULTS['time_record'] = deepcopy(RESULTS)
 
-############ VISUALIZE ############
 
-    cat_plot(data=RESULTS, x='dFC_method', y='dFC_assess_time (s)', 
-        kind='bar',
-        title='dFC assess time record of ' + filter,
-        save_image=save_image, output_root=output_root+'time/'
-        )
-
-    cat_plot(data=RESULTS, x='dFC_method', y='FCS_fit_time (s)', 
-        kind='bar',
-        title='FCS fit time record of ' + filter,
-        save_image=save_image, output_root=output_root+'time/'
-        )
+################################# SAVE ALL RESULTS #################################
 
 np.save(output_root+'ALL_RESULTS.npy', ALL_RESULTS)
 
-if not save_image:
-    plt.show()
 #################################################################################
