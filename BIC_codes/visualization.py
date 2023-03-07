@@ -13,7 +13,7 @@ print(' VISUALIZATION IN PROGRESS ... ')
 
 ################################# LOAD RESULTS #################################
 
-output_root = './../../../../RESULTs/methods_implementation/server/methods_implementation/out/'
+output_root = './../../../../RESULTs/methods_implementation/server/methods_implementation/final_figures/'
 # output_root = './output/'
 save_image = True
 

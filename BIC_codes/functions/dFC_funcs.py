@@ -48,6 +48,7 @@ import pandas as pd
 fig_dpi = 120
 fig_bbox_inches = 'tight'
 fig_pad = 0.1
+show_title = False
 
 ################################# Other Functions ####################################
 
@@ -495,7 +496,8 @@ def visualize_conn_mat_dict(data, title='', \
     if not type(axes) is np.ndarray:
         axes = np.array([axes])
 
-    fig.suptitle(title, fontsize=20, y=0.98) #, fontsize=20, size=20
+    if show_title:
+        fig.suptitle(title, fontsize=20, y=0.98) #, fontsize=20, size=20
 
     axes = axes.ravel()
 
@@ -625,7 +627,8 @@ def visualize_conn_mat_2D_dict(data, title='', \
     if not type(axs) is np.ndarray:
         axs = np.array([axs])
 
-    fig.suptitle(title, fontsize=25, y=0.98) #, fontsize=20, size=20
+    if show_title:
+        fig.suptitle(title, fontsize=25, y=0.98) #, fontsize=20, size=20
 
     # axs = axs.ravel()
 

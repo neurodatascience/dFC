@@ -26,6 +26,7 @@ from functions.dFC_funcs import dFC_mat2vec
 fig_dpi = 120
 fig_bbox_inches = 'tight'
 fig_pad = 0.1
+show_title = False
 
 ################################# Plotting Functions ####################################
 
@@ -114,7 +115,8 @@ def pairwise_cat_plots(data, x, y, z=None,
             ax.set_axis_off()
             ax.xaxis.set_tick_params(which='both', labelbottom=True)
     
-    plt.suptitle(title, fontsize=15, y=0.90)
+    if show_title:
+        plt.suptitle(title, fontsize=15, y=0.90)
 
     if save_image:
         folder = output_root[:output_root.rfind('/')]
@@ -135,7 +137,6 @@ def joint_dist_plot(data,
     data is a dictionary including list of dFC values
     of each dFC method
     '''
-    title = 'distributions'
     df = pd.DataFrame(data)
     fig_width = 5*len(data)
     fig_height = 5*len(data)
@@ -155,7 +156,8 @@ def joint_dist_plot(data,
     g.fig.set_figwidth(fig_width)
     g.fig.set_figheight(fig_height)
     g.fig.subplots_adjust(top=0.95)
-    plt.suptitle(title, fontsize=50, y=0.98)
+    if show_title:
+        plt.suptitle(title, fontsize=50, y=0.98)
 
     if save_image:
         folder = output_root[:output_root.rfind('/')]
@@ -210,7 +212,8 @@ def pairwise_scatter_plots(data, x, y,
             ax.set_axis_off()
             ax.xaxis.set_tick_params(which='both', labelbottom=True)
     
-    plt.suptitle(title, fontsize=15, y=0.90)
+    if show_title:
+        plt.suptitle(title, fontsize=15, y=0.90)
 
     if save_image:
         folder = output_root[:output_root.rfind('/')]
@@ -259,7 +262,9 @@ def scatter_plot(data, x, y,
                 s=df[labels][i], 
                 fontdict=dict(color='black', size=20),
             )
-    plt.title(title, fontsize=15)
+    
+    if show_title:
+        plt.title(title, fontsize=15)
 
     if save_image:
         folder = output_root[:output_root.rfind('/')]
@@ -308,7 +313,8 @@ def cat_plot(data, x, y,
 
     g.fig.set_figwidth(fig_width)
     g.fig.set_figheight(fig_height)
-    plt.title(title, fontsize=15)
+    if show_title:
+        plt.title(title, fontsize=15)
     if save_image:
         folder = output_root[:output_root.rfind('/')]
         if not os.path.exists(folder):
@@ -374,7 +380,8 @@ def visualize_sim_mat(data, mat_key, title='',
     if not type(axes) is np.ndarray:
         axes = np.array([axes])
 
-    fig.suptitle(title, fontsize=20, y=0.98) #, fontsize=20, size=20
+    if show_title:
+        fig.suptitle(title, fontsize=20, y=0.98) #, fontsize=20, size=20
 
     axes = axes.ravel()
 
@@ -451,7 +458,8 @@ def dist_mat_dendo(dist_mat, labels, title='', \
     ax = fig.add_subplot(1, 1, 1)    
     with mpl.rc_context({'lines.linewidth': 3}):
         dend = shc.dendrogram(shc.linkage(distArray, method='single', metric='euclidean'), distance_sort='ascending', no_plot=False, labels=labels)
-    plt.title(title, fontsize=15)
+    if show_title:
+        plt.title(title, fontsize=15)
     ax.tick_params(axis='x', which='major', labelsize=15)
     ax.tick_params(axis='y', which='major', labelsize=15)    
     if save_image:
@@ -504,7 +512,8 @@ def visualize_state_TC(TC_lst, \
     plt.xlabel('TR')
     plt.yticks(ticks=ticks, labels=state_lst)
     plt.legend(TC_name_lst)
-    plt.title(title)
+    if show_title:
+        plt.title(title)
     if save_image:
         folder = output_root[:output_root.rfind('/')]
         if not os.path.exists(folder):
