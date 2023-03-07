@@ -49,6 +49,7 @@ fig_dpi = 120
 fig_bbox_inches = 'tight'
 fig_pad = 0.1
 show_title = False
+save_fig_format = 'pdf'
 
 ################################# Other Functions ####################################
 
@@ -576,8 +577,8 @@ def visualize_conn_mat_dict(data, title='', \
         folder = output_root[:output_root.rfind('/')]
         if not os.path.exists(folder):
             os.makedirs(folder)
-        plt.savefig(output_root+title+'.png', \
-            dpi=fig_dpi, bbox_inches=fig_bbox_inches, pad_inches=fig_pad \
+        plt.savefig(output_root+title.replace(" ", "_")+'.'+save_fig_format, 
+            dpi=fig_dpi, bbox_inches=fig_bbox_inches, pad_inches=fig_pad, format=save_fig_format
         ) 
         plt.close()
     else:
@@ -731,8 +732,8 @@ def visualize_conn_mat_2D_dict(data, title='', \
         folder = output_root[:output_root.rfind('/')]
         if not os.path.exists(folder):
             os.makedirs(folder)
-        plt.savefig(output_root+title+'.png', \
-            dpi=fig_dpi, bbox_inches=fig_bbox_inches, pad_inches=fig_pad \
+        plt.savefig(output_root+title.replace(" ", "_")+'.'+save_fig_format,
+            dpi=fig_dpi, bbox_inches=fig_bbox_inches, pad_inches=fig_pad, format=save_fig_format
         ) 
         plt.close()
     else:
@@ -1878,8 +1879,8 @@ class dFC:
             folder = output_root[:output_root.rfind('/')]
             if not os.path.exists(folder):
                 os.makedirs(folder)
-            plt.savefig(output_root+'.png', \
-                dpi=fig_dpi, bbox_inches=fig_bbox_inches, pad_inches=fig_pad \
+            plt.savefig(output_root+'.'+save_fig_format, \
+                dpi=fig_dpi, bbox_inches=fig_bbox_inches, pad_inches=fig_pad, format=save_fig_format
             ) 
             plt.close()
         else:
@@ -3376,13 +3377,16 @@ class TIME_SERIES():
         plt.figure(figsize=(15, 5))
         plt.plot(self.time[interval], self.data[nodes_lst, interval].T)
         plt.xlabel('time (sec)')
-        plt.title(self.TS_name_ + ' ' + self.session_name_ )
+        title = self.TS_name_ + ' ' + self.session_name_
+        if show_title:
+            plt.title(title)
         if save_image:
             folder = output_root[:output_root.rfind('/')]
+            file_name = title.replace(" ", "_")
             if not os.path.exists(folder):
                 os.makedirs(folder)
-            plt.savefig(output_root+'.png', \
-                dpi=fig_dpi, bbox_inches=fig_bbox_inches, pad_inches=fig_pad \
+            plt.savefig(output_root+file_name+'.'+save_fig_format, 
+                dpi=fig_dpi, bbox_inches=fig_bbox_inches, pad_inches=fig_pad, format=save_fig_format
             ) 
             plt.close()
         else:
