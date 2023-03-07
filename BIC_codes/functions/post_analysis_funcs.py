@@ -27,6 +27,7 @@ fig_dpi = 120
 fig_bbox_inches = 'tight'
 fig_pad = 0.1
 show_title = False
+save_fig_format = 'pdf'
 
 ################################# Plotting Functions ####################################
 
@@ -129,8 +130,8 @@ def pairwise_cat_plots(data, x, y, z=None,
         folder = output_root[:output_root.rfind('/')]
         if not os.path.exists(folder):
             os.makedirs(folder)
-        plt.savefig(output_root+title2file_name(title)+'.png', \
-            dpi=fig_dpi, bbox_inches=fig_bbox_inches, pad_inches=fig_pad \
+        plt.savefig(output_root+title2file_name(title)+'.'+save_fig_format, \
+            dpi=fig_dpi, bbox_inches=fig_bbox_inches, pad_inches=fig_pad, format=save_fig_format \
         ) 
         plt.close()
     else:
@@ -170,8 +171,8 @@ def joint_dist_plot(data,
         folder = output_root[:output_root.rfind('/')]
         if not os.path.exists(folder):
             os.makedirs(folder)
-        plt.savefig(output_root+title2file_name(title)+'.png', 
-            dpi=fig_dpi, bbox_inches=fig_bbox_inches, pad_inches=fig_pad
+        plt.savefig(output_root+title2file_name(title)+'.'+save_fig_format, 
+            dpi=fig_dpi, bbox_inches=fig_bbox_inches, pad_inches=fig_pad, format=save_fig_format
         ) 
         plt.close()
     else:
@@ -226,8 +227,8 @@ def pairwise_scatter_plots(data, x, y,
         folder = output_root[:output_root.rfind('/')]
         if not os.path.exists(folder):
             os.makedirs(folder)
-        plt.savefig(output_root+title2file_name(title)+'.png', \
-            dpi=fig_dpi, bbox_inches=fig_bbox_inches, pad_inches=fig_pad \
+        plt.savefig(output_root+title2file_name(title)+'.'+save_fig_format, 
+            dpi=fig_dpi, bbox_inches=fig_bbox_inches, pad_inches=fig_pad, format=save_fig_format 
         ) 
         plt.close()
     else:
@@ -277,8 +278,8 @@ def scatter_plot(data, x, y,
         folder = output_root[:output_root.rfind('/')]
         if not os.path.exists(folder):
             os.makedirs(folder)
-        plt.savefig(output_root+title2file_name(title)+'.png', \
-            dpi=fig_dpi, bbox_inches=fig_bbox_inches, pad_inches=fig_pad \
+        plt.savefig(output_root+title2file_name(title)+'.'+save_fig_format, 
+            dpi=fig_dpi, bbox_inches=fig_bbox_inches, pad_inches=fig_pad, format=save_fig_format
         ) 
         plt.close()
     else:
@@ -326,8 +327,8 @@ def cat_plot(data, x, y,
         folder = output_root[:output_root.rfind('/')]
         if not os.path.exists(folder):
             os.makedirs(folder)
-        plt.savefig(output_root+title2file_name(title)+'.png', \
-            dpi=fig_dpi, bbox_inches=fig_bbox_inches, pad_inches=fig_pad \
+        plt.savefig(output_root+title2file_name(title)+'.'+save_fig_format, 
+            dpi=fig_dpi, bbox_inches=fig_bbox_inches, pad_inches=fig_pad, format=save_fig_format
         ) 
         plt.close()
     else:
@@ -446,8 +447,8 @@ def visualize_sim_mat(data, mat_key, title='',
         folder = output_root[:output_root.rfind('/')]
         if not os.path.exists(folder):
             os.makedirs(folder)
-        plt.savefig(output_root+title2file_name(title)+'.png', \
-            dpi=fig_dpi, bbox_inches=fig_bbox_inches, pad_inches=fig_pad \
+        plt.savefig(output_root+title2file_name(title)+'.'+save_fig_format, 
+            dpi=fig_dpi, bbox_inches=fig_bbox_inches, pad_inches=fig_pad, format=save_fig_format
         ) 
         plt.close()
     else:
@@ -473,8 +474,8 @@ def dist_mat_dendo(dist_mat, labels, title='', \
         folder = output_root[:output_root.rfind('/')]
         if not os.path.exists(folder):
             os.makedirs(folder)
-        plt.savefig(output_root+title2file_name(title)+'.png', \
-            dpi=fig_dpi, bbox_inches=fig_bbox_inches, pad_inches=fig_pad \
+        plt.savefig(output_root+title2file_name(title)+'.'+save_fig_format, 
+            dpi=fig_dpi, bbox_inches=fig_bbox_inches, pad_inches=fig_pad, format=save_fig_format
         ) 
         plt.close()
 
@@ -493,8 +494,8 @@ def plot_brain_act(act_vec, locs, axes,
         folder = output_root[:output_root.rfind('/')]
         if not os.path.exists(folder):
             os.makedirs(folder)
-        plt.savefig(output_root+title2file_name(title)+'.png', \
-            dpi=fig_dpi, bbox_inches=fig_bbox_inches, pad_inches=fig_pad \
+        plt.savefig(output_root+title2file_name(title)+'.'+save_fig_format, 
+            dpi=fig_dpi, bbox_inches=fig_bbox_inches, pad_inches=fig_pad, format=save_fig_format
         ) 
         plt.close()
 
@@ -525,8 +526,8 @@ def visualize_state_TC(TC_lst, \
         folder = output_root[:output_root.rfind('/')]
         if not os.path.exists(folder):
             os.makedirs(folder)
-        plt.savefig(output_root+title2file_name(title)+'.png', \
-            dpi=fig_dpi, bbox_inches=fig_bbox_inches, pad_inches=fig_pad \
+        plt.savefig(output_root+title2file_name(title)+'.'+save_fig_format, 
+            dpi=fig_dpi, bbox_inches=fig_bbox_inches, pad_inches=fig_pad, format=save_fig_format
         ) 
         plt.close()
     # else:
