@@ -77,7 +77,7 @@ def unzip_name(name):
         new_name = 'SlidingWindow'
     return new_name
 
-def pairwise_cat_plots(data, x, y, z=None,
+def pairwise_cat_plots(data=None, x=None, y=None, z=None,
     title='', 
     save_image=False, output_root=None
     ):
