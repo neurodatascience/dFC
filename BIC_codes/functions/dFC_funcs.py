@@ -581,8 +581,8 @@ def visualize_conn_mat_dict(data, title='', \
             dpi=fig_dpi, bbox_inches=fig_bbox_inches, pad_inches=fig_pad, format=save_fig_format
         ) 
         plt.close()
-    else:
-        plt.show()
+    # else:
+    #     plt.show()
 
 
 def visualize_conn_mat_2D_dict(data, title='', \

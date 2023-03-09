@@ -28,20 +28,25 @@ node_networks = ALL_RESULTS['node_networks']
 
 RESULTS = ALL_RESULTS['dFC_sample']
 
-for measure_name in RESULTS:
-    
-    visualize_conn_mat_dict(RESULTS[measure_name]['samples'], node_networks=node_networks, 
-        title=measure_name, 
-        normalize=False, fix_lim=False, 
-        disp_diag=False,
-        save_image=save_image, output_root=output_root+'dFC_sample/'
-        )
-    visualize_conn_mat_dict(RESULTS[measure_name]['samples_ranked'], node_networks=node_networks, 
-        title=measure_name+'_ranked', 
-        normalize=False, fix_lim=False, 
-        disp_diag=False, cmap='plasma', center_0=False,
-        save_image=save_image, output_root=output_root+'dFC_sample/'
-        )
+plot_sample_dFC(D=RESULTS, x='samples',
+    title='dFC_samples',
+    cmap='seismic',
+    normalize=False,
+    disp_diag=False,
+    save_image=save_image, output_root=output_root+'dFC_sample/', 
+    fix_lim=False, center_0=False, 
+    node_networks=node_networks, segmented=False 
+)
+
+plot_sample_dFC(D=RESULTS, x='samples_ranked',
+    title='dFC_samples_ranked',
+    cmap='plasma',
+    normalize=False,
+    disp_diag=False,
+    save_image=save_image, output_root=output_root+'dFC_sample/', 
+    fix_lim=False, center_0=False, 
+    node_networks=node_networks, segmented=False 
+)
 
 ################################# FCS visualization #################################
 

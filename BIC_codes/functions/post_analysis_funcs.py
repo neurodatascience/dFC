@@ -19,7 +19,7 @@ from copy import deepcopy
 import sys
 
 sys.path.append('./../git_codes/BIC_codes/')
-from functions.dFC_funcs import dFC_mat2vec
+from functions.dFC_funcs import dFC_mat2vec, visualize_conn_mat_dict
 
 ################################# Parameters ####################################
 
@@ -77,6 +77,69 @@ def unzip_name(name):
         new_name = 'SlidingWindow'
     return new_name
 
+def plot_sample_dFC(D, x,
+    title='',
+    cmap='seismic',
+    normalize=False,
+    disp_diag=True,
+    save_image=False, output_root=None, 
+    fix_lim=True, center_0=True, 
+    node_networks=None, segmented=False 
+    ):
+    '''
+    D is a dictionary of dFC samples. each
+    key is the name of a dFC matrix (e.g. method
+    used for assessing it), and D[key][x] contains the 
+    the dFC matrix as a numpy ndarray 
+    '''
+
+    num_dFC = len(D)
+    names_lst = [key for key in D]
+    num_time = len(D[names_lst[0]][x])
+
+    fig_width = 55*(num_time/10)
+    fig_height = 55*(num_dFC/10)
+
+    fig, axes = plt.subplots(num_dFC, num_time, figsize=(fig_width, fig_height), \
+        facecolor='w', edgecolor='k')
+
+    fig.subplots_adjust(
+        bottom=0.1, \
+        top=0.85, \
+        left=0.1, \
+        right=0.9,
+        wspace=0.3, \
+        hspace=0.8\
+    )
+
+    for i, dFC_mat_name in enumerate(D):
+        visualize_conn_mat_dict(data=D[dFC_mat_name][x], 
+            node_networks=node_networks, 
+            title=dFC_mat_name, 
+            cmap=cmap, center_0=center_0,
+            normalize=normalize, fix_lim=fix_lim, 
+            disp_diag=disp_diag,
+            segmented=segmented,
+            save_image=False, output_root=output_root,
+            axes=axes[i, :], fig=fig, 
+        )
+        
+    # set row names
+    for i, dFC_mat_name in enumerate(D):
+        axes[i, 0].set_ylabel(dFC_mat_name, fontdict={'fontsize': 18, 'fontweight': 'bold'}, rotation=90)
+    
+    if save_image:
+        folder = output_root[:output_root.rfind('/')]
+        if not os.path.exists(folder):
+            os.makedirs(folder)
+        fig.savefig(output_root+title.replace(" ", "_")+'.'+save_fig_format, 
+            dpi=fig_dpi, bbox_inches=fig_bbox_inches, pad_inches=fig_pad, format=save_fig_format
+        ) 
+        plt.close()
+    else:
+        plt.show()
+
+    
 def pairwise_cat_plots(data=None, x=None, y=None, z=None,
     title='', 
     save_image=False, output_root=None
