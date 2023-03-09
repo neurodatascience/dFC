@@ -27,7 +27,7 @@ fig_dpi = 120
 fig_bbox_inches = 'tight'
 fig_pad = 0.1
 show_title = False
-save_fig_format = 'pdf'
+save_fig_format = 'png' # pdf, png, 
 
 ################################# Plotting Functions ####################################
 
@@ -288,6 +288,7 @@ def scatter_plot(data, x, y,
 def cat_plot(data, x, y, 
     kind='bar',
     scale_dist=False,
+    log=False,
     title='',
     save_image=False, output_root=None
     ):
@@ -314,10 +315,17 @@ def cat_plot(data, x, y,
             scale='width'
             # errorbar=("pi", 95)
         )
+    elif kind=='bar':
+        g = sns.catplot(data=df, x=x, y=y, kind=kind,
+            # errorbar=("pi", 95)
+        )
     else:
         g = sns.catplot(data=df, x=x, y=y, kind=kind,
             # errorbar=("pi", 95)
         )
+
+    if log:
+        plt.yscale('log')
 
     g.fig.set_figwidth(fig_width)
     g.fig.set_figheight(fig_height)

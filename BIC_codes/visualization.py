@@ -485,16 +485,20 @@ cat_plot(data=RESULTS, x='dFC_method', y=key_name,
 RESULTS = ALL_RESULTS['time_record'] 
 filter = 'session_Rest1_LR'
 
+RESULTS['FCS fit time (s)'] = RESULTS['FCS_fit_time (s)']
+RESULTS['dFC assess time (s)'] = RESULTS['dFC_assess_time (s)']
+RESULTS['dFC method'] = RESULTS['dFC_method']
+
 ############ VISUALIZE ############
 
-cat_plot(data=RESULTS, x='dFC_method', y='dFC_assess_time (s)', 
-    kind='bar',
+cat_plot(data=RESULTS, x='dFC method', y='dFC assess time (s)', 
+    kind='bar', log=True,
     title='dFC assess time record of ' + filter,
     save_image=save_image, output_root=output_root+'time/'
     )
 
-cat_plot(data=RESULTS, x='dFC_method', y='FCS_fit_time (s)', 
-    kind='bar',
+cat_plot(data=RESULTS, x='dFC method', y='FCS fit time (s)', 
+    kind='bar', log=True,
     title='FCS fit time record of ' + filter,
     save_image=save_image, output_root=output_root+'time/'
     )
