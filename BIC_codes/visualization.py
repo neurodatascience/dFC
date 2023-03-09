@@ -88,7 +88,7 @@ for metric in ALL_RESULTS['dFC_similarity_overall'] :
                                         save_image=save_image, output_root=output_root+'dFC_similarity/'+metric+'/'
         )
     for filter in ['session_Rest1_LR']:
-        pairwise_cat_plots(RESULTS[filter]['sim_distribution'], x='', y='sim',
+        pairwise_cat_plots(RESULTS[filter]['sim_distribution'], y='sim',
             title=metric+' total similarity distributions '+filter,
             save_image=save_image, output_root=output_root+'dFC_similarity/'+metric+'/'
             )
@@ -396,7 +396,7 @@ but with randomized temporal order
 RESULTS = ALL_RESULTS['randomization']['shuffled_time'] 
 
 ############ VISUALIZE ############
-pairwise_cat_plots(RESULTS, x='', y='sim', z='actual_sim',
+pairwise_cat_plots(RESULTS, y='sim', z='actual_sim',
     title='randomized time similarity',
     save_image=save_image, output_root=output_root+'randomization/'
     )
@@ -413,7 +413,7 @@ subject are used
 RESULTS = ALL_RESULTS['randomization']['random_state_TC'] 
 
 ############ VISUALIZE ############
-pairwise_cat_plots(RESULTS, x='', y='sim', z='actual_sim',
+pairwise_cat_plots(RESULTS, y='sim', z='actual_sim',
     title='random state time course dFC',
     save_image=save_image, output_root=output_root+'randomization/'
     )
