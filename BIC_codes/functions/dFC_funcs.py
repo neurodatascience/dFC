@@ -49,7 +49,7 @@ fig_dpi = 120
 fig_bbox_inches = 'tight'
 fig_pad = 0.1
 show_title = False
-save_fig_format = 'pdf'
+save_fig_format = 'png'
 
 ################################# Other Functions ####################################
 
@@ -3155,7 +3155,7 @@ class TIME_SERIES():
         if self.nodes_info_ is None:
             return None
         else:
-            return [self.nodes_info_[0]] + [self.nodes_info_[i+1] for i in self.nodes_lst] 
+            return [self.nodes_info_[i] for i in self.nodes_lst] 
 
     @property
     def Fs(self):
@@ -3285,7 +3285,7 @@ class TIME_SERIES():
                 nodes_idx.sort()
             else:
                 # nodes_idx = np.array(list(range(self.num_select_nodes)))
-                nodes_idx = np.arange(0, self.n_regions, self.n_regions/num_select_nodes, dtype=int)
+                nodes_idx = np.arange(0, self.n_regions, np.ceil(self.n_regions/num_select_nodes), dtype=int)
             self.select_nodes(nodes_idx=nodes_idx)
 
             self.data_ = None

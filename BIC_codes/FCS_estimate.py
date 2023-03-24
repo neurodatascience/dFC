@@ -52,7 +52,7 @@ params_methods = { \
     # Hyper Parameters
     'normalization': True, \
     'num_subj': 395, \
-    'num_select_nodes': 100, \
+    'num_select_nodes': 96, \
     'num_time_point': 1200, \
     'Fs_ratio': 1.00, \
     'noise_ratio': 0.00, \
