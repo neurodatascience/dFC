@@ -210,6 +210,9 @@ for subj_lvl_feature in ALL_RESULTS['subj_clustring']:
     ############ VISUALIZE ############
     for key in RESULTS:
         annot = True
+        # set diag values to 0
+        for session in RESULTS[key]:
+            np.fill_diagonal(RESULTS[key][session]['sim_mat'], 0)
         visualize_sim_mat(RESULTS[key], mat_key='sim_mat', title='inter-subject-corr similarity '+key+ ' based on '+subj_lvl_feature, 
                                         name_lst_key='name_lst', 
                                         cmap='viridis',
