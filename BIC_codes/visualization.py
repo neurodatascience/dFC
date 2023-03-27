@@ -318,6 +318,7 @@ scatter_plot(
     data=scatter_data, x='var_time', y='var_method', 
     title='var method vs time across func conns',
     hist=True,
+    equal_axis_lim=True, show_x_equal_y=True,
     save_image=save_image, output_root=output_root+'variation/'
 )
 
@@ -361,13 +362,16 @@ visualize_sim_mat(RESULTS, mat_key='sim_mat', title='variation in different dime
 
 pairwise_scatter_plots(
     data=scatter_data_across_func_conn, x='var_time', y='var_method', 
-    title='var method vs time across func conns across methods pairs', hist=True,
+    title='var method vs time across func conns across methods pairs', 
+    hist=True,
+    equal_axis_lim=True, show_x_equal_y=True,
     save_image=save_image, output_root=output_root+'variation/'
 )
 
 scatter_plot(
     data=scatter_data, x='var_time', y='var_method', 
     labels='labels', title='var method vs time',
+    equal_axis_lim=True, show_x_equal_y=False,
     save_image=save_image, output_root=output_root+'variation/'
 )
 

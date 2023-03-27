@@ -243,6 +243,7 @@ def joint_dist_plot(data,
 
 def pairwise_scatter_plots(data, x, y,
     title='', hist=False,
+    equal_axis_lim=False, show_x_equal_y=False,
     save_image=False, output_root=None
     ):
     '''
@@ -266,6 +267,26 @@ def pairwise_scatter_plots(data, x, y,
     fig, axs = plt.subplots(n_rows, n_columns, figsize=(fig_width, fig_height), \
         facecolor='w', edgecolor='k', sharex=True, sharey=True)
     
+    # equal x_lim and y_lim
+    if equal_axis_lim or show_x_equal_y:
+        min_lim = None
+        max_lim = None
+        for i, key_i in enumerate(data):
+            for j, key_j in enumerate(data[key_i]):
+                df = pd.DataFrame(data[key_i][key_j])
+                m = np.minimum(df[x].min(), df[y].min())
+                M = np.maximum(df[x].max(), df[y].max())
+                if min_lim is None:
+                    min_lim = m
+                    max_lim = M
+                else:
+                    min_lim = np.minimum(m, min_lim)
+                    max_lim = np.maximum(M, max_lim)
+                
+        lim_L = max_lim - min_lim
+        min_lim = min_lim - lim_L*0.1
+        max_lim = max_lim + lim_L*0.1
+
     axs_plotted = list()
     for i, key_i in enumerate(data):
         for j, key_j in enumerate(data[key_i]):
@@ -275,6 +296,18 @@ def pairwise_scatter_plots(data, x, y,
             else:
                 g = sns.scatterplot(ax=axs[i, j], data=df, x=x, y=y, s=50)
             axs[i, j].set_title(key_i+'-'+key_j)
+
+            # equal x_lim and y_lim
+            if equal_axis_lim:
+                axs[i, j].set_xlim(min_lim, max_lim)
+                axs[i, j].set_ylim(min_lim, max_lim)
+
+            # y=x line
+            if show_x_equal_y:
+                X_plot = np.linspace(min_lim, max_lim, 100)
+                Y_plot = X_plot
+                axs[i, j].plot(X_plot, Y_plot, color='r')
+
             axs_plotted.append(axs[i, j])
 
     # remove extra subplots
@@ -300,6 +333,7 @@ def pairwise_scatter_plots(data, x, y,
 def scatter_plot(data, x, y,
     labels=None, hue=None,
     title='', hist=False,
+    equal_axis_lim=False, show_x_equal_y=False,
     save_image=False, output_root=None
     ):
     '''
@@ -321,7 +355,27 @@ def scatter_plot(data, x, y,
     else:
         g = sns.scatterplot(data=df, x=x, y=y, s=100, hue=hue)
     
-    
+    # equal x_lim and y_lim
+    if equal_axis_lim:
+        min_lim = np.minimum(df[x].min(), df[y].min())
+        max_lim = np.maximum(df[x].max(), df[y].max())
+        lim_L = max_lim - min_lim
+        min_lim = min_lim - lim_L*0.1
+        max_lim = max_lim + lim_L*0.1
+        g.set_xlim(min_lim, max_lim)
+        g.set_ylim(min_lim, max_lim)
+
+    # y=x line
+    if show_x_equal_y:
+        min_lim = np.minimum(df[x].min(), df[y].min())
+        max_lim = np.maximum(df[x].max(), df[y].max())
+        lim_L = max_lim - min_lim
+        min_lim = min_lim - lim_L*0.1
+        max_lim = max_lim + lim_L*0.1
+        X_plot = np.linspace(min_lim, max_lim, 100)
+        Y_plot = X_plot
+        plt.plot(X_plot, Y_plot, color='r')
+
     if (not labels is None) and (not hist):
         c = 0.015
         mid_x = (np.max(df[x]) + np.min(df[x]))/2
