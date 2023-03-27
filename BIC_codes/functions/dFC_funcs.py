@@ -480,6 +480,13 @@ def visualize_conn_mat_dict(data, title='', \
         0.76 0.45 0.00 
     '''
 
+    sns.set_context("paper", 
+        font_scale=2.5, 
+        rc={"lines.linewidth": 3.0}
+    )
+
+    sns.set_style('white')
+
     if node_networks is None:
         fig_width = 25*(len(data)/10)
     else:
@@ -615,6 +622,13 @@ def visualize_conn_mat_2D_dict(data, title='', \
                 0.31 0.00 0.43 
                 0.76 0.43 0.00 
     '''
+
+    sns.set_context("paper", 
+        font_scale=3.5, 
+        rc={"lines.linewidth": 3.0}
+    )
+
+    sns.set_style('white')
 
     if node_networks is None:
         fig_width = 30*(len(data)/10)
