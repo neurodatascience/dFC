@@ -495,6 +495,8 @@ def visualize_sim_mat(data, mat_key, title='',
         font_scale=1.0, 
         rc={"lines.linewidth": 1.0}
     )
+
+    sns.set_style('white')
     
     if name_lst_key is None:
         fig_width = int(25*(len(data)/10))
@@ -583,6 +585,13 @@ def dist_mat_dendo(dist_mat, labels, title='', \
     save_image=False, output_root=None, \
     ):
 
+    sns.set_context("paper", 
+        font_scale=3.5, 
+        rc={"lines.linewidth": 3.0}
+    )
+
+    sns.set_style('darkgrid')
+
     # convert the redundant n*n square matrix form into a condensed nC2 array
     distArray = ssd.squareform(dist_mat) 
 
@@ -590,7 +599,7 @@ def dist_mat_dendo(dist_mat, labels, title='', \
     fig = plt.figure(figsize=(width, 5))
     ax = fig.add_subplot(1, 1, 1)    
     with mpl.rc_context({'lines.linewidth': 3}):
-        dend = shc.dendrogram(shc.linkage(distArray, method='single', metric='euclidean'), distance_sort='ascending', no_plot=False, labels=labels)
+        dend = shc.dendrogram(shc.linkage(distArray, method='ward'), distance_sort='ascending', no_plot=False, labels=labels)
     if show_title:
         plt.title(title, fontsize=15)
     ax.tick_params(axis='x', which='major', labelsize=15)

@@ -304,6 +304,7 @@ def dFC_mask(dFC_mat, mask):
     return dFC_vec_new
 
 #test
+# toDo: use ssd.squareform
 def dFC_mat2vec(C_t):
     '''
     C_t must be an array of matrices or a single matrix
@@ -328,6 +329,7 @@ def dFC_mat2vec(C_t):
     return F
 
 #test
+# toDo: use ssd.squareform
 def dFC_vec2mat(F, N):
     '''
     diagonal values are set to 1.0
