@@ -166,6 +166,25 @@ for metric in metric_list:
         all_subjs_avg = np.mean(all_subjs_sim_mat, axis=0)
         across_subj_var = np.var(all_subjs_sim_mat, axis=0)
 
+        # E(VAR(sim)) across subj
+        var_lst = []
+        for i, measure_i in enumerate(sim_distribution):
+            for j, measure_j in enumerate(sim_distribution[measure_i]):
+                var_lst.append(
+                    np.var(np.array(sim_distribution[measure_i][measure_j]['sim']))
+                )
+        E_VAR = np.mean(np.array(var_lst))
+
+        # E(E(sim)) and VAR(E(sim)) across subj
+        avg_lst = []
+        for i, measure_i in enumerate(sim_distribution):
+            for j, measure_j in enumerate(sim_distribution[measure_i]):
+                avg_lst.append(
+                    np.mean(np.array(sim_distribution[measure_i][measure_j]['sim']))
+                )
+        E_E = np.mean(np.array(avg_lst))
+        VAR_E = np.var(np.array(avg_lst))
+
         # change default_values to session_Rest1_LR
         if filter=='default_values':
             new_filter = 'session_Rest1_LR'
@@ -174,6 +193,7 @@ for metric in metric_list:
             RESULTS[new_filter]['var_mat'] = across_subj_var
             RESULTS[new_filter]['avg_div_var_mat'] = np.divide(all_subjs_avg, np.sqrt(across_subj_var), out=np.zeros_like(all_subjs_avg), where=np.sqrt(across_subj_var)!=0)
             RESULTS[new_filter]['sim_distribution'] = sim_distribution
+            RESULTS[new_filter]['overall_stat'] = {'E_VAR': E_VAR, 'E_E': E_E, 'VAR_E': VAR_E}
             RESULTS[new_filter]['name_lst'] = measure_name_lst
         else:
             RESULTS[filter] = {}
@@ -181,6 +201,7 @@ for metric in metric_list:
             RESULTS[filter]['var_mat'] = across_subj_var
             RESULTS[filter]['avg_div_var_mat'] = np.divide(all_subjs_avg, np.sqrt(across_subj_var), out=np.zeros_like(all_subjs_avg), where=np.sqrt(across_subj_var)!=0)
             RESULTS[filter]['sim_distribution'] = sim_distribution
+            RESULTS[filter]['overall_stat'] = {'E_VAR': E_VAR, 'E_E': E_E, 'VAR_E': VAR_E}
             RESULTS[filter]['name_lst'] = measure_name_lst
 
     ALL_RESULTS['dFC_similarity_overall'][metric] = deepcopy(RESULTS)
