@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from copy import deepcopy
 import os
 
-sys.path.append('./BIC_codes/')
+# sys.path.append('./BIC_codes/')
 from functions.dFC_funcs import *
 from functions.post_analysis_funcs import *
 
@@ -34,7 +34,7 @@ plot_sample_dFC(D=RESULTS, x='samples',
     normalize=False,
     disp_diag=False,
     save_image=save_image, output_root=output_root+'dFC_sample/', 
-    fix_lim=False, center_0=False, 
+    fix_lim=False, center_0=True, 
     node_networks=node_networks, segmented=False 
 )
 
@@ -70,6 +70,12 @@ joint_dist_plot(data=RESULTS,
 
 ################################# dFC Similarity #################################
 
+RESULTS = ALL_RESULTS['dFC_similarity_overall']['spearman']['session_Rest1_LR']['overall_stat']
+print('Average similarity of all pairs (E_E) = ', RESULTS['E_E'])
+print('Variance of average similarity across pairs (VAR_E) = ', RESULTS['VAR_E'], ' and std = ', np.sqrt(RESULTS['VAR_E']))
+print('Average variance of similarity across subjects (E_VAR) = ', RESULTS['E_VAR'])
+print('ratio of variances (VAR_E / E_VAR) = ', RESULTS['VAR_E']/RESULTS['E_VAR'])
+
 ################# whole subject #################
 '''
     - corr((all dFC timepoints of one Subj using method_i), (all dFC timepoints of one Subj using method_j)) -> avg(corr) and var(corr)
@@ -85,7 +91,7 @@ for metric in ALL_RESULTS['dFC_similarity_overall'] :
 
     ############ VISUALIZE ############
     for key in keys_lst:
-        if key=='name_lst' or key=='sim_distribution':
+        if key=='name_lst' or key=='sim_distribution' or key=='overall_stat':
             continue
         visualize_sim_mat(RESULTS, mat_key=key, title=metric+' '+key, 
                                         name_lst_key='name_lst', 

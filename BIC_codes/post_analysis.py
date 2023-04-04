@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from copy import deepcopy
 import os
 
-sys.path.append('./BIC_codes/')
+# sys.path.append('./BIC_codes/')
 from functions.dFC_funcs import *
 from functions.post_analysis_funcs import *
 
@@ -231,6 +231,8 @@ for feature2extract in feature2extract_list:
         for s in ALL_RECORDS:
             SUBJs_output = np.load(assessment_results_root+FOLDER_name+s, allow_pickle='True').item()
             # SUBJs_output[filter]['feature_based'][feature2extract] = (sample, method, method)
+            if np.any(np.isnan(np.mean(SUBJs_output[filter]['feature_based'][feature2extract], axis=0))):
+                continue
             all_subjs_sim_mat.append(np.mean(SUBJs_output[filter]['feature_based'][feature2extract], axis=0))
 
         measure_name_lst = [measure.measure_name for measure in SUBJs_output[filter]['measure_lst']]
@@ -255,6 +257,11 @@ for filter in ['default_values']:
     for s in ALL_RECORDS:
         SUBJs_output = np.load(assessment_results_root+FOLDER_name+s, allow_pickle='True').item()
         # SUBJs_output[filter]['feature_based'][feature2extract] = (sample, method, method)
+        if (
+            np.any(np.isnan(np.mean(SUBJs_output[filter]['feature_based']['spatial'], axis=0))) 
+            or np.any(np.isnan(np.mean(SUBJs_output[filter]['feature_based']['temporal'], axis=0)))
+        ):
+            continue
         all_subjs_spatial_sim_mat.append(np.mean(SUBJs_output[filter]['feature_based']['spatial'], axis=0))
         all_subjs_temporal_sim_mat.append(np.mean(SUBJs_output[filter]['feature_based']['temporal'], axis=0))
 
@@ -563,7 +570,11 @@ for filter in ['default_values']:
     RESULTS = {}
     RESULTS['var_over_time'] = np.divide(var_over_time, np.max(var_over_time))
     RESULTS['var_over_method'] = np.divide(var_over_method, np.max(var_over_method))
-    RESULTS['var_over_method/var_over_time'] = np.divide(var_over_method, var_over_time) - 1
+    RESULTS['var_over_method/var_over_time'] = np.divide(
+                                                        var_over_method, var_over_time, 
+                                                        out=np.zeros_like(var_over_method), 
+                                                        where=var_over_time!=0
+                                                        ) - 1 
     RESULTS['var_over_method*var_over_time'] = np.multiply(var_over_method, var_over_time)
     for key in RESULTS:
         RESULTS[key] = rank_norm(RESULTS[key])
