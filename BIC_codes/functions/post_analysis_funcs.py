@@ -9,6 +9,9 @@ Created on Wed Feb 8 2023
 import numpy as np
 import scipy.cluster.hierarchy as shc
 import scipy.spatial.distance as ssd
+import statsmodels.api as sm
+from statsmodels.formula.api import ols
+
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 from nilearn.plotting import plot_markers
@@ -706,6 +709,22 @@ def make_sim_distribution(sim_mats_lst, name_lst, zip_names=True):
                 output[name_i_used][name_j_used][''].append('sim')
     return output
 
+def two_way_anova(data):
+    '''
+    perform two-way anova
+    target: sim
+    factor1: session
+    factor2: direction
+    '''
+    df = pd.DataFrame(data)
+
+    # Performing two-way ANOVA
+    model = ols('sim ~ C(session) + C(direction) +\
+    C(session):C(direction)',
+                data=df).fit()
+    
+    return sm.stats.anova_lm(model, type=2)
+    
 def convert_pvalue_to_asterisks(pvalue):
     if pvalue <= 0.0001:
         return "****"

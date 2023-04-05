@@ -119,6 +119,31 @@ for metric in ALL_RESULTS['dFC_similarity_overall'] :
             title='Hierarchical Clustering of Methods ' + filter+' using '+metric, 
             save_image=save_image, output_root=output_root+'dFC_similarity/'+metric+'/'
         )
+
+################# session ANOVA #################
+
+RESULTS = ALL_RESULTS['session_ANOVA'] 
+
+data = {
+    'measure_pair': list(), 
+    'session p-value': list(), 
+    'direction p-value': list(), 
+    'session * direction p-value': list()
+    }
+for i, measure_i in enumerate(RESULTS):
+    for j, measure_j in enumerate(RESULTS[measure_i]):
+        result = RESULTS[measure_i][measure_j]
+        data['measure_pair'].append(measure_i+' and '+measure_j)
+        data['session p-value'].append(result['PR(>F)'][0])
+        data['direction p-value'].append(result['PR(>F)'][1])
+        data['session * direction p-value'].append(result['PR(>F)'][2])
+
+df = pd.DataFrame({key: data[key] for key in data if key!='measure_pair'}, index=data['measure_pair'])
+# pd.options.display.float_format = '{:,.4f}'.format
+p = df.applymap(lambda x: ''.join(['*' for t in [.05, .01, .001] if x<=t]))
+p = df.round(5).astype(str) + p
+print(p)
+
 ################# feature-based #################
 '''
     - spatial

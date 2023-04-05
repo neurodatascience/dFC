@@ -205,7 +205,45 @@ for metric in metric_list:
             RESULTS[filter]['name_lst'] = measure_name_lst
 
     ALL_RESULTS['dFC_similarity_overall'][metric] = deepcopy(RESULTS)
-    
+
+################# session ANOVA #################
+'''
+    - performing a two-way ANOVA test to investigate the effect of direction (LR/RL)
+    and session on the observed similarity values
+'''
+sim_RESULTS = ALL_RESULTS['dFC_similarity_overall']['spearman']
+# sim_RESULTS[filter]['sim_distribution'][measure_i][measure_j]['sim']
+
+data = {}
+for filter in sim_RESULTS:
+    #session_Rest1_LR
+    session = filter[filter.index('Rest'):filter.index('Rest')+5] #session_Rest1_LR
+    direction = filter[filter.index('Rest')+6:filter.index('Rest')+8]
+
+    sim_distribution_all = sim_RESULTS[filter]['sim_distribution']
+    for i, measure_i in enumerate(sim_distribution_all):
+        for j, measure_j in enumerate(sim_distribution_all[measure_i]):
+            sim_distribution = sim_distribution_all[measure_i][measure_j]
+
+            if not measure_i in data:
+                data[measure_i] = {}
+            if not measure_j in data[measure_i]:
+                data[measure_i][measure_j] = {'sim': list(), 'session': list(), 'direction': list()}
+
+            data[measure_i][measure_j]['sim'].extend(sim_distribution['sim'])
+            data[measure_i][measure_j]['session'].extend([session for sim in sim_distribution['sim']])
+            data[measure_i][measure_j]['direction'].extend([direction for sim in sim_distribution['sim']])
+            
+RESULTS = {}
+for i, measure_i in enumerate(data):
+    for j, measure_j in enumerate(data[measure_i]):
+        
+        if not measure_i in RESULTS:
+            RESULTS[measure_i] = {}
+        RESULTS[measure_i][measure_j] = two_way_anova(data[measure_i][measure_j])
+
+ALL_RESULTS['session_ANOVA'] = deepcopy(RESULTS)
+
 ################# feature-based #################
 '''
     - spatial
