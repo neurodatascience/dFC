@@ -106,8 +106,9 @@ for metric in ALL_RESULTS['dFC_similarity_overall'] :
     ############ Hierarchical Clustering ############
     for filter in ['session_Rest1_LR']:
         if metric=='MI':
-            normalized_mat = np.divide(RESULTS[filter]['avg_mat'], np.max(RESULTS[filter]['avg_mat']))
-            dist_mat = 1 - normalized_mat
+            if np.any(RESULTS[filter]['avg_mat']>1):
+                print('MI values cannot be converted to distances.')
+            dist_mat = 1 - RESULTS[filter]['avg_mat']
         elif metric=='euclidean_distance':
             dist_mat = RESULTS[filter]['avg_mat']
         else:
