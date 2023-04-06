@@ -590,6 +590,10 @@ def dist_mat_dendo(dist_mat, labels,
     title='', \
     save_image=False, output_root=None, \
     ):
+    '''
+    if var_mat is provided, confidence intervals (CI)
+    of the distances will be demonstrated.
+    '''
 
     sns.set_context("paper", 
         font_scale=3.5, 
@@ -630,17 +634,21 @@ def dist_mat_dendo(dist_mat, labels,
             std_distArray = ssd.squareform(dist_mat - std_mat) 
             Z_min = shc.linkage(std_distArray, method='ward')
 
+            error_flag = False
             for idx, clstr in enumerate(Z):
                 if (Z[idx][0]!=Z_min[idx][0] 
                 or Z[idx][1]!=Z_min[idx][1]
                 or Z[idx][3]!=Z_min[idx][3]
                 ):
-                    warnings.warn(
-                        'Error in computing CI.',
-                        UserWarning
-                    )
+                    error_flag = True
+            if error_flag:
+                warnings.warn(
+                    'Error in computing CI.',
+                    UserWarning
+                )
 
-            for n, (i, d) in enumerate(zip(dend['icoord'], dend['dcoord'])):
+            max_y_lim = None
+            for i, d in zip(dend['icoord'], dend['dcoord']):
                 # if n==len(Z)-1:
                 #     continue
                 # we have to match the distances in dcoord
@@ -676,7 +684,11 @@ def dist_mat_dendo(dist_mat, labels,
                             fontweight= 'bold',
                             textcoords='offset points',
                             va='top', ha='center')
-                plt.ylim(0, 1.1)
+                if max_y_lim is None:
+                    max_y_lim = y+Z_std
+                else:
+                    max_y_lim = max(y+Z_std, max_y_lim)
+            plt.ylim(0, max_y_lim*1.1)
                 
     if show_title:
         plt.title(title, fontsize=15)
