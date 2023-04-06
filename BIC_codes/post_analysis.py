@@ -745,12 +745,29 @@ for filter in ['default_values']:
 
 ALL_RESULTS['randomization']['sim_with_static_FC'] = deepcopy(RESULTS)
 
-########### Shuffled time ###########
+########### Shuffled ###########
 
 '''
 find the similarity between the dFC obtained by each method 
-but with randomized temporal order
+but with randomized temporal(time)/spatial(region)/all(both) order
+ - temporal: find the similarity between the dFC obtained by each method 
+            but with randomized temporal order. The null keeps the spatial 
+            order but not the temporal orders
+ - spatial: find the similarity between the dFC obtained by each method 
+            but with randomized spatial order. The null keeps the temporal 
+            order but not the spatial orders
+ - temporal: find the similarity between the dFC obtained by each method 
+            but with randomized both temporal AND spatial order. The null keeps 
+            neither the spatial order nor the temporal order
 '''
+metric = 'spearman'
+modes_lst = [
+    'temporal',
+    'spatial',
+    'all'
+]
+ALL_RESULTS['randomization']['shuffled'] = {'similarity_dict': {}, 'modes_lst': modes_lst}
+
 for filter in ['default_values']:
 
     all_subjs_sim_mat = list()
@@ -773,18 +790,21 @@ for filter in ['default_values']:
             dFC_mat = SUBJs_output[filter]['dFCM_samples'][str(i)]
             dFC_dict[zip_name(measure.measure_name)] = dFC_mat
 
-        output = randomize_time(dFC_dict, N=num_randomization)
+        for mode in modes_lst:
+            key = mode+'_shuffle_sim'
+            output = randomized_dFC_sim(dFC_dict, N=num_randomization, mode=mode)
 
-        for measure_i_name in output:
-            for measure_j_name in output[measure_i_name]:
+            for measure_i_name in output:
+                for measure_j_name in output[measure_i_name]:
 
-                if not measure_i_name in RESULTS:
-                    RESULTS[measure_i_name] = {}
-                if not measure_j_name in RESULTS[measure_i_name]:
-                    RESULTS[measure_i_name][measure_j_name] = {'sim':list(), '':list()}
-            
-                RESULTS[measure_i_name][measure_j_name]['sim'].extend(output[measure_i_name][measure_j_name]['sim'])
-                RESULTS[measure_i_name][measure_j_name][''].extend(output[measure_i_name][measure_j_name][''])
+                    if not measure_i_name in RESULTS:
+                        RESULTS[measure_i_name] = {}
+                    if not measure_j_name in RESULTS[measure_i_name]:
+                        RESULTS[measure_i_name][measure_j_name] = {}
+                    if not key in RESULTS[measure_i_name][measure_j_name]:
+                        RESULTS[measure_i_name][measure_j_name][key] = list()
+                
+                    RESULTS[measure_i_name][measure_j_name][key].extend(output[measure_i_name][measure_j_name]['sim'])
 
     for measure_i_name in output:
         for measure_j_name in output[measure_i_name]:
@@ -792,9 +812,9 @@ for filter in ['default_values']:
             # change diagonal from 0 to 1
             if measure_i_name==measure_j_name:
                 sim = 1
-            RESULTS[measure_i_name][measure_j_name]['actual_sim'] = [sim for item in RESULTS[measure_i_name][measure_j_name]['sim']]
+            RESULTS[measure_i_name][measure_j_name]['actual_sim'] = [sim for item in RESULTS[measure_i_name][measure_j_name][key]]
 
-ALL_RESULTS['randomization']['shuffled_time'] = deepcopy(RESULTS)
+ALL_RESULTS['randomization']['shuffled']['similarity_dict'] = RESULTS
 
 ########### Random state time course ###########
 

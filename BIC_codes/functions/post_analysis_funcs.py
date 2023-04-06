@@ -23,7 +23,7 @@ from copy import deepcopy
 import sys
 
 sys.path.append('./../git_codes/BIC_codes/')
-from functions.dFC_funcs import dFC_mat2vec, visualize_conn_mat_dict
+from functions.dFC_funcs import dFC_mat2vec, visualize_conn_mat_dict, mat_reorder
 
 ################################# Parameters ####################################
 
@@ -866,6 +866,85 @@ def randomize_time(dFC_dict, N):
 
     return output
 
+
+def suffle_dFC(dFC_mat, mode):
+    '''
+    dFC_mat = ndarray(time, region, region)
+    mode can be 'temporal', 'spatial',
+    or 'all'
+    '''
+    new_dFC_mat = deepcopy(dFC_mat)
+    if mode=='temporal':
+        n_time = new_dFC_mat.shape[0]
+        new_order = np.random.choice(n_time, n_time, replace=False)
+        new_dFC_mat = new_dFC_mat[new_order, :, :]
+    elif mode=='spatial':
+        n_region = new_dFC_mat.shape[1]
+        new_order = np.random.choice(n_region, n_region, replace=False)
+        for k, mat in enumerate(new_dFC_mat):
+            new_dFC_mat[k, :, :] = mat_reorder(new_dFC_mat[k, :, :], new_order)
+    elif mode=='all':
+        #spatial
+        n_region = new_dFC_mat.shape[1]
+        new_order_regions = np.random.choice(n_region, n_region, replace=False)
+        for k, mat in enumerate(new_dFC_mat):
+            new_dFC_mat[k, :, :] = mat_reorder(new_dFC_mat[k, :, :], new_order_regions)
+        #temporal
+        n_time = new_dFC_mat.shape[0]
+        new_order_time = np.random.choice(n_time, n_time, replace=False)
+        new_dFC_mat = new_dFC_mat[new_order_time, :, :]
+
+    return new_dFC_mat
+
+
+def randomized_dFC_sim(dFC_dict, N, mode):
+    '''
+    mode can be 'temporal', 'spatial',
+    or 'all'
+    'spatial': this will result in different methods having
+    different spatial/region orders but still the
+    same temporal order
+    'temporal': this will result in different methods having
+    different temporal orders but still the
+    same spatial order
+    'all': this will result in different methods having
+    different temporal orders AND different spatial order
+    '''
+    output = {}
+    for n in range(N):
+
+        for i, measure_i_name in enumerate(dFC_dict):
+            
+            dFC_mat_i = dFC_dict[measure_i_name]
+
+            # randomize the spatial (regions) order
+            dFC_mat_i = suffle_dFC(dFC_mat_i, mode=mode)
+
+            dFC_mat_i_vec = dFC_mat2vec(dFC_mat_i)
+
+            for j, measure_j_name in enumerate(dFC_dict):
+            
+                if j>i:
+                    continue
+                if not measure_i_name in output:
+                    output[measure_i_name] = {}
+                if not measure_j_name in output[measure_i_name]:
+                    output[measure_i_name][measure_j_name] = {'sim':list(), '':list()}
+
+                dFC_mat_j = dFC_dict[measure_j_name]
+
+                # randomize the temporal order
+                dFC_mat_j = suffle_dFC(dFC_mat_j, mode=mode)
+
+                dFC_mat_j_vec = dFC_mat2vec(dFC_mat_j)
+
+                sim, p = stats.spearmanr(dFC_mat_i_vec.flatten(), dFC_mat_j_vec.flatten())
+                output[measure_i_name][measure_j_name]['sim'].append(sim)
+                output[measure_i_name][measure_j_name][''].append('sim')
+
+    return output
+
+
 def dFC_rand_generator(FCS, n_time):
     '''
     generate a dFC mat of length n_time 
@@ -878,6 +957,7 @@ def dFC_rand_generator(FCS, n_time):
 
 def dFC_rand_sim(FCS_dict, n_time, N):
     '''
+    for random state TC similarity assessment
     '''
     output = {}
     for n in range(N):

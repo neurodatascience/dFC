@@ -59,14 +59,14 @@ for measure in ALL_RESULTS['measure_lst']:
 
 ################################# dFC values distributions #################################
 
-# RESULTS = ALL_RESULTS['dFC_values_dist']
+RESULTS = ALL_RESULTS['dFC_values_dist']
 
-# ############ VISUALIZE ############
+############ VISUALIZE ############
 
-# joint_dist_plot(data=RESULTS,
-#     title='dFC values distributions',
-#     save_image=save_image, output_root=output_root+'indiv_prop/'
-#     )
+joint_dist_plot(data=RESULTS,
+    title='dFC values distributions',
+    save_image=save_image, output_root=output_root+'indiv_prop/'
+    )
 
 ################################# dFC Similarity #################################
 
@@ -450,20 +450,23 @@ cat_plot(data=RESULTS, x='dFC_method', y='sim',
         save_image=save_image, output_root=output_root+'randomization/'
         )
 
-########### Shuffled time ###########
+########### Shuffled ###########
 
 '''
 find the similarity between the dFC obtained by each method 
-but with randomized temporal order
+but with randomized temporal/spatial/all order
 '''
 
-RESULTS = ALL_RESULTS['randomization']['shuffled_time'] 
+RESULTS = ALL_RESULTS['randomization']['shuffled']['similarity_dict']
+modes_lst = ALL_RESULTS['randomization']['shuffled']['modes_lst']
 
 ############ VISUALIZE ############
-pairwise_cat_plots(RESULTS, y='sim', z='actual_sim',
-    title='randomized time similarity',
-    save_image=save_image, output_root=output_root+'randomization/'
-    )
+for mode in modes_lst:
+    key = mode+'_shuffle_sim'
+    pairwise_cat_plots(RESULTS, y=key, z='actual_sim',
+        title=mode+' shuffled similarity',
+        save_image=save_image, output_root=output_root+'randomization/'
+        )
 
 ########### Random state time course ###########
 

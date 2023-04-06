@@ -70,6 +70,10 @@ def mat_reorder(A, new_order):
     new_order = find_new_order(old_list, new_list)
     A_sorted is a copy of A
     '''
+    assert (
+        len(new_order)==A.shape[0]
+        and len(new_order)==A.shape[1]
+    ), 'dimension mismatch in reordering.'
     A_sorted = deepcopy(A)
 
     A_sorted = [[A_sorted[i][j] for j in new_order] for i in new_order]
