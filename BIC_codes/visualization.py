@@ -116,6 +116,7 @@ for metric in ALL_RESULTS['dFC_similarity_overall'] :
         # diagonal values of dist_mat must equal exactly zero
         np.fill_diagonal(dist_mat, 0)
         dist_mat_dendo(dist_mat=dist_mat, labels=RESULTS[filter]['name_lst'], 
+            var_mat=RESULTS[filter]['var_mat'],
             title='Hierarchical Clustering of Methods ' + filter+' using '+metric, 
             save_image=save_image, output_root=output_root+'dFC_similarity/'+metric+'/'
         )
@@ -176,6 +177,7 @@ for feature2extract in ALL_RESULTS['dFC_similarity_feature_based']:
         # diagonal values of dist_mat must equal exactly zero
         np.fill_diagonal(dist_mat, 0)
         dist_mat_dendo(dist_mat=dist_mat, labels=RESULTS[filter]['name_lst'], 
+            var_mat=RESULTS[filter]['var_mat'],
             title='Hierarchical Clustering of Methods ' + filter+' using '+feature2extract, 
             save_image=save_image, output_root=output_root+'feature_based/'+feature2extract+'/'
         )
@@ -222,6 +224,7 @@ for graph_property in ALL_RESULTS['dFC_similarity_graph']['spatial']:
         # diagonal values of dist_mat must equal exactly zero
         np.fill_diagonal(dist_mat, 0)
         dist_mat_dendo(dist_mat=dist_mat, labels=RESULTS[filter]['name_lst'], 
+            var_mat=RESULTS[filter]['var_mat'],
             title='Hierarchical Clustering of Methods ' + filter+' using '+ 'spatial '+ graph_property, 
             save_image=save_image, output_root=output_root+'graph_based/'+graph_property+'/'
         )

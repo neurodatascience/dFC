@@ -6,6 +6,7 @@ Created on Wed Feb 8 2023
 @author: mte
 """
 
+import warnings
 import numpy as np
 import scipy.cluster.hierarchy as shc
 import scipy.spatial.distance as ssd
@@ -584,7 +585,9 @@ def visualize_sim_mat(data, mat_key, title='',
     else:
         plt.show()
 
-def dist_mat_dendo(dist_mat, labels, title='', \
+def dist_mat_dendo(dist_mat, labels, 
+    var_mat=None,
+    title='', \
     save_image=False, output_root=None, \
     ):
 
@@ -602,7 +605,79 @@ def dist_mat_dendo(dist_mat, labels, title='', \
     fig = plt.figure(figsize=(width, 5))
     ax = fig.add_subplot(1, 1, 1)    
     with mpl.rc_context({'lines.linewidth': 3}):
-        dend = shc.dendrogram(shc.linkage(distArray, method='ward'), distance_sort='ascending', no_plot=False, labels=labels)
+        Z = shc.linkage(distArray, method='ward')
+        dend = shc.dendrogram(Z, distance_sort='ascending', no_plot=False, labels=labels)
+
+        # show confidence interval of distances
+        if not var_mat is None:
+
+            # finding linkage corresponding to 
+            # the end of CI
+            # it is easier to use -std than +std
+            # However, it is symmetrical, so there
+            # is no diff.
+            if not np.allclose(var_mat, var_mat.T):
+                warnings.warn(
+                    'var_mat not symmetric.',
+                    UserWarning
+                )
+            if not np.all(np.diag(var_mat)==0):
+                warnings.warn(
+                    'diag values of var_mat are not zero.',
+                    UserWarning
+                )
+            std_mat = np.sqrt(var_mat)
+            std_distArray = ssd.squareform(dist_mat - std_mat) 
+            Z_min = shc.linkage(std_distArray, method='ward')
+
+            for idx, clstr in enumerate(Z):
+                if (Z[idx][0]!=Z_min[idx][0] 
+                or Z[idx][1]!=Z_min[idx][1]
+                or Z[idx][3]!=Z_min[idx][3]
+                ):
+                    warnings.warn(
+                        'Error in computing CI.',
+                        UserWarning
+                    )
+
+            for n, (i, d) in enumerate(zip(dend['icoord'], dend['dcoord'])):
+                # if n==len(Z)-1:
+                #     continue
+                # we have to match the distances in dcoord
+                # with those in Z, because the orders are not
+                # the same
+                count = 0
+                for idx, clstr in enumerate(Z):
+                    if np.isclose(Z[idx][2], d[1]):
+                        count += 1
+                        Z_std = np.abs(Z[idx][2] - Z_min[idx][2])
+
+                if count > 1 or count==0:
+                    warnings.warn(
+                        'Error in finding std of linkage.',
+                        UserWarning
+                    )
+
+                x = 0.5 * sum(i[1:3])
+                y = d[1]
+                ci_line_y = np.linspace(y-Z_std, y+Z_std, 100)
+                ci_line_x = x * np.ones(100)
+                # cut start and the end for better
+                # visualization
+                ci_line_y = ci_line_y[5:-5]
+                ci_line_x = ci_line_x[5:-5]
+
+                plt.plot(ci_line_x, ci_line_y, 'black')
+                plt.plot(x, y-Z_std, 'b_', markersize=15, linewidth=15)
+                plt.plot(x, y+Z_std, 'b_', markersize=15, linewidth=15)
+                plt.plot(x, y, 'ro')
+                plt.annotate("%.2g" % y, (x, y), xytext=(15, 13),
+                            fontsize = 11,
+                            fontweight= 'bold',
+                            textcoords='offset points',
+                            va='top', ha='center')
+                plt.ylim(0, 1.1)
+                
     if show_title:
         plt.title(title, fontsize=15)
     ax.tick_params(axis='x', which='major', labelsize=15)
