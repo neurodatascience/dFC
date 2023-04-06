@@ -59,22 +59,25 @@ for measure in ALL_RESULTS['measure_lst']:
 
 ################################# dFC values distributions #################################
 
-RESULTS = ALL_RESULTS['dFC_values_dist']
+# RESULTS = ALL_RESULTS['dFC_values_dist']
 
-############ VISUALIZE ############
+# ############ VISUALIZE ############
 
-joint_dist_plot(data=RESULTS,
-    title='dFC values distributions',
-    save_image=save_image, output_root=output_root+'indiv_prop/'
-    )
+# joint_dist_plot(data=RESULTS,
+#     title='dFC values distributions',
+#     save_image=save_image, output_root=output_root+'indiv_prop/'
+#     )
 
 ################################# dFC Similarity #################################
 
 RESULTS = ALL_RESULTS['dFC_similarity_overall']['spearman']['session_Rest1_LR']['overall_stat']
-print('Average similarity of all pairs (E_E) = ', RESULTS['E_E'])
-print('Variance of average similarity across pairs (VAR_E) = ', RESULTS['VAR_E'], ' and std = ', np.sqrt(RESULTS['VAR_E']))
-print('Average variance of similarity across subjects (E_VAR) = ', RESULTS['E_VAR'])
-print('ratio of variances (VAR_E / E_VAR) = ', RESULTS['VAR_E']/RESULTS['E_VAR'])
+text_file = open(output_root+'dFC_similarity/overall_stat.txt', 'wt')
+text_file.write('Average similarity of all pairs (E_E) = '+ str(RESULTS['E_E'])+'\n')
+text_file.write('Variance of average similarity across pairs (VAR_E) = '+ str(RESULTS['VAR_E'])+ 
+                ' and std = '+ str(np.sqrt(RESULTS['VAR_E']))+'\n')
+text_file.write('Average variance of similarity across subjects (E_VAR) = '+ str(RESULTS['E_VAR'])+'\n')
+text_file.write('ratio of variances (VAR_E / E_VAR) = '+ str(RESULTS['VAR_E']/RESULTS['E_VAR'])+'\n')
+text_file.close()
 
 ################# whole subject #################
 '''
