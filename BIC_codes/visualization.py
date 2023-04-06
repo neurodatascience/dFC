@@ -199,7 +199,7 @@ scatter_data = ALL_RESULTS['spatial_vs_temporal_similarity']
 scatter_plot(
     data=scatter_data, x='temporal', y='spatial', 
     labels='labels', title='spatial similarity vs temporal similarity',
-    equal_axis_lim=True, show_x_equal_y=False,
+    equal_axis_lim=False, show_x_equal_y=False,
     save_image=save_image, output_root=output_root+'variation/'
 )
     
