@@ -1,9 +1,8 @@
 
-import sys
 import numpy as np
 import matplotlib.pyplot as plt
 from copy import deepcopy
-import os
+from pathlib import Path
 
 # sys.path.append('./BIC_codes/')
 from functions.dFC_funcs import *
@@ -71,7 +70,13 @@ joint_dist_plot(data=RESULTS,
 ################################# dFC Similarity #################################
 
 RESULTS = ALL_RESULTS['dFC_similarity_overall']['spearman']['session_Rest1_LR']['overall_stat']
-text_file = open(output_root+'dFC_similarity/overall_stat.txt', 'wt')
+
+folder = output_root+'dFC_similarity'
+if not os.path.exists(folder):
+    os.makedirs(folder)
+filename = Path(folder+'/overall_stat.txt')
+filename.touch(exist_ok=True)
+text_file = open(filename, 'wt')
 text_file.write('Average similarity of all pairs (E_E) = '+ str(RESULTS['E_E'])+'\n')
 text_file.write('Variance of average similarity across pairs (VAR_E) = '+ str(RESULTS['VAR_E'])+ 
                 ' and std = '+ str(np.sqrt(RESULTS['VAR_E']))+'\n')
@@ -152,7 +157,12 @@ if 'session_ANOVA' in ALL_RESULTS:
     # pd.options.display.float_format = '{:,.4f}'.format
     p = df.applymap(lambda x: ''.join(['*' for t in [.05, .01, .001] if x<=t]))
     p = df.round(5).astype(str) + p
-    print(p)
+    
+    # write the results to a csv file
+    folder = output_root+'dFC_similarity'
+    if not os.path.exists(folder):
+        os.makedirs(folder)
+    p.to_csv(folder+'/session_ANOVA.csv')
 
 ################# feature-based #################
 '''
