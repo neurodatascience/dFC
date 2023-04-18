@@ -466,7 +466,7 @@ def cat_plot(data, x, y,
 def visualize_sim_mat(data, mat_key, title='', 
     name_lst_key=None, 
     cmap='viridis',
-    annot=True, fmt=".2f",
+    annot=True, fmt=".2f", show_diag=False,
     save_image=False, output_root=None, axes=None, fig=None, 
     ):
 
@@ -545,7 +545,8 @@ def visualize_sim_mat(data, mat_key, title='',
 
         if annot:
             C_forlabels = C.copy()
-            np.fill_diagonal(C_forlabels, np.nan)
+            if not show_diag:
+                np.fill_diagonal(C_forlabels, np.nan)
             df = pd.DataFrame(C_forlabels)
             annot_labels = df.applymap(lambda v: '' if np.isnan(v) else str(round(v,2)))
         else:
@@ -558,14 +559,15 @@ def visualize_sim_mat(data, mat_key, title='',
             square=True, linewidth=2, linecolor='w'
         )
         axes[i].set_title(key, fontdict= { 'fontsize': 17, 'fontweight':'bold'})
-        im.set_xticklabels(im.get_xticklabels(), fontdict= { 'fontsize': 10, 'fontweight':'bold'})
-        im.set_yticklabels(im.get_yticklabels(), fontdict= { 'fontsize': 10, 'fontweight':'bold'})
+        im.set_xticklabels(im.get_xticklabels(), fontdict= { 'fontsize': 10, 'fontweight':'bold'}, rotation=90)
+        im.set_yticklabels(im.get_yticklabels(), fontdict= { 'fontsize': 10, 'fontweight':'bold'}, rotation=0)
 
     if not fig_flag:
+            
         fig.subplots_adjust(
-            bottom=0.1, \
-            top=0.85, \
-            left=0.1, \
+            bottom=0.1, 
+            top=0.85, 
+            left=0.1, 
             right=0.9,
         )
 
