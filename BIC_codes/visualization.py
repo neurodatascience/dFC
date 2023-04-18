@@ -57,15 +57,18 @@ for measure in ALL_RESULTS['measure_lst']:
             )
 
 ################################# dFC values distributions #################################
+dFC_dist_plot = False
 
-RESULTS = ALL_RESULTS['dFC_values_dist']
+if dFC_dist_plot:
+    
+    RESULTS = ALL_RESULTS['dFC_values_dist']
 
-############ VISUALIZE ############
+    ############ VISUALIZE ############
 
-joint_dist_plot(data=RESULTS,
-    title='dFC values distributions',
-    save_image=save_image, output_root=output_root+'indiv_prop/'
-    )
+    joint_dist_plot(data=RESULTS,
+        title='dFC values distributions',
+        save_image=save_image, output_root=output_root+'indiv_prop/'
+        )
 
 ################################# dFC Similarity #################################
 
@@ -376,6 +379,28 @@ visualize_conn_mat_2D_dict(RESULTS, node_networks=node_networks, segmented=True,
 
 RESULTS = ALL_RESULTS['var_across_func_conns'] 
 scatter_data = ALL_RESULTS['var_method_vs_time_across_func_conns_scatter'] 
+
+############ method var / time var ############
+
+ratio = list()
+for i, sample in enumerate(scatter_data['var_method']):
+    ratio.append(scatter_data['var_method'][i]/scatter_data['var_time'][i])
+ratio = np.mean(np.array(ratio))
+avg_var_time = np.mean(scatter_data['var_time'])
+avg_var_method = np.mean(scatter_data['var_method'])
+
+# write to a txt file
+folder = output_root+'variation'
+if not os.path.exists(folder):
+    os.makedirs(folder)
+filename = Path(folder+'/var_ratio.txt')
+filename.touch(exist_ok=True)
+text_file = open(filename, 'wt')
+text_file.write('Average of var method / var time ratio = '+ str(ratio)+'\n')
+text_file.write('Average var method = '+ str(avg_var_method)+'\n')
+text_file.write('Average var time = '+ str(avg_var_time)+'\n')
+text_file.write('Ratio of avg var method / avg var time = '+ str(avg_var_method/avg_var_time)+'\n')
+text_file.close()
 
 ############ VISUALIZE ############
 
