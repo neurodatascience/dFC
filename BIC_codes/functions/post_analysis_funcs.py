@@ -16,6 +16,7 @@ from statsmodels.formula.api import ols
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 from nilearn.plotting import plot_markers
+from matplotlib.colors import ListedColormap
 import seaborn as sns
 import pandas as pd
 import os
@@ -466,7 +467,8 @@ def cat_plot(data, x, y,
 def visualize_sim_mat(data, mat_key, title='', 
     name_lst_key=None, 
     cmap='viridis',
-    annot=True, fmt=".2f", show_diag=False,
+    annot=True, fmt=2, 
+    show_diag=False, show_sig=False, no_color=False,
     save_image=False, output_root=None, axes=None, fig=None, 
     ):
 
@@ -501,6 +503,9 @@ def visualize_sim_mat(data, mat_key, title='',
     )
 
     sns.set_style('white')
+
+    if no_color:
+        cmap = ListedColormap(['white'])
     
     if name_lst_key is None:
         fig_width = int(25*(len(data)/10))
@@ -548,15 +553,27 @@ def visualize_sim_mat(data, mat_key, title='',
             if not show_diag:
                 np.fill_diagonal(C_forlabels, np.nan)
             df = pd.DataFrame(C_forlabels)
-            annot_labels = df.applymap(lambda v: '' if np.isnan(v) else str(round(v,2)))
+            if show_sig:
+                annot_labels = df.applymap(lambda v: '' if np.isnan(v) else str(round(v, fmt))+''.join(['*' for t in [.05, .01, .001] if v<=t]))
+            else:
+                annot_labels = df.applymap(lambda v: '' if np.isnan(v) else str(round(v, fmt)))
         else:
             annot_labels = False
 
+        # borderlines color
+        if no_color:
+            linecolor = 'black'
+            annot_kws={'weight': 'bold'}
+        else:
+            linecolor = 'w'
+            annot_kws={}
+
         im = sns.heatmap(C, 
-            annot=annot_labels, fmt='', cmap=cmap, 
+            annot=annot_labels, annot_kws=annot_kws,
+            fmt='', cmap=cmap, 
             xticklabels=name_lst, yticklabels=name_lst, 
             ax=axes[i], cbar=cbar_flag,
-            square=True, linewidth=2, linecolor='w'
+            square=True, linewidth=2, linecolor=linecolor
         )
         axes[i].set_title(key, fontdict= { 'fontsize': 17, 'fontweight':'bold'})
         im.set_xticklabels(im.get_xticklabels(), fontdict= { 'fontsize': 10, 'fontweight':'bold'}, rotation=90)
@@ -586,6 +603,7 @@ def visualize_sim_mat(data, mat_key, title='',
         plt.close()
     else:
         plt.show()
+
 
 def dist_mat_dendo(dist_mat, labels, 
     var_mat=None,

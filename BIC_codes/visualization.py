@@ -140,32 +140,41 @@ for metric in ALL_RESULTS['dFC_similarity_overall'] :
 ################# session ANOVA #################
 
 if 'session_ANOVA' in ALL_RESULTS:
+
     RESULTS = ALL_RESULTS['session_ANOVA'] 
+    measure_lst = [measure.measure_name for measure in ALL_RESULTS['measure_lst']]
 
     data = {
-        'measure_pair': list(), 
-        'session p-value': list(), 
-        'direction p-value': list(), 
-        'session * direction p-value': list()
-        }
+        'day p-values': {
+                            'p_values':np.nan*np.ones((len(measure_lst), len(measure_lst))), 
+                            'measure_lst':measure_lst
+        }, 
+        'direction p-values': {
+                            'p_values':np.nan*np.ones((len(measure_lst), len(measure_lst))), 
+                            'measure_lst':measure_lst
+        }, 
+    }
+
     for i, measure_i in enumerate(RESULTS):
         for j, measure_j in enumerate(RESULTS[measure_i]):
             result = RESULTS[measure_i][measure_j]
-            data['measure_pair'].append(measure_i+' and '+measure_j)
-            data['session p-value'].append(result['PR(>F)'][0])
-            data['direction p-value'].append(result['PR(>F)'][1])
-            data['session * direction p-value'].append(result['PR(>F)'][2])
 
-    df = pd.DataFrame({key: data[key] for key in data if key!='measure_pair'}, index=data['measure_pair'])
-    # pd.options.display.float_format = '{:,.4f}'.format
-    p = df.applymap(lambda x: ''.join(['*' for t in [.05, .01, .001] if x<=t]))
-    p = df.round(5).astype(str) + p
-    
-    # write the results to a csv file
-    folder = output_root+'dFC_similarity'
-    if not os.path.exists(folder):
-        os.makedirs(folder)
-    p.to_csv(folder+'/session_ANOVA.csv')
+            index_i = measure_lst.index(unzip_name(measure_i))
+            index_j = measure_lst.index(unzip_name(measure_j))
+
+            data['day p-values']['p_values'][index_i, index_j] = result['PR(>F)'][0]
+            data['day p-values']['p_values'][index_j, index_i] = result['PR(>F)'][0]
+            data['direction p-values']['p_values'][index_i, index_j] = result['PR(>F)'][1]
+            data['direction p-values']['p_values'][index_j, index_i] = result['PR(>F)'][1]
+
+    ############ VISUALIZE ############
+
+    visualize_sim_mat(data, mat_key='p_values', title='session_ANOVA_test', 
+        name_lst_key='measure_lst', 
+        annot=True, fmt=2, 
+        show_diag=False, show_sig=True, no_color=True,
+        save_image=save_image, output_root=output_root+'dFC_similarity/'
+    )
 
 ################# feature-based #################
 '''
