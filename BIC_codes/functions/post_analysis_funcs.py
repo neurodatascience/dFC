@@ -604,15 +604,21 @@ def visualize_sim_mat(data, mat_key, title='',
     else:
         plt.show()
 
+def distance2Z(dist_mat, method='ward'):
+    # convert the redundant n*n square matrix form into a condensed nC2 array
+    distArray = ssd.squareform(dist_mat) 
+    Z = shc.linkage(distArray, method=method)
+    return Z
 
-def dist_mat_dendo(dist_mat, labels, 
-    var_mat=None,
+def dist_mat_dendo(Z, labels, 
+    distances_CI=None,
     title='', \
     save_image=False, output_root=None, \
     ):
     '''
-    if var_mat is provided, confidence intervals (CI)
-    of the distances will be demonstrated.
+    if distances_CI is provided, confidence intervals (CI)
+    of the distances will be shown. the order should be the same as 
+    Z
     '''
 
     sns.set_context("paper", 
@@ -622,55 +628,19 @@ def dist_mat_dendo(dist_mat, labels,
 
     sns.set_style('darkgrid')
 
-    # convert the redundant n*n square matrix form into a condensed nC2 array
-    distArray = ssd.squareform(dist_mat) 
-
-    width = int(2.5*dist_mat.shape[0])
+    width = int(2.5*len(Z))
     fig = plt.figure(figsize=(width, 5))
     ax = fig.add_subplot(1, 1, 1)    
     with mpl.rc_context({'lines.linewidth': 3}):
-        Z = shc.linkage(distArray, method='ward')
+
         dend = shc.dendrogram(Z, distance_sort='ascending', no_plot=False, labels=labels)
 
         # show confidence interval of distances
-        if not var_mat is None:
-
-            # finding linkage corresponding to 
-            # the end of CI
-            # it is easier to use -std than +std
-            # However, it is symmetrical, so there
-            # is no diff.
-            if not np.allclose(var_mat, var_mat.T):
-                warnings.warn(
-                    'var_mat not symmetric.',
-                    UserWarning
-                )
-            if not np.all(np.diag(var_mat)==0):
-                warnings.warn(
-                    'diag values of var_mat are not zero.',
-                    UserWarning
-                )
-            std_mat = np.sqrt(var_mat)
-            std_distArray = ssd.squareform(dist_mat - std_mat) 
-            Z_min = shc.linkage(std_distArray, method='ward')
-
-            error_flag = False
-            for idx, clstr in enumerate(Z):
-                if (Z[idx][0]!=Z_min[idx][0] 
-                or Z[idx][1]!=Z_min[idx][1]
-                or Z[idx][3]!=Z_min[idx][3]
-                ):
-                    error_flag = True
-            if error_flag:
-                warnings.warn(
-                    'Error in computing CI.',
-                    UserWarning
-                )
+        if not distances_CI is None:
 
             max_y_lim = None
             for i, d in zip(dend['icoord'], dend['dcoord']):
-                # if n==len(Z)-1:
-                #     continue
+                
                 # we have to match the distances in dcoord
                 # with those in Z, because the orders are not
                 # the same
@@ -678,7 +648,7 @@ def dist_mat_dendo(dist_mat, labels,
                 for idx, clstr in enumerate(Z):
                     if np.isclose(Z[idx][2], d[1]):
                         count += 1
-                        Z_std = np.abs(Z[idx][2] - Z_min[idx][2])
+                        Z_CI = distances_CI[idx]
 
                 if count > 1 or count==0:
                     warnings.warn(
@@ -688,7 +658,7 @@ def dist_mat_dendo(dist_mat, labels,
 
                 x = 0.5 * sum(i[1:3])
                 y = d[1]
-                ci_line_y = np.linspace(y-Z_std, y+Z_std, 100)
+                ci_line_y = np.linspace(y-Z_CI, y+Z_CI, 100)
                 ci_line_x = x * np.ones(100)
                 # cut start and the end for better
                 # visualization
@@ -696,18 +666,18 @@ def dist_mat_dendo(dist_mat, labels,
                 ci_line_x = ci_line_x[5:-5]
 
                 plt.plot(ci_line_x, ci_line_y, 'black')
-                plt.plot(x, y-Z_std, 'b_', markersize=15, linewidth=15)
-                plt.plot(x, y+Z_std, 'b_', markersize=15, linewidth=15)
-                plt.plot(x, y, 'ro')
+                plt.plot(x, y-Z_CI, 'b_', markersize=15, linewidth=15)
+                plt.plot(x, y+Z_CI, 'b_', markersize=15, linewidth=15)
+                plt.plot(x, y, 'ro', markersize=5)
                 plt.annotate("%.2g" % y, (x, y), xytext=(15, 13),
                             fontsize = 11,
                             fontweight= 'bold',
                             textcoords='offset points',
                             va='top', ha='center')
                 if max_y_lim is None:
-                    max_y_lim = y+Z_std
+                    max_y_lim = y+Z_CI
                 else:
-                    max_y_lim = max(y+Z_std, max_y_lim)
+                    max_y_lim = max(y+Z_CI, max_y_lim)
             plt.ylim(0, max_y_lim*1.1)
                 
     if show_title:
