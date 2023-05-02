@@ -127,15 +127,16 @@ for metric in ALL_RESULTS['dFC_similarity_overall'] :
         dist_mat = 0.5*(dist_mat + dist_mat.T)
         # diagonal values of dist_mat must equal exactly zero
         np.fill_diagonal(dist_mat, 0)
-        dist_mat_dendo(dist_mat=dist_mat, labels=RESULTS[filter]['name_lst'], 
+        Z = distance2Z(dist_mat, method='ward')
+        dist_mat_dendo(Z=Z, labels=RESULTS[filter]['name_lst'], 
             title='Hierarchical Clustering of Methods ' + filter+' using '+metric, 
             save_image=save_image, output_root=output_root+'dFC_similarity/'+metric+'/'
         )
-        dist_mat_dendo(dist_mat=dist_mat, labels=RESULTS[filter]['name_lst'], 
-            var_mat=RESULTS[filter]['var_mat'],
-            title='Hierarchical Clustering of Methods (with CI) ' + filter+' using '+metric, 
-            save_image=save_image, output_root=output_root+'dFC_similarity/'+metric+'/'
-        )
+        # dist_mat_dendo(dist_mat=dist_mat, labels=RESULTS[filter]['name_lst'], 
+        #     var_mat=RESULTS[filter]['var_mat'],
+        #     title='Hierarchical Clustering of Methods (with CI) ' + filter+' using '+metric, 
+        #     save_image=save_image, output_root=output_root+'dFC_similarity/'+metric+'/'
+        # )
 
 ################# session ANOVA #################
 
@@ -207,15 +208,16 @@ for feature2extract in ALL_RESULTS['dFC_similarity_feature_based']:
         dist_mat = 0.5*(dist_mat + dist_mat.T)
         # diagonal values of dist_mat must equal exactly zero
         np.fill_diagonal(dist_mat, 0)
-        dist_mat_dendo(dist_mat=dist_mat, labels=RESULTS[filter]['name_lst'], 
+        Z = distance2Z(dist_mat, method='ward')
+        dist_mat_dendo(Z=Z, labels=RESULTS[filter]['name_lst'], 
             title='Hierarchical Clustering of Methods ' + filter+' using '+feature2extract, 
             save_image=save_image, output_root=output_root+'feature_based/'+feature2extract+'/'
         )
-        dist_mat_dendo(dist_mat=dist_mat, labels=RESULTS[filter]['name_lst'], 
-            var_mat=RESULTS[filter]['var_mat'],
-            title='Hierarchical Clustering of Methods (with CI) ' + filter+' using '+feature2extract, 
-            save_image=save_image, output_root=output_root+'feature_based/'+feature2extract+'/'
-        )
+        # dist_mat_dendo(dist_mat=dist_mat, labels=RESULTS[filter]['name_lst'], 
+        #     var_mat=RESULTS[filter]['var_mat'],
+        #     title='Hierarchical Clustering of Methods (with CI) ' + filter+' using '+feature2extract, 
+        #     save_image=save_image, output_root=output_root+'feature_based/'+feature2extract+'/'
+        # )
 
 ############ Spatial vs. Temporal Scatter plot ############
     
@@ -259,15 +261,16 @@ for graph_property in ALL_RESULTS['dFC_similarity_graph']['spatial']:
         dist_mat = 0.5*(dist_mat + dist_mat.T)
         # diagonal values of dist_mat must equal exactly zero
         np.fill_diagonal(dist_mat, 0)
-        dist_mat_dendo(dist_mat=dist_mat, labels=RESULTS[filter]['name_lst'], 
+        Z = distance2Z(dist_mat, method='ward')
+        dist_mat_dendo(Z=Z, labels=RESULTS[filter]['name_lst'], 
             title='Hierarchical Clustering of Methods ' + filter+' using '+ 'spatial '+ graph_property, 
             save_image=save_image, output_root=output_root+'graph_based/'+graph_property+'/'
         )
-        dist_mat_dendo(dist_mat=dist_mat, labels=RESULTS[filter]['name_lst'], 
-            var_mat=RESULTS[filter]['var_mat'],
-            title='Hierarchical Clustering of Methods (with CI) ' + filter+' using '+ 'spatial '+ graph_property, 
-            save_image=save_image, output_root=output_root+'graph_based/'+graph_property+'/'
-        )
+        # dist_mat_dendo(dist_mat=dist_mat, labels=RESULTS[filter]['name_lst'], 
+        #     var_mat=RESULTS[filter]['var_mat'],
+        #     title='Hierarchical Clustering of Methods (with CI) ' + filter+' using '+ 'spatial '+ graph_property, 
+        #     save_image=save_image, output_root=output_root+'graph_based/'+graph_property+'/'
+        # )
 
 ################################# inter_subject similarity #################################
 
@@ -299,7 +302,8 @@ for subj_lvl_feature in ALL_RESULTS['subj_clustring']:
         dist_mat = 0.5*(dist_mat + dist_mat.T)
         # diagonal values of dist_mat must equal exactly zero
         np.fill_diagonal(dist_mat, 0)
-        dist_mat_dendo(dist_mat=dist_mat, labels=RESULTS['across_method'][session]['name_lst'], 
+        Z = distance2Z(dist_mat, method='ward')
+        dist_mat_dendo(Z=Z, labels=RESULTS['across_method'][session]['name_lst'], 
             title='Hierarchical Clustering of Methods ' + session +' using inter-subject similarity based on '+subj_lvl_feature, 
             save_image=save_image, output_root=output_root+'inter_subject/'+subj_lvl_feature+'/'
         )
