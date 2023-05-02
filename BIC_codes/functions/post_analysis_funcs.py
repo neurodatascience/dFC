@@ -623,7 +623,9 @@ def dist_mat_dendo(Z, labels,
 
     sns.set_context("paper", 
         font_scale=3.5, 
-        rc={"lines.linewidth": 3.0}
+        rc={"lines.linewidth": 3.0,
+            'font.weight': 'bold'
+            }
     )
 
     sns.set_style('darkgrid')
@@ -682,8 +684,15 @@ def dist_mat_dendo(Z, labels,
                 
     if show_title:
         plt.title(title, fontsize=15)
-    ax.tick_params(axis='x', which='major', labelsize=15)
-    ax.tick_params(axis='y', which='major', labelsize=15)    
+        
+    # set font size of the tick labels and make them bold
+    ax.tick_params(axis='x', which='major', labelsize=16)
+    ax.tick_params(axis='y', which='major', labelsize=16)   
+    tick_labels = ax.get_xticklabels() + ax.get_yticklabels()
+    for label in tick_labels:
+        label.set_fontweight('bold')
+
+    # save figure
     if save_image:
         folder = output_root[:output_root.rfind('/')]
         if not os.path.exists(folder):
