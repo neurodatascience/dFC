@@ -413,6 +413,7 @@ def cat_plot(data, x, y,
     scale_dist=False,
     log=False,
     title='',
+    y_lim=None,
     save_image=False, output_root=None
     ):
     '''
@@ -442,6 +443,11 @@ def cat_plot(data, x, y,
         g = sns.catplot(data=df, x=x, y=y, kind=kind,
             # errorbar=("pi", 95)
         )
+    elif kind=='box':
+        g = sns.catplot(data=df, x=x, y=y, kind=kind,
+                        width=0.25, fliersize=1.0
+            # errorbar=("pi", 95)
+        )
     else:
         g = sns.catplot(data=df, x=x, y=y, kind=kind,
             # errorbar=("pi", 95)
@@ -452,6 +458,16 @@ def cat_plot(data, x, y,
 
     g.fig.set_figwidth(fig_width)
     g.fig.set_figheight(fig_height)
+
+    # set font size of the tick labels and make them bold
+    # g.ax.tick_params(axis='x', which='major', labelsize=12)
+    # g.ax.tick_params(axis='y', which='major', labelsize=12)   
+    tick_labels = g.ax.get_xticklabels() + g.ax.get_yticklabels()
+    for label in tick_labels:
+        label.set_fontweight('bold')
+    if not y_lim is None:
+        g.ax.set_ylim(y_lim)
+
     if show_title:
         plt.title(title, fontsize=15)
     if save_image:
