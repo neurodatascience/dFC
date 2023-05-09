@@ -519,7 +519,7 @@ RESULTS = ALL_RESULTS['randomization']['sim_with_static_FC']
 
 ############ VISUALIZE ############
 cat_plot(data=RESULTS, x='dFC_method', y='sim', 
-        kind='violin',
+        kind='box',
         title='similarity with constant static FC',
         save_image=save_image, output_root=output_root+'randomization/'
         )
@@ -567,7 +567,7 @@ RESULTS = ALL_RESULTS[key_name]
 ############ VISUALIZE ############
 
 cat_plot(data=RESULTS, x='dFC_method', y='sim', 
-    kind='violin',
+    kind='box',
     scale_dist=False,
     title=key_name,
     save_image=save_image, output_root=output_root+'indiv_prop/'
@@ -581,7 +581,7 @@ RESULTS = ALL_RESULTS['adjacent_time_points']
 ############ VISUALIZE ############
 
 cat_plot(data=RESULTS, x='dFC_method', y=key_name, 
-    kind='violin',
+    kind='box',
     title=key_name,
     save_image=save_image, output_root=output_root+'indiv_prop/'
     )
@@ -597,7 +597,7 @@ RESULTS = ALL_RESULTS['transition_freq']
 ############ VISUALIZE ############
 
 cat_plot(data=RESULTS, x='dFC_method', y=key_name, 
-    kind='violin',
+    kind='box',
     title=key_name,
     save_image=save_image, output_root=output_root+'indiv_prop/'
     )
@@ -615,9 +615,10 @@ RESULTS = ALL_RESULTS['dwell_time']
 ############ VISUALIZE ############
 
 cat_plot(data=RESULTS, x='dFC_method', y=key_name, 
-    kind='violin',
+    kind='box',
     scale_dist=True,
     title=key_name,
+    y_lim=(0, 0.2),
     save_image=save_image, output_root=output_root+'indiv_prop/'
     )
 
