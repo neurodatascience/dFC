@@ -154,9 +154,21 @@ def mutual_information(X, Y, N_bins=100):
     nzs = pxy > 0 # Only non-zero pxy values contribute to the sum
     return np.sum(pxy[nzs] * np.log(pxy[nzs] / px_py[nzs]))
 
-def corr2distance(corr_mat):
-    # negative corr will be > 1.0
-    dist_mat = 1 - corr_mat
+def corr2distance(corr_mat, metric):
+    '''
+    metric can be: MI, euclidean_distance, spearman,
+    corr (pearson)
+    '''
+    if metric=='MI':
+        if np.any(corr_mat>1):
+            print('MI values cannot be converted to distances.')
+        # negative corr will be > 1.0
+        dist_mat = 1 - corr_mat
+    elif metric=='euclidean_distance':
+        dist_mat = corr_mat
+    else:
+        # negative corr will be > 1.0
+        dist_mat = 1 - corr_mat
     # dist_mat must be symmetric
     dist_mat = 0.5*(dist_mat + dist_mat.T)
     # diagonal values of dist_mat must equal exactly zero

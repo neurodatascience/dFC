@@ -211,6 +211,26 @@ for metric in metric_list:
 
     ALL_RESULTS['dFC_similarity_overall'][metric] = deepcopy(RESULTS)
 
+################# Hierarchical Clstr with Confidence Interval #################
+'''
+    - plot the most frequent hierclstr structures across subjects
+'''
+metric = 'spearman'
+
+for filter in ['default_values']:
+
+    Z_lst = list()
+    for s in ALL_RECORDS:
+        SUBJs_output = np.load(assessment_results_root+FOLDER_name+s, allow_pickle='True').item()
+        # SUBJs_output[filter]['all']['metric'] = (1, method, method)
+        sim_mat = np.squeeze(SUBJs_output[filter]['all'][metric])
+
+        dist_mat = corr2distance(sim_mat, metric=metric)
+        Z = distance2Z(dist_mat, method='ward')
+        Z_lst.append(Z)
+
+ALL_RESULTS['Hierclstr_CI'] = deepcopy(Z_lst)
+
 ################# session ANOVA #################
 '''
     - performing a two-way ANOVA test to investigate the effect of direction (LR/RL)

@@ -685,14 +685,14 @@ def dist_mat_dendo(Z, labels,
                 ci_line_x = ci_line_x[5:-5]
 
                 plt.plot(ci_line_x, ci_line_y, 'black')
-                plt.plot(x, y-Z_CI, 'b_', markersize=15, linewidth=15)
-                plt.plot(x, y+Z_CI, 'b_', markersize=15, linewidth=15)
-                plt.plot(x, y, 'ro', markersize=5)
-                plt.annotate("%.2g" % y, (x, y), xytext=(15, 13),
-                            fontsize = 11,
-                            fontweight= 'bold',
-                            textcoords='offset points',
-                            va='top', ha='center')
+                plt.plot(x, y-Z_CI, 'k_', markersize=15, linewidth=15)
+                plt.plot(x, y+Z_CI, 'k_', markersize=15, linewidth=15)
+                plt.plot(x, y, 'wo', markersize=5, mec='k')
+                # plt.annotate("%.2g" % y, (x, y), xytext=(15, 13),
+                #             fontsize = 11,
+                #             fontweight= 'bold',
+                #             textcoords='offset points',
+                #             va='top', ha='center')
                 if max_y_lim is None:
                     max_y_lim = y+Z_CI
                 else:
@@ -703,8 +703,8 @@ def dist_mat_dendo(Z, labels,
         plt.title(title, fontsize=15)
         
     # set font size of the tick labels and make them bold
-    ax.tick_params(axis='x', which='major', labelsize=16)
-    ax.tick_params(axis='y', which='major', labelsize=16)   
+    ax.tick_params(axis='x', which='major', labelsize=15)
+    ax.tick_params(axis='y', which='major', labelsize=15)   
     tick_labels = ax.get_xticklabels() + ax.get_yticklabels()
     for label in tick_labels:
         label.set_fontweight('bold')
@@ -1078,3 +1078,77 @@ def dFC_rand_sim(FCS_dict, n_time, N):
                 output[measure_i_name][measure_j_name][''].append('sim')
     return output
 
+############## Hierarchical Clustering ##############
+
+def correct_order(s):
+    list = s.split('-')
+    list = [int(item) for item in list]
+    list.sort()
+    return '-'.join(str(x) for x in list)
+
+def open_trees(Z, num_leaf):
+    '''
+    replace trees in Z by their leaves
+    '''
+    Z_copy = deepcopy(Z)
+    Z_new = []
+    for tree in Z_copy:
+        Z_new.append([tree[0], tree[1], tree[2], tree[3]])
+    encode_dict = {}
+    counter = num_leaf
+    for tree in Z_new:
+        if tree[0]>=num_leaf:
+            tree[0] = encode_dict[tree[0]]
+        else:
+            tree[0] = str(int(tree[0]))
+        if tree[1]>=num_leaf:
+            tree[1] = encode_dict[tree[1]]
+        else:
+            tree[1] = str(int(tree[1]))
+        encode_dict[counter] = tree[0]+'-'+tree[1]
+        encode_dict[counter] = correct_order(encode_dict[counter])
+        counter += 1
+    return Z_new
+
+def is_trees_equal(trees_1, trees_2):
+    '''
+    trees_2 is the reference
+    '''
+    for tree in trees_1:
+        if (not [tree[0], tree[1]] in trees_2) \
+            and (not [tree[1], tree[0]] in trees_2):
+            return False
+    return True
+
+def is_in_Z_clstrs(trees, Z_clstrs, trees_key):
+    for key in Z_clstrs:
+        if is_trees_equal(trees, Z_clstrs[key][trees_key]):
+            return key
+    return None
+
+def cluster_Z(Z_lst, num_leaf):
+    '''
+    Z_lst is the list of linkages of samples
+    num_leaf is the number of objects in clustering
+    '''
+    Z_clstrs = {}
+    counter = 0
+    for Z in Z_lst:
+        # replace trees in Z by their leaves
+        Z_open = open_trees(Z, num_leaf)
+        trees = [[tree[0], tree[1]] for tree in Z_open]
+        distances = [tree[2] for tree in Z]
+        clstr_idx = is_in_Z_clstrs(trees, Z_clstrs, trees_key='trees')
+        
+        if clstr_idx is None:
+            Z_clstrs[counter] = {
+                'Z': Z, 
+                'trees': trees,
+                'freq': 1, 
+                'distance_lst': [distances]
+            }
+            counter += 1
+        else:
+            Z_clstrs[clstr_idx]['freq'] += 1
+            Z_clstrs[clstr_idx]['distance_lst'].append(distances)
+    return Z_clstrs

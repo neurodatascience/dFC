@@ -116,23 +116,57 @@ for metric in ALL_RESULTS['dFC_similarity_overall'] :
             )
     ############ Hierarchical Clustering ############
     for filter in ['session_Rest1_LR']:
-        if metric=='MI':
-            if np.any(RESULTS[filter]['avg_mat']>1):
-                print('MI values cannot be converted to distances.')
-            dist_mat = 1 - RESULTS[filter]['avg_mat']
-        elif metric=='euclidean_distance':
-            dist_mat = RESULTS[filter]['avg_mat']
-        else:
-            dist_mat = 1 - RESULTS[filter]['avg_mat']
-        dist_mat = 0.5*(dist_mat + dist_mat.T)
-        # diagonal values of dist_mat must equal exactly zero
-        np.fill_diagonal(dist_mat, 0)
+        dist_mat = corr2distance(RESULTS[filter]['avg_mat'], metric=metric)
         Z = distance2Z(dist_mat, method='ward')
         dist_mat_dendo(Z=Z, labels=RESULTS[filter]['name_lst'], 
             title='Hierarchical Clustering of Methods ' + filter+' using '+metric, 
             save_image=save_image, output_root=output_root+'dFC_similarity/'+metric+'/'
         )
 
+################# Hierarchical Clstr with Confidence Interval #################
+'''
+    - plot the most frequent hierclstr structures across subjects
+'''
+min_freq = 10
+Z_lst = ALL_RESULTS['Hierclstr_CI']
+measures_lst = [measure.measure_name for measure in ALL_RESULTS['measure_lst']]
+
+# cluster Zs to find common structures
+Z_clstrs = cluster_Z(Z_lst, num_leaf=len(measures_lst))
+
+num_clstrs = len([key for key in Z_clstrs])
+num_clstrs_included = 0
+for key in Z_clstrs:
+    Z_clstrs[key]['distance_lst'] = np.array(Z_clstrs[key]['distance_lst'])
+    if Z_clstrs[key]['freq'] > min_freq:
+        num_clstrs_included += 1
+        n = Z_clstrs[key]['distance_lst'].shape[0]
+        avg_distances = np.mean(Z_clstrs[key]['distance_lst'], axis=0)
+        std_distances = np.std(Z_clstrs[key]['distance_lst'], axis=0)
+
+        # reconstruct avg Z
+        Z = list()
+        for i, tree in enumerate(Z_clstrs[key]['Z']):
+            Z.append([tree[0], tree[1], avg_distances[i], tree[3]])
+
+        dist_mat_dendo(Z, labels=measures_lst, 
+            distances_CI=std_distances,
+            title='Hierclstr clstr '+str(key)+'_'+str(n)+'subjects',
+            save_image=save_image, output_root=output_root+'hierclstr_CI/',
+        )  
+
+# write to a txt file
+folder = output_root+'hierclstr_CI'
+if not os.path.exists(folder):
+    os.makedirs(folder)
+filename = Path(folder+'/hierclstr.txt')
+filename.touch(exist_ok=True)
+text_file = open(filename, 'wt')
+text_file.write('Number of structures found across subjects = '+ str(num_clstrs)+'\n')
+text_file.write('The min number of subjects to be included = '+ str(min_freq)+'\n')
+text_file.write('Number of structures included = '+ str(num_clstrs_included)+'\n')
+text_file.close()
+        
 ################# session ANOVA #################
 
 if 'session_ANOVA' in ALL_RESULTS:
@@ -199,10 +233,7 @@ for feature2extract in ALL_RESULTS['dFC_similarity_feature_based']:
         )
     ############ Hierarchical Clustering ############
     for filter in ['default_values']:
-        dist_mat = 1 - RESULTS[filter]['avg_mat']
-        dist_mat = 0.5*(dist_mat + dist_mat.T)
-        # diagonal values of dist_mat must equal exactly zero
-        np.fill_diagonal(dist_mat, 0)
+        dist_mat = corr2distance(RESULTS[filter]['avg_mat'], metric='spearman')
         Z = distance2Z(dist_mat, method='ward')
         dist_mat_dendo(Z=Z, labels=RESULTS[filter]['name_lst'], 
             title='Hierarchical Clustering of Methods ' + filter+' using '+feature2extract, 
@@ -247,10 +278,7 @@ for graph_property in ALL_RESULTS['dFC_similarity_graph']['spatial']:
         )
     ############ Hierarchical Clustering ############
     for filter in ['default_values']:
-        dist_mat = 1 - RESULTS[filter]['avg_mat']
-        dist_mat = 0.5*(dist_mat + dist_mat.T)
-        # diagonal values of dist_mat must equal exactly zero
-        np.fill_diagonal(dist_mat, 0)
+        dist_mat = corr2distance(RESULTS[filter]['avg_mat'], metric='spearman')
         Z = distance2Z(dist_mat, method='ward')
         dist_mat_dendo(Z=Z, labels=RESULTS[filter]['name_lst'], 
             title='Hierarchical Clustering of Methods ' + filter+' using '+ 'spatial '+ graph_property, 
@@ -275,7 +303,7 @@ for i, measure in enumerate(measures_lst):
     color_dict[measure] = colors_lst[i]
 
 # using overall corr
-dist_mat = corr2distance(RESULTS['corr'])
+dist_mat = corr2distance(RESULTS['corr'], metric='spearman')
 
 plot_TSNE(
     dist_mat, 
@@ -287,7 +315,7 @@ plot_TSNE(
 )
 
 for n_components in RESULTS['X_red_corr']:
-    dist_mat = corr2distance(RESULTS['X_red_corr'][n_components])
+    dist_mat = corr2distance(RESULTS['X_red_corr'][n_components], metric='spearman')
 
     plot_TSNE(
         dist_mat, 
@@ -324,10 +352,7 @@ for subj_lvl_feature in ALL_RESULTS['subj_clustring']:
         )
     ############ Hierarchical Clustering ############
     for session in RESULTS['across_method']:
-        dist_mat = 1 - RESULTS['across_method'][session]['sim_mat']
-        dist_mat = 0.5*(dist_mat + dist_mat.T)
-        # diagonal values of dist_mat must equal exactly zero
-        np.fill_diagonal(dist_mat, 0)
+        dist_mat = corr2distance(RESULTS['across_method'][session]['sim_mat'], metric='spearman')
         Z = distance2Z(dist_mat, method='ward')
         dist_mat_dendo(Z=Z, labels=RESULTS['across_method'][session]['name_lst'], 
             title='Hierarchical Clustering of Methods ' + session +' using inter-subject similarity based on '+subj_lvl_feature, 
