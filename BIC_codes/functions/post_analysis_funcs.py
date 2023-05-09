@@ -12,6 +12,7 @@ import scipy.cluster.hierarchy as shc
 import scipy.spatial.distance as ssd
 import statsmodels.api as sm
 from statsmodels.formula.api import ols
+from sklearn.manifold import TSNE
 
 import matplotlib.pyplot as plt
 import matplotlib as mpl
@@ -691,6 +692,82 @@ def dist_mat_dendo(Z, labels,
     tick_labels = ax.get_xticklabels() + ax.get_yticklabels()
     for label in tick_labels:
         label.set_fontweight('bold')
+
+    # save figure
+    if save_image:
+        folder = output_root[:output_root.rfind('/')]
+        if not os.path.exists(folder):
+            os.makedirs(folder)
+        plt.savefig(output_root+title2file_name(title)+'.'+save_fig_format, 
+            dpi=fig_dpi, bbox_inches=fig_bbox_inches, pad_inches=fig_pad, format=save_fig_format
+        ) 
+        plt.close()
+
+def plot_TSNE(
+        dist_mat, 
+        sample_measure_lst,
+        color_dict,
+        projection='2d',
+        title='',
+        save_image=False, output_root=None,
+    ):
+
+    sns.set_context("paper", 
+        font_scale=2.5, 
+        rc={
+            "lines.linewidth": 3.0,
+            "lines.markersize": 10.0
+            }
+    )
+
+    sns.set_style('darkgrid')
+
+    fig_width = 20
+    fig_height = 20 
+    
+    if projection=='2d':
+        X_embedded = TSNE(
+                        n_components=2, 
+                        learning_rate='auto',
+                        init='random', perplexity=30, 
+                        metric='precomputed'
+                    ).fit_transform(dist_mat)
+
+        # 2D plot
+        plt.figure(figsize=(fig_width, fig_height))
+        sns.scatterplot(
+            x=X_embedded[:, 0], y=X_embedded[:, 1], 
+            hue=sample_measure_lst, 
+            palette=color_dict,
+            alpha=0.7
+        )
+    elif projection=='3d':
+        X_embedded = TSNE(
+                        n_components=3, 
+                        learning_rate='auto',
+                        init='random', perplexity=30, 
+                        metric='precomputed'
+                    ).fit_transform(dist_mat)
+        
+        measures_lst = list(set(sample_measure_lst))
+        measures_lst.sort()
+
+        # 3D plot
+        fig = plt.figure(figsize=(fig_width, fig_height))
+        ax = fig.add_subplot(projection='3d')
+        sample_measure_array = np.array(sample_measure_lst)
+        for measure in measures_lst:
+            scatter = ax.scatter(
+                X_embedded[sample_measure_array==measure, 0], 
+                X_embedded[sample_measure_array==measure, 1], 
+                X_embedded[sample_measure_array==measure, 2],
+                c=color_dict[measure],
+                label=measure
+            )
+        ax.legend()
+
+    if show_title:
+        plt.title(title, fontsize=15)
 
     # save figure
     if save_image:

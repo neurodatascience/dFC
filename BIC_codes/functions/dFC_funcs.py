@@ -154,6 +154,15 @@ def mutual_information(X, Y, N_bins=100):
     nzs = pxy > 0 # Only non-zero pxy values contribute to the sum
     return np.sum(pxy[nzs] * np.log(pxy[nzs] / px_py[nzs]))
 
+def corr2distance(corr_mat):
+    # negative corr will be > 1.0
+    dist_mat = 1 - corr_mat
+    # dist_mat must be symmetric
+    dist_mat = 0.5*(dist_mat + dist_mat.T)
+    # diagonal values of dist_mat must equal exactly zero
+    np.fill_diagonal(dist_mat, 0)
+    return dist_mat
+
 # test
 def normalizeAdjacency(W):
     """

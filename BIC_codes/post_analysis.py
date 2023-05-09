@@ -2,6 +2,7 @@
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
+from sklearn.decomposition import PCA
 from copy import deepcopy
 import os
 
@@ -13,12 +14,16 @@ print('################################# POST ANALYSIS STARTED RUNNING ... #####
 
 ################################# LOAD RESULTS #################################
 
+# local code
 # assessment_results_root = './../../../../RESULTs/methods_implementation/server/methods_implementation/'
-assessment_results_root = './'
 # output_root = './../../../../RESULTs/methods_implementation/server/methods_implementation/out/'
+
+# server code
+assessment_results_root = './'
 output_root = './output/'
+
 FOLDER_name = 'similarity_measured/'
-num_randomization = 100
+num_randomization = 10
 num_subj2include = None # None -> all
 
 ALL_RECORDS = os.listdir(assessment_results_root+FOLDER_name)
@@ -357,6 +362,62 @@ for graph_property in graph_property_list:
         RESULTS[filter]['name_lst'] = measure_name_lst
 
     ALL_RESULTS['dFC_similarity_graph']['spatial'][graph_property] = deepcopy(RESULTS)
+
+################################# TSNE #################################
+'''
+    - visualize subjects dFC obtained by different methods in a 2D space
+        considering their distances
+'''
+RESULTS = {}
+for filter in ['default_values']:
+    features_dict = {}
+    for s in ALL_RECORDS:
+        SUBJs_output = np.load(assessment_results_root+FOLDER_name+s, allow_pickle='True').item()
+        subj_name = SUBJs_output[filter]['TS_info_lst'][0]['subj_id_lst'][0]
+
+        for i, measure_i in enumerate(SUBJs_output[filter]['measure_lst']):
+            measure_name = measure_i.measure_name
+
+            dFC_mat_i = SUBJs_output[filter]['dFCM_samples'][str(i)]
+            # rank normalization
+            dFC_mat_i = rank_norm(dFC_mat_i) 
+
+            if not measure_name in features_dict:
+                features_dict[measure_name] = {'dFC':list(), 'sample_name':list()}
+            features_dict[measure_name]['dFC'].append(dFC_mat2vec(dFC_mat_i).flatten())
+            features_dict[measure_name]['sample_name'].append(subj_name+'_'+measure_name)
+
+sample_lst = list()
+features_all = list()
+for measure_name in features_dict:
+    features_all.append(features_dict[measure_name]['dFC'])
+    sample_lst.extend(features_dict[measure_name]['sample_name'])
+features_all = np.array(features_all)
+
+# observation matrix
+X = np.reshape(features_all, (-1, features_all.shape[-1]))
+
+RESULTS['sample_lst'] = sample_lst
+# overall corr
+RESULTS['corr'] = np.corrcoef(X)
+
+RESULTS['X_red'] = {}
+RESULTS['X_embedded'] = {}
+RESULTS['X_red_corr'] = {}
+for n_components in [100, 500, 1000, 1500, 2000]:
+    pca = PCA(n_components=n_components)
+    RESULTS['X_red'][n_components] = pca.fit_transform(X)
+
+    # corr of subjects after PCA
+    RESULTS['X_red_corr'][n_components] = np.corrcoef(RESULTS['X_red'][n_components])
+
+    # embessing X into 2D space using TSNE
+    RESULTS['X_embedded'][n_components] = TSNE(
+                                            n_components=2, learning_rate='auto',
+                                            init='random', perplexity=30
+                                        ).fit_transform(RESULTS['X_red'][n_components])
+    
+ALL_RESULTS['TSNE']= deepcopy(RESULTS)
 
 ################################# inter_subject similarity #################################
 

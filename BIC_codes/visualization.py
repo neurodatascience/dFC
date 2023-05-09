@@ -132,11 +132,6 @@ for metric in ALL_RESULTS['dFC_similarity_overall'] :
             title='Hierarchical Clustering of Methods ' + filter+' using '+metric, 
             save_image=save_image, output_root=output_root+'dFC_similarity/'+metric+'/'
         )
-        # dist_mat_dendo(dist_mat=dist_mat, labels=RESULTS[filter]['name_lst'], 
-        #     var_mat=RESULTS[filter]['var_mat'],
-        #     title='Hierarchical Clustering of Methods (with CI) ' + filter+' using '+metric, 
-        #     save_image=save_image, output_root=output_root+'dFC_similarity/'+metric+'/'
-        # )
 
 ################# session ANOVA #################
 
@@ -213,11 +208,6 @@ for feature2extract in ALL_RESULTS['dFC_similarity_feature_based']:
             title='Hierarchical Clustering of Methods ' + filter+' using '+feature2extract, 
             save_image=save_image, output_root=output_root+'feature_based/'+feature2extract+'/'
         )
-        # dist_mat_dendo(dist_mat=dist_mat, labels=RESULTS[filter]['name_lst'], 
-        #     var_mat=RESULTS[filter]['var_mat'],
-        #     title='Hierarchical Clustering of Methods (with CI) ' + filter+' using '+feature2extract, 
-        #     save_image=save_image, output_root=output_root+'feature_based/'+feature2extract+'/'
-        # )
 
 ############ Spatial vs. Temporal Scatter plot ############
     
@@ -266,11 +256,47 @@ for graph_property in ALL_RESULTS['dFC_similarity_graph']['spatial']:
             title='Hierarchical Clustering of Methods ' + filter+' using '+ 'spatial '+ graph_property, 
             save_image=save_image, output_root=output_root+'graph_based/'+graph_property+'/'
         )
-        # dist_mat_dendo(dist_mat=dist_mat, labels=RESULTS[filter]['name_lst'], 
-        #     var_mat=RESULTS[filter]['var_mat'],
-        #     title='Hierarchical Clustering of Methods (with CI) ' + filter+' using '+ 'spatial '+ graph_property, 
-        #     save_image=save_image, output_root=output_root+'graph_based/'+graph_property+'/'
-        # )
+
+################################# TSNE visualization #################################
+
+'''
+    - visualize subjects dFC obtained by different methods in a 2D space
+        considering their distances
+'''
+
+RESULTS = ALL_RESULTS['TSNE']
+sample_measure_lst = [sample[sample.find('_')+1:] for sample in RESULTS['sample_lst']]
+
+measures_lst = list(set(sample_measure_lst))
+measures_lst.sort()
+colors_lst = ['black', 'green', 'orange', 'red', 'dodgerblue', 'grey', 'violet']
+color_dict = {}
+for i, measure in enumerate(measures_lst):
+    color_dict[measure] = colors_lst[i]
+
+# using overall corr
+dist_mat = corr2distance(RESULTS['corr'])
+
+plot_TSNE(
+    dist_mat, 
+    sample_measure_lst,
+    color_dict,
+    projection='2d',
+    title='TSNE overall corr',
+    save_image=save_image, output_root=output_root+'TSNE/',
+)
+
+for n_components in RESULTS['X_red_corr']:
+    dist_mat = corr2distance(RESULTS['X_red_corr'][n_components])
+
+    plot_TSNE(
+        dist_mat, 
+        sample_measure_lst,
+        color_dict,
+        projection='2d',
+        title='TSNE '+str(n_components),
+        save_image=save_image, output_root=output_root+'TSNE/',
+    )
 
 ################################# inter_subject similarity #################################
 
