@@ -781,6 +781,63 @@ ALL_RESULTS['var_comparison'] = deepcopy(RESULTS)
 ALL_RESULTS['var_method_vs_time_method_pairs_across_func_conns'] = deepcopy(scatter_data_across_func_conn)
 ALL_RESULTS['var_method_vs_time_method_pairs'] = deepcopy(scatter_data)
 
+################################# Var method vs. Time Clstrwise #################################
+'''
+    - compute var over method and time within each group of methods
+'''
+ALL_RESULTS['var_method_vs_time_clstrwise'] = {}
+
+clstr1 = ['CAP', 'Windowless']
+clstr2 = ['Clustering', 'ContinuousHMM', 'DiscreteHMM']
+clstr3 = ['SlidingWindow', 'Time-Freq']
+clstrs_dict = {'clstr1':clstr1, 'clstr2':clstr2, 'clstr3':clstr3}
+
+for filter in ['default_values']:
+    var_over_time = {'clstr1': list(), 'clstr2': list(), 'clstr3': list()}
+    var_over_method = {'clstr1': list(), 'clstr2': list(), 'clstr3': list()}
+    for s in ALL_RECORDS:
+
+        SUBJs_output = np.load(assessment_results_root+FOLDER_name+s, allow_pickle='True').item()
+
+        dFC_mat_lst = {'clstr1': list(), 'clstr2': list(), 'clstr3': list()}
+        for i, measure_i in enumerate(SUBJs_output[filter]['measure_lst']):
+
+            dFC_mat_i = SUBJs_output[filter]['dFCM_samples'][str(i)]
+
+            # rank normalization
+            dFC_mat_i = rank_norm(dFC_mat_i)
+
+            # dFC mat
+            if measure_i.measure_name in clstr1:
+                dFC_mat_lst['clstr1'].append(dFC_mat_i)
+            elif measure_i.measure_name in clstr2:
+                dFC_mat_lst['clstr2'].append(dFC_mat_i)
+            elif measure_i.measure_name in clstr3:
+                dFC_mat_lst['clstr3'].append(dFC_mat_i)
+
+        # Calc var_over_method and var_over_time in each subj
+        for clstr in dFC_mat_lst:
+            dFC_mat_lst[clstr] = np.array(dFC_mat_lst[clstr]) # (method, time, ROI, ROI)
+            var_over_method[clstr].append(np.mean(np.var(dFC_mat_lst[clstr], axis=0), axis=0))
+            var_over_time[clstr].append(np.mean(np.var(dFC_mat_lst[clstr], axis=1), axis=0))
+
+    for clstr in dFC_mat_lst:
+        var_over_time[clstr] = np.array(var_over_time[clstr]) # (subj, ROI, ROI)
+        var_over_method[clstr] = np.array(var_over_method[clstr]) # (subj, ROI, ROI)
+
+        var_over_time[clstr] = dFC_mat2vec(var_over_time[clstr]).flatten() # (subj*(ROI)*(ROI-1)/2,)
+        var_over_method[clstr] = dFC_mat2vec(var_over_method[clstr]).flatten() # (subj*(ROI)*(ROI-1)/2,)
+
+    # collect var over method and time across all func conns of all subjects
+    scatter_data = {}
+    for clstr in var_over_method:
+        scatter_data[clstr] = {'var_method':list(), 'var_time':list()}
+        scatter_data[clstr]['var_method'] = var_over_method[clstr]
+        scatter_data[clstr]['var_time'] = var_over_time[clstr]
+
+    ALL_RESULTS['var_method_vs_time_clstrwise']['scatter_data'] = deepcopy(scatter_data)
+    ALL_RESULTS['var_method_vs_time_clstrwise']['clstrs_dict'] = deepcopy(clstrs_dict)
+
 ################################# Randomization Tests #################################
 
 metric = 'spearman'

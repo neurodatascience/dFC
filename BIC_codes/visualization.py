@@ -529,6 +529,47 @@ scatter_plot(
     save_image=save_image, output_root=output_root+'variation/'
 )
 
+################################# Var method vs. Time Clstrwise #################################
+'''
+    - compute var over method and time within each group of methods
+'''
+scatter_data = ALL_RESULTS['var_method_vs_time_clstrwise']['scatter_data']
+clstrs_dict = ALL_RESULTS['var_method_vs_time_clstrwise']['clstrs_dict']
+
+# write to a txt file
+folder = output_root+'variation'
+if not os.path.exists(folder):
+    os.makedirs(folder)
+filename = Path(folder+'/var_clstrwise_ratio.txt')
+filename.touch(exist_ok=True)
+text_file = open(filename, 'wt')
+
+for clstr in scatter_data:
+
+    ratio = list()
+    for i, sample in enumerate(scatter_data[clstr]['var_method']):
+        ratio.append(scatter_data[clstr]['var_method'][i]/scatter_data[clstr]['var_time'][i])
+
+    ratio = np.mean(np.array(ratio))
+    avg_var_time = np.mean(scatter_data[clstr]['var_time'])
+    avg_var_method = np.mean(scatter_data[clstr]['var_method'])
+    
+    text_file.write(clstr+'\n')
+    text_file.write(' '.join(clstrs_dict[clstr])+'\n')
+    text_file.write('Average of var method / var time ratio = '+ str(ratio)+'\n')
+    text_file.write('Average var method = '+ str(avg_var_method)+'\n')
+    text_file.write('Average var time = '+ str(avg_var_time)+'\n')
+    text_file.write('Ratio of avg var method / avg var time = '+ str(avg_var_method/avg_var_time)+'\n')
+
+    scatter_plot(
+        data=scatter_data[clstr], x='var_time', y='var_method', 
+        title='var method vs time clusterwise across func conns ' + clstr,
+        hist=True,
+        equal_axis_lim=True, show_x_equal_y=True,
+        save_image=save_image, output_root=output_root+'variation/'
+    )
+text_file.close()
+
 ################################# Randomization Tests #################################
 
 metric = 'spearman'
