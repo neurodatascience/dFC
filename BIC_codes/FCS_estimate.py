@@ -17,16 +17,16 @@ print('################################# CODE started running ... ##############
 output_root = './'
 
 # DATA_type is either 'sample' or 'Gordon' or 'simulated' or 'ICA'
-params_data_load = { \
-    'DATA_type': 'Gordon', \
-    'SESSIONs':['Rest1_LR' , 'Rest1_RL', 'Rest2_LR', 'Rest2_RL'], \
+params_data_load = { 
+    'DATA_type': 'Gordon', 
+    'SESSIONs':['Rest1_LR' , 'Rest1_RL', 'Rest2_LR', 'Rest2_RL'], 
     'networks2include':['Auditory', 'CinguloOperc', 'Default', 'DorsalAttn', 'FrontoParietal',
         'MedialParietal', 'ParietoOccip', 'SMhand', 'SMmouth',
-        'Salience', 'VentralAttn', 'Visual'], \
+        'Salience', 'VentralAttn', 'Visual'], 
 
-    'data_root_simul': './../../../../DATA/TVB data/', \
-    'data_root_sample': './sampleDATA/', \
-    'data_root_gordon': './../../../../DATA/HCP/HCP_Gordon/', \
+    'data_root_simul': './../../../../DATA/TVB data/', 
+    'data_root_sample': './sampleDATA/', 
+    'data_root_gordon': './../../../../DATA/HCP/HCP_Gordon/', 
     'data_root_ica': './../../../../DATA/HCP/HCP_PTN1200/node_timeseries/3T_HCP1200_MSMAll_d50_ts2/'
 }
 
@@ -34,61 +34,61 @@ params_data_load = { \
 
 # W is in sec
 
-params_methods = { \
+params_methods = { 
     # Sliding Parameters
-    'W': 44, 'n_overlap': 0.5, 'sw_method':'pear_corr', 'tapered_window':True, \
+    'W': 44, 'n_overlap': 0.5, 'sw_method':'pear_corr', 'tapered_window':True, 
     # TIME_FREQ
-    'TF_method':'WTC', \
+    'TF_method':'WTC', 
     # CLUSTERING AND DHMM
-    'clstr_base_measure':'SlidingWindow', \
+    'clstr_base_measure':'SlidingWindow', 
     # HMM
-    'hmm_iter': 30, 'dhmm_obs_state_ratio': 16/24, \
+    'hmm_iter': 30, 'dhmm_obs_state_ratio': 16/24, 
     # State Parameters
-    'n_states': 12, 'n_subj_clstrs': 20, \
+    'n_states': 12, 'n_subj_clstrs': 20, 
     # Parallelization Parameters
-    'n_jobs': 2, 'verbose': 0, 'backend': 'loky', \
+    'n_jobs': 2, 'verbose': 0, 'backend': 'loky', 
     # SESSION
-    'session': 'Rest1_LR', \
+    'session': 'Rest1_LR', 
     # Hyper Parameters
-    'normalization': True, \
-    'num_subj': 395, \
-    'num_select_nodes': 96, \
-    'num_time_point': 1200, \
-    'Fs_ratio': 1.00, \
-    'noise_ratio': 0.00, \
-    'num_realization': 1 \
+    'normalization': True, 
+    'num_subj': 395, 
+    'num_select_nodes': 96, 
+    'num_time_point': 1200, 
+    'Fs_ratio': 1.00, 
+    'noise_ratio': 0.00, 
+    'num_realization': 1 
 }
 
 ###### HYPER PARAMETERS ALTERNATIVE ######
 
-MEASURES_name_lst = [ \
-                'SlidingWindow', \
-                'Time-Freq', \
-                'CAP', \
-                'ContinuousHMM', \
-                'Windowless', \
-                'Clustering', \
-                'DiscreteHMM' \
-                ]
+MEASURES_name_lst = [ 
+                'SlidingWindow', 
+                'Time-Freq', 
+                'CAP', 
+                'ContinuousHMM', 
+                'Windowless', 
+                'Clustering', 
+                'DiscreteHMM' 
+]
 
 alter_hparams = { \
-            'session': ['Rest1_RL', 'Rest2_LR', 'Rest2_RL'], \
-            # 'n_overlap': [0, 0.25, 0.75, 1], \
-            # 'n_states': [6, 16], \
-            # # 'normalization': [], \
-            # 'num_subj': [50, 100, 200], \
-            # 'num_select_nodes': [30, 50, 333], \
-            # 'num_time_point': [800, 1000], \
-            # 'Fs_ratio': [0.50, 0.75, 1.5], \
-            # 'noise_ratio': [1.00, 2.00, 3.00], \
-            # 'num_realization': [] \
+            'session': ['Rest1_RL', 'Rest2_LR', 'Rest2_RL'], 
+            # 'n_overlap': [0, 0.25, 0.75, 1], 
+            # 'n_states': [6, 16], 
+            # # 'normalization': [], 
+            # 'num_subj': [50, 100, 200], 
+            # 'num_select_nodes': [30, 50, 333], 
+            # 'num_time_point': [800, 1000], 
+            # 'Fs_ratio': [0.50, 0.75, 1.5], 
+            # 'noise_ratio': [1.00, 2.00, 3.00], 
+            # 'num_realization': [] 
             }
 
 ###### dFC ANALYZER PARAMETERS ######
 
-params_dFC_analyzer = { \
+params_dFC_analyzer = { 
     # Parallelization Parameters
-    'n_jobs': None, 'verbose': 0, 'backend': 'loky' \
+    'n_jobs': None, 'verbose': 0, 'backend': 'loky' 
 }
 
 
@@ -105,16 +105,16 @@ BOLD = data_loader.load()
 
 ################################# Measures of dFC #################################
 
-dFC_analyzer = DFC_ANALYZER( \
-    analysis_name='reproducibility assessment', \
-    **params_dFC_analyzer \
+dFC_analyzer = DFC_ANALYZER( 
+    analysis_name='reproducibility assessment', 
+    **params_dFC_analyzer 
 )
 
-MEASURES_lst = dFC_analyzer.measures_initializer( \
-    MEASURES_name_lst, \
-    params_methods, \
-    alter_hparams \
-    )
+MEASURES_lst = dFC_analyzer.measures_initializer( 
+    MEASURES_name_lst, 
+    params_methods, 
+    alter_hparams 
+)
 
 tic = time.time()
 print('Measurement Started ...')
