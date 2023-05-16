@@ -485,13 +485,13 @@ def visualize_conn_mat(C, axis=None, title='', \
 
     return im
 
-def visualize_conn_mat_dict(data, title='', \
-    cmap='seismic',\
-    normalize=False,\
-    disp_diag=True,\
-    save_image=False, output_root=None, axes=None, fig=None, \
-    fix_lim=True, center_0=True, \
-    node_networks=None, segmented=False \
+def visualize_conn_mat_dict(data, title='', 
+    cmap='seismic',
+    normalize=False,
+    disp_diag=True,
+    save_image=False, output_root=None, axes=None, fig=None, 
+    fix_lim=True, center_0=True, 
+    node_networks=None, segmented=False 
     ):
 
     '''
@@ -3395,9 +3395,13 @@ class TIME_SERIES():
 
         
 
-    def visualize(self, start_time=None, end_time=None, \
-        nodes_lst=None, \
+    def visualize(self, start_time=None, end_time=None, 
+        nodes_lst=None, 
         save_image=False, output_root=None):
+        '''
+        time in seconds
+        nodes_lst is a list of indices
+        '''
 
         start = 0
         end = self.n_time
@@ -3681,8 +3685,8 @@ class DFCM():
         self.TR_array_ = TR_array
 
 
-    def visualize_dFC(self, TRs=None, normalize=True, \
-        threshold=0.0, save_image=False, fig_name=None, fix_lim=True):
+    def visualize_dFC(self, TRs=None, normalize=False, 
+        threshold=0.0, save_image=False, fig_name=None, fix_lim=False):
 
         assert not self.measure is None, \
             'Measure is not provided.'
@@ -3690,21 +3694,14 @@ class DFCM():
         if TRs is None:
             TRs = self.TR_array
 
-        if normalize:
-            C = dFC_mat_normalize(C_t=self.get_dFC_mat(TRs=TRs), \
-                global_normalization=True, threshold=threshold)
-        else:
-            C = self.get_dFC_mat(TRs=TRs)
+        node_networks = node_info2network(self.TS_info['nodes_info'])
 
-        dFC_dict = {}
-        for i, TR in enumerate(TRs):
-            dFC_dict['TR'+str(TR)] = C[i]
-
-        visualize_conn_mat(data=dFC_dict, \
-            title=self.measure.measure_name+' dFC', \
-            save_image=save_image, \
-            output_root=fig_name, \
-            fix_lim=fix_lim \
+        visualize_conn_mat_dict(data=self.dFC2dict(TRs=TRs), 
+            title=self.measure.measure_name+' dFC', 
+            fix_lim=fix_lim, normalize=normalize,
+            node_networks=node_networks,
+            save_image=save_image, 
+            output_root=fig_name, 
         )
 
 
