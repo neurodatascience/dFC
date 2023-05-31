@@ -51,10 +51,11 @@ plot_sample_dFC(D=RESULTS, x='samples_ranked',
 
 for measure in ALL_RESULTS['measure_lst']:
 
-    measure.visualize_FCS(
-            normalize=True, fix_lim=False, 
-            save_image=save_image, output_root=output_root+'FCS/'
-            )
+    visualize_FCS(
+        measure,
+        normalize=True, fix_lim=False, 
+        save_image=save_image, output_root=output_root+'FCS/'
+    )
 
 ################################# dFC values distributions #################################
 dFC_dist_plot = False

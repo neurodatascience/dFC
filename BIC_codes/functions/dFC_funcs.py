@@ -481,7 +481,7 @@ def visualize_conn_mat(C, axis=None, title='', \
         axis.set_xticklabels(network_names, rotation=90, fontsize=13)
         axis.set_yticklabels(network_names, fontsize=13)
     
-    axis.set_title(title, fontsize=18)
+    axis.set_title(title, fontdict={'fontsize': 18, 'fontweight': 'bold'})
 
     return im
 
@@ -780,6 +780,67 @@ def visualize_conn_mat_2D_dict(data, title='', \
     else:
         plt.show()
         
+
+def visualize_FCS(
+        measure,
+        normalize=True, fix_lim=True, 
+        save_image=False, output_root=None
+    ):
+    
+    if measure.FCS == []:
+        return
+
+    if normalize:
+        D = dFC_dict_normalize(D=measure.FCS_dict, global_normalization=False)
+    else:
+        D = measure.FCS_dict
+
+    fig_width = 45*(len(D)/10)
+    fig_height = 8
+
+    fig, axes = plt.subplots(2, len(D), figsize=(fig_width, fig_height), 
+        facecolor='w', edgecolor='k')
+
+    fig.subplots_adjust(
+        bottom=0.1, 
+        top=0.85, 
+        left=0.1, 
+        right=0.9,
+        wspace=0.1, 
+        hspace=0.6
+    )
+
+    # plot mean activity
+    for i, mean_act in enumerate(measure.mean_act):
+        plot_markers(
+            node_values=mean_act, 
+            node_coords=measure.TS_info['nodes_locs'], 
+            node_cmap='hot', 
+            display_mode='z', 
+            colorbar=False, axes=axes[1, i]
+        )
+
+    # plot FC pattern
+    node_networks = node_info2network(measure.TS_info['nodes_info'])
+
+    visualize_conn_mat_dict(data=D, \
+        node_networks=node_networks, \
+        title=measure.measure_name+' FCS', \
+        save_image=save_image, \
+        axes=axes[0, :], fig=fig, 
+        output_root=output_root, \
+        disp_diag=False, \
+        fix_lim=fix_lim \
+    )
+
+    fig.subplots_adjust(
+        bottom=0.1, 
+        top=0.85, 
+        left=0.1, 
+        right=0.9,
+        wspace=0.1, 
+        hspace=1.0
+    )
 
 '''
 ########## bundled brain graph visualizer ##########
@@ -1851,55 +1912,16 @@ class dFC:
         pass
 
     # todo : use FCS_dict func in this func
-    def visualize_FCS(self,
-                normalize=True, fix_lim=True, 
-                save_image=False, output_root=None
-                ):
+    def visualize_FCS(
+            self,
+            normalize=True, fix_lim=True, 
+            save_image=False, output_root=None
+        ):
         
-        if self.FCS == []:
-            return
-
-        if normalize:
-            D = dFC_dict_normalize(D=self.FCS_dict, global_normalization=False)
-        else:
-            D = self.FCS_dict
-
-        fig_width = 55*(len(D)/10)
-        fig_height = 8
-
-        fig, axes = plt.subplots(2, len(D), figsize=(fig_width, fig_height), \
-            facecolor='w', edgecolor='k')
-
-        fig.subplots_adjust(
-            bottom=0.1, \
-            top=0.85, \
-            left=0.1, \
-            right=0.9,
-            wspace=0.3, \
-            hspace=0.8\
-        )
-
-        # plot mean activity
-        for i, mean_act in enumerate(self.mean_act):
-            plot_markers(
-                node_values=mean_act, 
-                node_coords=self.TS_info['nodes_locs'], 
-                node_cmap='hot', 
-                display_mode='z', 
-                colorbar=False, axes=axes[1, i]
-            )
-
-        # plot FC pattern
-        node_networks = node_info2network(self.TS_info['nodes_info'])
-
-        visualize_conn_mat_dict(data=D, \
-            node_networks=node_networks, \
-            title=self.measure_name+' FCS', \
-            save_image=save_image, \
-            axes=axes[0, :], fig=fig, 
-            output_root=output_root, \
-            disp_diag=False, \
-            fix_lim=fix_lim \
+        visualize_FCS(
+            self,
+            normalize=normalize, fix_lim=fix_lim, 
+            save_image=save_image, output_root=output_root
         )
 
     def visualize_TPM(self, normalize=True, save_image=False, output_root=None):
