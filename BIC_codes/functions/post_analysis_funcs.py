@@ -524,8 +524,6 @@ def cat_plot(data, x, y,
         xlabel = label_dict[xlabel]
     g.ax.set_xlabel(xlabel, fontdict={'fontsize': 13, 'fontweight': 'bold'})
     # set font size of the tick labels and make them bold
-    # g.ax.tick_params(axis='x', which='major', labelsize=12)
-    # g.ax.tick_params(axis='y', which='major', labelsize=12)   
     tick_labels = g.ax.get_xticklabels() + g.ax.get_yticklabels()
     for label in tick_labels:
         label.set_fontweight('bold')
@@ -549,6 +547,7 @@ def visualize_sim_mat(data, mat_key, title='',
     name_lst_key=None, 
     cmap='viridis',
     annot=True, fmt=2, 
+    label_dict={},
     show_diag=False, show_sig=False, no_color=False,
     save_image=False, output_root=None, axes=None, fig=None, 
     ):
@@ -599,8 +598,9 @@ def visualize_sim_mat(data, mat_key, title='',
         fig_flag = False
 
     if not fig_flag:
-        fig, axes = plt.subplots(1, len(data), figsize=(fig_width, fig_height), \
-            facecolor='w', edgecolor='k', sharey=False)
+        fig, axes = plt.subplots(1, len(data), figsize=(fig_width, fig_height),
+            facecolor='w', edgecolor='k', sharey=False
+        )
 
     if not type(axes) is np.ndarray:
         axes = np.array([axes])
@@ -656,9 +656,12 @@ def visualize_sim_mat(data, mat_key, title='',
             ax=axes[i], cbar=cbar_flag,
             square=True, linewidth=2, linecolor=linecolor
         )
-        axes[i].set_title(key, fontdict= { 'fontsize': 17, 'fontweight':'bold'})
-        im.set_xticklabels(im.get_xticklabels(), fontdict= {'fontsize': 12, 'fontweight':'bold'}, rotation=90)
-        im.set_yticklabels(im.get_yticklabels(), fontdict= {'fontsize': 12, 'fontweight':'bold'}, rotation=0)
+        axis_title = key
+        if key in label_dict:
+            axis_title = label_dict[key]
+        axes[i].set_title(axis_title, fontdict= {'fontsize': 18, 'fontweight':'bold'})
+        im.set_xticklabels(im.get_xticklabels(), fontdict= {'fontsize': 14, 'fontweight':'bold'}, rotation=90)
+        im.set_yticklabels(im.get_yticklabels(), fontdict= {'fontsize': 14, 'fontweight':'bold'}, rotation=0)
 
     if not fig_flag:
             
@@ -671,7 +674,7 @@ def visualize_sim_mat(data, mat_key, title='',
 
         if not name_lst is None:
             fig.subplots_adjust(
-                wspace=0.25 
+                wspace=0.5
             )
 
     if save_image:

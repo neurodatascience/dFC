@@ -102,13 +102,22 @@ for metric in ALL_RESULTS['dFC_similarity_overall'] :
     keys_lst = [key for key in RESULTS[filters_lst[0]]]
 
     ############ VISUALIZE ############
+    label_dict = {
+        'session_Rest1_LR': 'session Rest1 LR',
+        'session_Rest1_RL': 'session Rest1 RL',
+        'session_Rest2_LR': 'session Rest2 LR',
+        'session_Rest2_RL': 'session Rest2 RL'
+    }
     for key in keys_lst:
         if key=='name_lst' or key=='sim_distribution' or key=='overall_stat':
             continue
-        visualize_sim_mat(RESULTS, mat_key=key, title=metric+' '+key, 
-                                        name_lst_key='name_lst', 
-                                        cmap='viridis',
-                                        save_image=save_image, output_root=output_root+'dFC_similarity/'+metric+'/'
+        visualize_sim_mat(
+            RESULTS, 
+            mat_key=key, title=metric+' '+key, 
+            name_lst_key='name_lst', 
+            label_dict=label_dict,
+            cmap='viridis',
+            save_image=save_image, output_root=output_root+'dFC_similarity/'+metric+'/'
         )
 
     #### similarity values distribution ####
@@ -231,13 +240,21 @@ for feature2extract in ALL_RESULTS['dFC_similarity_feature_based']:
     keys_lst = [key for key in RESULTS[filters_lst[0]]]
 
     ############ VISUALIZE ############
+    label_dict = {
+        'default_values': 'session Rest1 LR',
+        'session_Rest1_RL': 'session Rest1 RL',
+        'session_Rest2_LR': 'session Rest2 LR',
+        'session_Rest2_RL': 'session Rest2 RL'
+    }
     for key in keys_lst:
         if key=='name_lst':
             continue
-        visualize_sim_mat(RESULTS, mat_key=key, title=feature2extract+' '+key, 
-                                        name_lst_key='name_lst', 
-                                        cmap='viridis',
-                                        save_image=save_image, output_root=output_root+'feature_based/'+feature2extract+'/'
+        visualize_sim_mat(
+            RESULTS, mat_key=key, title=feature2extract+' '+key, 
+            name_lst_key='name_lst',
+            label_dict=label_dict,
+            cmap='viridis',
+            save_image=save_image, output_root=output_root+'feature_based/'+feature2extract+'/'
         )
     ############ Hierarchical Clustering ############
     for filter in ['default_values']:
@@ -282,13 +299,21 @@ for graph_property in ALL_RESULTS['dFC_similarity_graph']['spatial']:
     keys_lst = [key for key in RESULTS[filters_lst[0]]]
 
     ############ VISUALIZE ############
+    label_dict = {
+        'default_values': 'session Rest1 LR',
+        'session_Rest1_RL': 'session Rest1 RL',
+        'session_Rest2_LR': 'session Rest2 LR',
+        'session_Rest2_RL': 'session Rest2 RL'
+    }
     for key in keys_lst:
         if key=='name_lst':
             continue
-        visualize_sim_mat(RESULTS, mat_key=key, title='spatial '+graph_property+' '+key, 
-                                        name_lst_key='name_lst', 
-                                        cmap='viridis',
-                                        save_image=save_image, output_root=output_root+'graph_based/'+graph_property+'/'
+        visualize_sim_mat(
+            RESULTS, mat_key=key, title='spatial '+graph_property+' '+key, 
+            name_lst_key='name_lst', 
+            label_dict=label_dict,
+            cmap='viridis',
+            save_image=save_image, output_root=output_root+'graph_based/'+graph_property+'/'
         )
     ############ Hierarchical Clustering ############
     for filter in ['default_values']:
@@ -353,16 +378,24 @@ for subj_lvl_feature in ALL_RESULTS['subj_clustring']:
     RESULTS = ALL_RESULTS['subj_clustring'][subj_lvl_feature] 
 
     ############ VISUALIZE ############
+    label_dict = {
+        'session_Rest1_LR': 'session Rest1 LR',
+        'session_Rest1_RL': 'session Rest1 RL',
+        'session_Rest2_LR': 'session Rest2 LR',
+        'session_Rest2_RL': 'session Rest2 RL'
+    }
     for key in RESULTS:
         annot = True
         # set diag values to 0
         for session in RESULTS[key]:
             np.fill_diagonal(RESULTS[key][session]['sim_mat'], 0)
-        visualize_sim_mat(RESULTS[key], mat_key='sim_mat', title='inter-subject-corr similarity '+key+ ' based on '+subj_lvl_feature, 
-                                        name_lst_key='name_lst', 
-                                        cmap='viridis',
-                                        annot=annot,
-                                        save_image=save_image, output_root=output_root+'inter_subject/'+subj_lvl_feature+'/'
+        visualize_sim_mat(
+            RESULTS[key], mat_key='sim_mat', title='inter-subject-corr similarity '+key+ ' based on '+subj_lvl_feature, 
+            name_lst_key='name_lst',
+            label_dict=label_dict,
+            cmap='viridis',
+            annot=annot,
+            save_image=save_image, output_root=output_root+'inter_subject/'+subj_lvl_feature+'/'
         )
     ############ Hierarchical Clustering ############
     for session in RESULTS['across_method']:
@@ -532,10 +565,11 @@ scatter_data = ALL_RESULTS['var_method_vs_time_method_pairs']
 
 ############ VISUALIZE ############
 
-visualize_sim_mat(RESULTS, mat_key='sim_mat', title='variation in different dimensions', 
-                                name_lst_key='name_lst', 
-                                cmap='viridis',
-                                save_image=save_image, output_root=output_root+'variation/'
+visualize_sim_mat(
+    RESULTS, mat_key='sim_mat', title='variation in different dimensions', 
+    name_lst_key='name_lst', 
+    cmap='viridis',
+    save_image=save_image, output_root=output_root+'variation/'
 )
 
 label_dict = {
