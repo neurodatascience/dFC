@@ -58,7 +58,7 @@ for measure in ALL_RESULTS['measure_lst']:
     )
 
 ################################# dFC values distributions #################################
-dFC_dist_plot = False
+dFC_dist_plot = True
 
 if dFC_dist_plot:
     
@@ -278,8 +278,8 @@ scatter_plot(
     data=scatter_data, x='temporal', y='spatial', 
     labels='labels', title='spatial similarity vs temporal similarity',
     label_dict=label_dict,
-    c=0.1,
-    equal_axis_lim=False, show_x_equal_y=False,
+    c=0.3,
+    equal_axis_lim=True, show_x_equal_y=False,
     save_image=save_image, output_root=output_root+'variation/'
 )
     
