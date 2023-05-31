@@ -109,11 +109,18 @@ for metric in ALL_RESULTS['dFC_similarity_overall'] :
                                         cmap='viridis',
                                         save_image=save_image, output_root=output_root+'dFC_similarity/'+metric+'/'
         )
+
+    #### similarity values distribution ####
+    label_dict = {
+        'sim': 'similarity'
+    }
     for filter in ['session_Rest1_LR']:
         pairwise_cat_plots(RESULTS[filter]['sim_distribution'], y='sim',
             title=metric+' total similarity distributions '+filter,
+            label_dict=label_dict,
             save_image=save_image, output_root=output_root+'dFC_similarity/'+metric+'/'
-            )
+        )
+
     ############ Hierarchical Clustering ############
     for filter in ['session_Rest1_LR']:
         dist_mat = corr2distance(RESULTS[filter]['avg_mat'], metric=metric)
@@ -245,9 +252,15 @@ for feature2extract in ALL_RESULTS['dFC_similarity_feature_based']:
 scatter_data = ALL_RESULTS['spatial_vs_temporal_similarity']
 
 ############ visualization ############
+label_dict = {
+    'spatial': 'spatial similarity',
+    'temporal': 'temporal similarity'
+}
 scatter_plot(
     data=scatter_data, x='temporal', y='spatial', 
     labels='labels', title='spatial similarity vs temporal similarity',
+    label_dict=label_dict,
+    c=0.1,
     equal_axis_lim=False, show_x_equal_y=False,
     save_image=save_image, output_root=output_root+'variation/'
 )
@@ -468,9 +481,14 @@ text_file.close()
 
 ############ VISUALIZE ############
 
+label_dict = {
+    'var_method': 'variation over method',
+    'var_time': 'variation over time'
+}
 scatter_plot(
     data=scatter_data, x='var_time', y='var_method', 
     title='var method vs time across func conns',
+    label_dict=label_dict,
     hist=True,
     equal_axis_lim=True, show_x_equal_y=True,
     save_image=save_image, output_root=output_root+'variation/'
@@ -514,17 +532,28 @@ visualize_sim_mat(RESULTS, mat_key='sim_mat', title='variation in different dime
                                 save_image=save_image, output_root=output_root+'variation/'
 )
 
+label_dict = {
+    'var_method': 'variation over methods',
+    'var_time': 'variation over time'
+}
 pairwise_scatter_plots(
     data=scatter_data_across_func_conn, x='var_time', y='var_method', 
     title='var method vs time across func conns across methods pairs', 
+    label_dict=label_dict,
     hist=True,
     equal_axis_lim=True, show_x_equal_y=True,
     save_image=save_image, output_root=output_root+'variation/'
 )
 
+label_dict = {
+    'var_method': 'variation over method',
+    'var_time': 'variation over time'
+}
 scatter_plot(
     data=scatter_data, x='var_time', y='var_method', 
     labels='labels', title='var method vs time',
+    label_dict=label_dict,
+    c=0.5,
     equal_axis_lim=True, show_x_equal_y=False,
     save_image=save_image, output_root=output_root+'variation/'
 )
@@ -561,9 +590,14 @@ for clstr in scatter_data:
     text_file.write('Average var time = '+ str(avg_var_time)+'\n')
     text_file.write('Ratio of avg var method / avg var time = '+ str(avg_var_method/avg_var_time)+'\n')
 
+    label_dict = {
+        'var_method': 'variation over method',
+        'var_time': 'variation over time'
+    }
     scatter_plot(
         data=scatter_data[clstr], x='var_time', y='var_method', 
         title='var method vs time clusterwise across func conns ' + clstr,
+        label_dict=label_dict,
         hist=True,
         equal_axis_lim=True, show_x_equal_y=True,
         save_image=save_image, output_root=output_root+'variation/'
@@ -584,9 +618,14 @@ and a dFC which is a constant sequence of mean of all methods dFC
 RESULTS = ALL_RESULTS['randomization']['sim_with_static_FC']
 
 ############ VISUALIZE ############
+label_dict = {
+    'sim': 'similarity',
+    'dFC_method': 'dFC assessment method'
+}
 cat_plot(data=RESULTS, x='dFC_method', y='sim', 
         kind='box',
         title='similarity with constant static FC',
+        label_dict=label_dict,
         save_image=save_image, output_root=output_root+'randomization/'
         )
 
@@ -601,10 +640,16 @@ RESULTS = ALL_RESULTS['randomization']['shuffled']['similarity_dict']
 modes_lst = ALL_RESULTS['randomization']['shuffled']['modes_lst']
 
 ############ VISUALIZE ############
+label_dict = {
+    'all_shuffle_sim': 'similarity',
+    'spatial_shuffle_sim': 'similarity',
+    'temporal_shuffle_sim': 'similarity',
+}
 for mode in modes_lst:
     key = mode+'_shuffle_sim'
     pairwise_cat_plots(RESULTS, y=key, z='actual_sim',
         title=mode+' shuffled similarity',
+        label_dict=label_dict,
         save_image=save_image, output_root=output_root+'randomization/'
         )
 
@@ -620,10 +665,14 @@ subject are used
 RESULTS = ALL_RESULTS['randomization']['random_state_TC'] 
 
 ############ VISUALIZE ############
+label_dict = {
+    'sim': 'similarity',
+}
 pairwise_cat_plots(RESULTS, y='sim', z='actual_sim',
     title='random state time course dFC',
+    label_dict=label_dict,
     save_image=save_image, output_root=output_root+'randomization/'
-    )
+)
 
 ################################# inter-state spatial similarity #################################
 
@@ -631,11 +680,15 @@ key_name = 'inter-state_spatial_sim'
 RESULTS = ALL_RESULTS[key_name]
 
 ############ VISUALIZE ############
-
+label_dict = {
+    'sim': 'inter-state spatial similarity',
+    'dFC_method': 'dFC assessment method'
+}
 cat_plot(data=RESULTS, x='dFC_method', y='sim', 
     kind='box',
     scale_dist=False,
     title=key_name,
+    label_dict=label_dict,
     save_image=save_image, output_root=output_root+'indiv_prop/'
     )
 
@@ -645,10 +698,13 @@ key_name = 'similarity of adjacent time points'
 RESULTS = ALL_RESULTS['adjacent_time_points']
 
 ############ VISUALIZE ############
-
+label_dict = {
+    'dFC_method': 'dFC assessment method'
+}
 cat_plot(data=RESULTS, x='dFC_method', y=key_name, 
     kind='box',
     title=key_name,
+    label_dict=label_dict,
     save_image=save_image, output_root=output_root+'indiv_prop/'
     )
 
@@ -661,10 +717,14 @@ key_name = 'trans_freq'
 RESULTS = ALL_RESULTS['transition_freq'] 
 
 ############ VISUALIZE ############
-
+label_dict = {
+    'trans_freq': 'transition frequency',
+    'dFC_method': 'dFC assessment method'
+}
 cat_plot(data=RESULTS, x='dFC_method', y=key_name, 
     kind='box',
     title=key_name,
+    label_dict=label_dict,
     save_image=save_image, output_root=output_root+'indiv_prop/'
     )
 
@@ -679,11 +739,15 @@ key_name = 'dwell_time'
 RESULTS = ALL_RESULTS['dwell_time'] 
 
 ############ VISUALIZE ############
-
+label_dict = {
+    'dwell_time': 'dwell time',
+    'dFC_method': 'dFC assessment method'
+}
 cat_plot(data=RESULTS, x='dFC_method', y=key_name, 
     kind='box',
     scale_dist=True,
     title=key_name,
+    label_dict=label_dict,
     y_lim=(0, 0.2),
     save_image=save_image, output_root=output_root+'indiv_prop/'
     )
@@ -693,23 +757,25 @@ cat_plot(data=RESULTS, x='dFC_method', y=key_name,
 RESULTS = ALL_RESULTS['time_record'] 
 filter = 'session_Rest1_LR'
 
-RESULTS['FCS fit time (s)'] = RESULTS['FCS_fit_time (s)']
-RESULTS['dFC assess time (s)'] = RESULTS['dFC_assess_time (s)']
-RESULTS['dFC method'] = RESULTS['dFC_method']
-
 ############ VISUALIZE ############
-
-cat_plot(data=RESULTS, x='dFC method', y='dFC assess time (s)', 
+label_dict = {
+    'FCS_fit_time (s)':'FCS fitting time (s)',
+    'dFC_assess_time (s)':'dFC assessing time (s)',
+    'dFC_method': 'dFC assessment method'
+}
+cat_plot(data=RESULTS, x='dFC_method', y='dFC_assess_time (s)', 
     kind='bar', log=True,
     title='dFC assess time record of ' + filter,
+    label_dict=label_dict,
     save_image=save_image, output_root=output_root+'time/'
-    )
+)
 
-cat_plot(data=RESULTS, x='dFC method', y='FCS fit time (s)', 
+cat_plot(data=RESULTS, x='dFC_method', y='FCS_fit_time (s)', 
     kind='bar', log=True,
     title='FCS fit time record of ' + filter,
+    label_dict=label_dict,
     save_image=save_image, output_root=output_root+'time/'
-    )
+)
 
 if not save_image:
     plt.show()

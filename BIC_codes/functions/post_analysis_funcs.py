@@ -8,6 +8,7 @@ Created on Wed Feb 8 2023
 
 import warnings
 import numpy as np
+import math
 import scipy.cluster.hierarchy as shc
 import scipy.spatial.distance as ssd
 import statsmodels.api as sm
@@ -148,6 +149,7 @@ def plot_sample_dFC(D, x,
     
 def pairwise_cat_plots(data=None, x=None, y=None, z=None,
     title='', 
+    label_dict={},
     save_image=False, output_root=None
     ):
     '''
@@ -183,7 +185,22 @@ def pairwise_cat_plots(data=None, x=None, y=None, z=None,
                 sns.stripplot(ax=axs[i, j], data=df, x=x, y=z, color='red', jitter=False, size=10)
             sns.violinplot(ax=axs[i, j], data=df, x=x, y=y)
 
-            axs[i, j].set_title(key_i+'-'+key_j)
+            axs[i, j].set_title(key_i+'-'+key_j, fontdict={'fontsize': 25, 'fontweight': 'bold'})
+
+            ## set labels
+            ylabel = axs[i, j].get_ylabel()
+            if ylabel in label_dict:
+                ylabel = label_dict[ylabel]
+            axs[i, j].set_ylabel(ylabel, fontdict={'fontsize': 20, 'fontweight': 'bold'})
+            xlabel = axs[i, j].get_xlabel()
+            if xlabel in label_dict:
+                xlabel = label_dict[xlabel]
+            axs[i, j].set_xlabel(xlabel, fontdict={'fontsize': 20, 'fontweight': 'bold'})
+            # set font size of the tick labels and make them bold 
+            tick_labels = axs[i, j].get_xticklabels() + axs[i, j].get_yticklabels()
+            for label in tick_labels:
+                label.set_fontweight('bold')
+
             axs_plotted.append(axs[i, j])
 
     # remove extra subplots
@@ -249,6 +266,7 @@ def joint_dist_plot(data,
 
 def pairwise_scatter_plots(data, x, y,
     title='', hist=False,
+    label_dict={},
     equal_axis_lim=False, show_x_equal_y=False,
     save_image=False, output_root=None
     ):
@@ -301,7 +319,22 @@ def pairwise_scatter_plots(data, x, y,
                 g = sns.histplot(ax=axs[i, j], data=df, x=x, y=y, bins=50)
             else:
                 g = sns.scatterplot(ax=axs[i, j], data=df, x=x, y=y, s=50)
-            axs[i, j].set_title(key_i+'-'+key_j)
+            axs[i, j].set_title(key_i+'-'+key_j, fontdict={'fontsize': 25, 'fontweight': 'bold'})
+
+            ## set labels and font sizes
+            ylabel = g.get_ylabel()
+            if ylabel in label_dict:
+                ylabel = label_dict[ylabel]
+            g.set_ylabel(ylabel, fontdict={'fontsize': 18, 'fontweight': 'bold'})
+            xlabel = g.get_xlabel()
+            if xlabel in label_dict:
+                xlabel = label_dict[xlabel]
+            g.set_xlabel(xlabel, fontdict={'fontsize': 18, 'fontweight': 'bold'})
+            g.tick_params(axis='x', which='major', labelsize=18)
+            g.tick_params(axis='y', which='major', labelsize=18)   
+            tick_labels = g.get_xticklabels() + g.get_yticklabels()
+            for label in tick_labels:
+                label.set_fontweight('bold')
 
             # equal x_lim and y_lim
             if equal_axis_lim:
@@ -315,7 +348,6 @@ def pairwise_scatter_plots(data, x, y,
                 axs[i, j].plot(X_plot, Y_plot, color='r')
 
             axs_plotted.append(axs[i, j])
-
     # remove extra subplots
     for ax in axs.ravel():
         if not ax in axs_plotted:
@@ -339,11 +371,14 @@ def pairwise_scatter_plots(data, x, y,
 def scatter_plot(data, x, y,
     labels=None, hue=None,
     title='', hist=False,
+    label_dict={},
     equal_axis_lim=False, show_x_equal_y=False,
+    c=0.25,
     save_image=False, output_root=None
     ):
     '''
     data is a dictionary with different vars as keys 
+    c determines how far the annotation will be from dots
     '''
     df = pd.DataFrame(data)
 
@@ -360,6 +395,21 @@ def scatter_plot(data, x, y,
         g = sns.histplot(data=df, x=x, y=y, hue=hue)
     else:
         g = sns.scatterplot(data=df, x=x, y=y, s=100, hue=hue)
+
+    ## set labels and font sizes
+    ylabel = g.get_ylabel()
+    if ylabel in label_dict:
+        ylabel = label_dict[ylabel]
+    g.set_ylabel(ylabel, fontdict={'fontsize': 25, 'fontweight': 'bold'})
+    xlabel = g.get_xlabel()
+    if xlabel in label_dict:
+        xlabel = label_dict[xlabel]
+    g.set_xlabel(xlabel, fontdict={'fontsize': 25, 'fontweight': 'bold'})
+    g.tick_params(axis='x', which='major', labelsize=18)
+    g.tick_params(axis='y', which='major', labelsize=18)   
+    tick_labels = g.get_xticklabels() + g.get_yticklabels()
+    for label in tick_labels:
+        label.set_fontweight('bold')
     
     # equal x_lim and y_lim
     if equal_axis_lim:
@@ -383,15 +433,28 @@ def scatter_plot(data, x, y,
         plt.plot(X_plot, Y_plot, color='r')
 
     if (not labels is None) and (not hist):
-        c = 0.015
+        # the labels are located smartly
+        # the direction will be away from mean
+        # the distance will be inverse proportional to 
+        # distance from mean
         mid_x = (np.max(df[x]) + np.min(df[x]))/2
         mid_y = (np.max(df[y]) + np.min(df[y]))/2
+        x_range = max(np.max(df[x])-mid_x, mid_x-np.min(df[x]))
+        y_range = max(np.max(df[y])-mid_y, mid_y-np.min(df[y]))
+        distance_from_mean_range = math.sqrt(x_range**2+y_range**2)
         for i in range(len(df[x])):
+            distance_from_mean = math.sqrt((df[x][i]-mid_x)**2+(df[y][i]-mid_y)**2)
+            text_x = df[x][i]+c*np.sign(df[x][i]-mid_x)*np.abs(df[x][i]-mid_x)*(distance_from_mean_range-distance_from_mean)/distance_from_mean 
+            text_y = df[y][i]+c*np.sign(df[y][i]-mid_y)*np.abs(df[y][i]-mid_y)*(distance_from_mean_range-distance_from_mean)/distance_from_mean
             plt.text(
-                x=df[x][i]-c*np.sign(df[x][i]-mid_x)-0.04, 
-                y=df[y][i]-c*np.sign(df[y][i]-mid_y)-0.005, 
+                x=text_x, 
+                y=text_y, 
                 s=df[labels][i], 
-                fontdict=dict(color='black', size=20),
+                fontdict=dict(color='black', size=14, weight='bold'),
+            )
+            plt.plot(
+                [df[x][i], text_x], [df[y][i], text_y], 
+                'k', linewidth=0.5
             )
     
     if show_title:
@@ -413,6 +476,7 @@ def cat_plot(data, x, y,
     scale_dist=False,
     log=False,
     title='',
+    label_dict={},
     y_lim=None,
     save_image=False, output_root=None
     ):
@@ -441,6 +505,7 @@ def cat_plot(data, x, y,
         )
     elif kind=='bar':
         g = sns.catplot(data=df, x=x, y=y, kind=kind,
+                        width=0.25
             # errorbar=("pi", 95)
         )
     elif kind=='box':
@@ -459,6 +524,15 @@ def cat_plot(data, x, y,
     g.fig.set_figwidth(fig_width)
     g.fig.set_figheight(fig_height)
 
+    ## set labels
+    ylabel = g.ax.get_ylabel()
+    if ylabel in label_dict:
+        ylabel = label_dict[ylabel]
+    g.ax.set_ylabel(ylabel, fontdict={'fontsize': 13, 'fontweight': 'bold'})
+    xlabel = g.ax.get_xlabel()
+    if xlabel in label_dict:
+        xlabel = label_dict[xlabel]
+    g.ax.set_xlabel(xlabel, fontdict={'fontsize': 13, 'fontweight': 'bold'})
     # set font size of the tick labels and make them bold
     # g.ax.tick_params(axis='x', which='major', labelsize=12)
     # g.ax.tick_params(axis='y', which='major', labelsize=12)   
@@ -583,7 +657,7 @@ def visualize_sim_mat(data, mat_key, title='',
             annot_kws={'weight': 'bold'}
         else:
             linecolor = 'w'
-            annot_kws={}
+            annot_kws={'weight': 'bold'}
 
         im = sns.heatmap(C, 
             annot=annot_labels, annot_kws=annot_kws,
@@ -593,8 +667,8 @@ def visualize_sim_mat(data, mat_key, title='',
             square=True, linewidth=2, linecolor=linecolor
         )
         axes[i].set_title(key, fontdict= { 'fontsize': 17, 'fontweight':'bold'})
-        im.set_xticklabels(im.get_xticklabels(), fontdict= { 'fontsize': 10, 'fontweight':'bold'}, rotation=90)
-        im.set_yticklabels(im.get_yticklabels(), fontdict= { 'fontsize': 10, 'fontweight':'bold'}, rotation=0)
+        im.set_xticklabels(im.get_xticklabels(), fontdict= {'fontsize': 12, 'fontweight':'bold'}, rotation=90)
+        im.set_yticklabels(im.get_yticklabels(), fontdict= {'fontsize': 12, 'fontweight':'bold'}, rotation=0)
 
     if not fig_flag:
             
