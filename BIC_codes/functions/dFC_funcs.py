@@ -53,6 +53,45 @@ save_fig_format = 'png'
 
 ################################# Other Functions ####################################
 
+# test
+def zip_name(name):
+    # zip measure names
+    if 'Clustering' in name:
+        new_name = 'SWC' 
+    if 'CAP' in name:
+        new_name = 'CAP' 
+    if 'ContinuousHMM' in name:
+        new_name = 'CHMM' 
+    if 'Windowless' in name:
+        new_name = 'WL' 
+    if 'DiscreteHMM' in name:
+        new_name = 'DHMM' 
+    if 'Time-Freq' in name:
+        new_name = 'TF' 
+    if 'SlidingWindow' in name:
+        new_name = 'SW'
+    return new_name
+
+# test
+# pear_corr problem
+def unzip_name(name):
+    # unzip measure names
+    if 'SWC' in name:
+        new_name = 'Clustering' 
+    elif 'CAP' in name:
+        new_name = 'CAP' 
+    elif 'CHMM' in name:
+        new_name = 'ContinuousHMM' 
+    elif 'WL' in name:
+        new_name = 'Windowless' 
+    elif 'DHMM' in name:
+        new_name = 'DiscreteHMM' 
+    elif 'TF' in name:
+        new_name = 'Time-Freq' 
+    elif 'SW' in name:
+        new_name = 'SlidingWindow'
+    return new_name
+
 def find_new_order(old_list, new_list):
     '''
     new_order is a list of indices
@@ -430,10 +469,11 @@ def segment_FC_dict(FC_dict, node_networks):
         segmented_dict[key] = segment_FC(FC_dict[key], node_networks)
     return segmented_dict
     
-def visualize_conn_mat(C, axis=None, title='', \
-    cmap='seismic',\
-    V_MIN=None, V_MAX=None, \
-    node_networks=None \
+def visualize_conn_mat(C, axis=None, title='',
+    cmap='seismic',
+    V_MIN=None, V_MAX=None,
+    node_networks=None,
+    title_fontsize=18
     ):
     '''
     C is (regions, regions)
@@ -481,7 +521,7 @@ def visualize_conn_mat(C, axis=None, title='', \
         axis.set_xticklabels(network_names, rotation=90, fontsize=13)
         axis.set_yticklabels(network_names, fontsize=13)
     
-    axis.set_title(title, fontdict={'fontsize': 18, 'fontweight': 'bold'})
+    axis.set_title(title, fontdict={'fontsize': title_fontsize, 'fontweight': 'bold'})
 
     return im
 
@@ -649,7 +689,7 @@ def visualize_conn_mat_2D_dict(data, title='', \
                 0.31 0.00 0.43 
                 0.76 0.43 0.00 
     '''
-
+    zip_measure_name = True
     sns.set_context("paper", 
         font_scale=3.5, 
         rc={"lines.linewidth": 3.0}
@@ -733,11 +773,17 @@ def visualize_conn_mat_2D_dict(data, title='', \
                 C = np.multiply(C, 1-np.eye(len(C)))
                 C = C + np.mean(C.flatten()) * np.eye(len(C))
 
-            im = visualize_conn_mat(C, axis=axs[i][j], title=key_i + ' and ' + key_j, \
-                cmap=cmap,\
-                V_MIN=V_MIN, V_MAX=V_MAX, \
-                node_networks=node_networks \
-                )
+            if zip_measure_name:
+                mat_title=zip_name(key_i)+'-'+zip_name(key_j)
+            else:
+                mat_title=key_i+' and '+key_j
+
+            im = visualize_conn_mat(C, axis=axs[i][j], title=mat_title,
+                cmap=cmap,
+                V_MIN=V_MIN, V_MAX=V_MAX,
+                node_networks=node_networks,
+                title_fontsize=25
+            )
 
             axs_plotted.append(axs[i][j])
 

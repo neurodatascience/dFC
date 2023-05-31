@@ -26,7 +26,7 @@ from copy import deepcopy
 import sys
 
 sys.path.append('./../git_codes/BIC_codes/')
-from functions.dFC_funcs import dFC_mat2vec, visualize_conn_mat_dict, mat_reorder
+from functions.dFC_funcs import dFC_mat2vec, visualize_conn_mat_dict, mat_reorder, zip_name, unzip_name
 
 ################################# Parameters ####################################
 
@@ -44,45 +44,6 @@ def title2file_name(title):
     the original string remains unchanged 
     '''
     return title.replace(" ", "_")
-
-# test
-def zip_name(name):
-    # zip measure names
-    if 'Clustering' in name:
-        new_name = 'SWC' 
-    if 'CAP' in name:
-        new_name = 'CAP' 
-    if 'ContinuousHMM' in name:
-        new_name = 'CHMM' 
-    if 'Windowless' in name:
-        new_name = 'WL' 
-    if 'DiscreteHMM' in name:
-        new_name = 'DHMM' 
-    if 'Time-Freq' in name:
-        new_name = 'TF' 
-    if 'SlidingWindow' in name:
-        new_name = 'SW'
-    return new_name
-
-# test
-# pear_corr problem
-def unzip_name(name):
-    # unzip measure names
-    if 'SWC' in name:
-        new_name = 'Clustering' 
-    elif 'CAP' in name:
-        new_name = 'CAP' 
-    elif 'CHMM' in name:
-        new_name = 'ContinuousHMM' 
-    elif 'WL' in name:
-        new_name = 'Windowless' 
-    elif 'DHMM' in name:
-        new_name = 'DiscreteHMM' 
-    elif 'TF' in name:
-        new_name = 'Time-Freq' 
-    elif 'SW' in name:
-        new_name = 'SlidingWindow'
-    return new_name
 
 def plot_sample_dFC(D, x,
     title='',
