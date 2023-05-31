@@ -529,6 +529,7 @@ def visualize_conn_mat_dict(data, title='',
     cmap='seismic',
     normalize=False,
     disp_diag=True,
+    label_dict={},
     save_image=False, output_root=None, axes=None, fig=None, 
     fix_lim=True, center_0=True, 
     node_networks=None, segmented=False 
@@ -620,10 +621,13 @@ def visualize_conn_mat_dict(data, title='',
 
         C = conn_mats[i,:,:]
 
-        im = visualize_conn_mat(C, axis=axes[i], title=key, \
-            cmap=cmap,\
-            V_MIN=V_MIN, V_MAX=V_MAX, \
-            node_networks=node_networks \
+        mat_title = key
+        if key in label_dict:
+            mat_title = label_dict[key]
+        im = visualize_conn_mat(C, axis=axes[i], title=mat_title,
+            cmap=cmap,
+            V_MIN=V_MIN, V_MAX=V_MAX,
+            node_networks=node_networks
             )
     if not fig_flag:
         fig.subplots_adjust(

@@ -533,23 +533,39 @@ scatter_plot(
     save_image=save_image, output_root=output_root+'variation/'
 )
 
+label_dict = {
+    'var_over_method': 'variation over method',
+    'var_over_time': 'variation over time',
+    'var_over_method/var_over_time': 'division',
+    'var_over_method*var_over_time': 'multiplication',
+}
+
 visualize_conn_mat_dict(RESULTS, node_networks=node_networks, 
-    title='variation across regions', fix_lim=False, 
+    title='variation across regions', fix_lim=False,  
+    label_dict=label_dict,
     disp_diag=True, cmap='plasma', center_0=False,
     save_image=save_image, output_root=output_root+'variation/'
 )
 
 # func conn segmented
 visualize_conn_mat_dict(RESULTS, node_networks=node_networks, segmented=True,
-    title='segmented high variation regions', fix_lim=False, 
+    title='segmented high variation regions', fix_lim=False,  
+    label_dict=label_dict,
     disp_diag=True, cmap='plasma', center_0=False,
     save_image=save_image, output_root=output_root+'variation/'
 )
 
 RESULTS = ALL_RESULTS['high_var_func_conns'] 
 
+label_dict = {
+    'var_over_method': 'variation over method',
+    'var_over_time': 'variation over time',
+    'var_over_method/var_over_time': 'division',
+    'var_over_method*var_over_time': 'multiplication',
+}
 visualize_conn_mat_dict(RESULTS, node_networks=node_networks, 
-    title='high variation regions', fix_lim=False, 
+    title='high variation regions', fix_lim=False,  
+    label_dict=label_dict,
     disp_diag=True, cmap='plasma', center_0=False,
     save_image=save_image, output_root=output_root+'variation/'
 )
