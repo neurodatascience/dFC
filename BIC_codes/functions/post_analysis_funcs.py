@@ -225,6 +225,7 @@ def pairwise_cat_plots(data=None, x=None, y=None, z=None,
 
 def joint_dist_plot(data,
     title='',
+    label_dict={},
     save_image=False, output_root=None
     ):
     '''
@@ -250,6 +251,25 @@ def joint_dist_plot(data,
     g.fig.set_figwidth(fig_width)
     g.fig.set_figheight(fig_height)
     g.fig.subplots_adjust(top=0.95)
+
+    for i in range(g.axes.shape[0]):
+        for j in range(g.axes.shape[1]):
+
+            ## set labels
+            ylabel = g.axes[i, j].get_ylabel()
+            if ylabel in label_dict:
+                ylabel = label_dict[ylabel]
+            g.axes[i, j].set_ylabel(ylabel, fontdict={'fontsize': 25, 'fontweight': 'bold'})
+            xlabel = g.axes[i, j].get_xlabel()
+            if xlabel in label_dict:
+                xlabel = label_dict[xlabel]
+            g.axes[i, j].set_xlabel(xlabel, fontdict={'fontsize': 25, 'fontweight': 'bold'})
+
+            # set font size of the tick labels and make them bold 
+            tick_labels = g.axes[i, j].get_xticklabels() + g.axes[i, j].get_yticklabels()
+            for label in tick_labels:
+                label.set_fontweight('bold')
+
     if show_title:
         plt.suptitle(title, fontsize=50, y=0.98)
 

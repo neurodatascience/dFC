@@ -58,7 +58,7 @@ for measure in ALL_RESULTS['measure_lst']:
     )
 
 ################################# dFC values distributions #################################
-dFC_dist_plot = False
+dFC_dist_plot = True
 
 if dFC_dist_plot:
     
@@ -69,7 +69,7 @@ if dFC_dist_plot:
     joint_dist_plot(data=RESULTS,
         title='dFC values distributions',
         save_image=save_image, output_root=output_root+'indiv_prop/'
-        )
+    )
 
 ################################# dFC Similarity #################################
 
