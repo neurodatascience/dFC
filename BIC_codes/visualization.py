@@ -58,7 +58,7 @@ for measure in ALL_RESULTS['measure_lst']:
     )
 
 ################################# dFC values distributions #################################
-dFC_dist_plot = True
+dFC_dist_plot = False
 
 if dFC_dist_plot:
     
@@ -385,17 +385,20 @@ RESULTS = ALL_RESULTS['dFC_var']
 visualize_conn_mat_dict(RESULTS['avg_dFC_var'], node_networks=node_networks, 
             title='avg dFC var', center_0=False,
             fix_lim=False, disp_diag=True, cmap='plasma', normalize=False, 
-            save_image=save_image, output_root=output_root+'dFC_var/')
+            save_image=save_image, output_root=output_root+'dFC_var/'
+)
 
 visualize_conn_mat_dict(RESULTS['avg_dFC_var'], node_networks=node_networks, segmented=True,
             title='segmented avg dFC var', center_0=False,
             fix_lim=False, disp_diag=True, cmap='plasma', normalize=False, 
-            save_image=save_image, output_root=output_root+'dFC_var/')
+            save_image=save_image, output_root=output_root+'dFC_var/'
+)
 
 visualize_conn_mat_dict(RESULTS['var_dFC_var'], node_networks=node_networks, 
             title='var of dFC var', center_0=False,
             fix_lim=False, disp_diag=True, cmap='plasma', normalize=False, 
-            save_image=save_image, output_root=output_root+'dFC_var/')
+            save_image=save_image, output_root=output_root+'dFC_var/'
+)
 
 ################################# dFC avg #################################
 
@@ -409,12 +412,14 @@ RESULTS = ALL_RESULTS['dFC_avg']
 visualize_conn_mat_dict(RESULTS, node_networks=node_networks, 
         title='dFC avg', center_0=False,
         fix_lim=False, disp_diag=False, cmap='plasma', normalize=False,
-        save_image=save_image, output_root=output_root+'dFC_avg/')
+        save_image=save_image, output_root=output_root+'dFC_avg/'
+)
 
 visualize_conn_mat_dict(RESULTS, node_networks=node_networks, segmented=True,
         title='segmented dFC avg', center_0=False,
         fix_lim=False, disp_diag=False, cmap='plasma', normalize=False,
-        save_image=save_image, output_root=output_root+'dFC_avg/')
+        save_image=save_image, output_root=output_root+'dFC_avg/'
+)
 
 ################################# Across Func Conn total Correlation #################################
 

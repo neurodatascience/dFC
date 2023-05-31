@@ -65,19 +65,19 @@ def plot_sample_dFC(D, x,
     names_lst = [key for key in D]
     num_time = len(D[names_lst[0]][x])
 
-    fig_width = 55*(num_time/10)
+    fig_width = 48*(num_time/10)
     fig_height = 55*(num_dFC/10)
 
     fig, axes = plt.subplots(num_dFC, num_time, figsize=(fig_width, fig_height), \
         facecolor='w', edgecolor='k')
 
     fig.subplots_adjust(
-        bottom=0.1, \
-        top=0.85, \
-        left=0.1, \
+        bottom=0.1,
+        top=0.85,
+        left=0.1,
         right=0.9,
-        wspace=0.3, \
-        hspace=0.8\
+        wspace=0.5,
+        hspace=0.6
     )
 
     for i, dFC_mat_name in enumerate(D):
@@ -91,10 +91,19 @@ def plot_sample_dFC(D, x,
             save_image=False, output_root=output_root,
             axes=axes[i, :], fig=fig, 
         )
+
+    fig.subplots_adjust(
+        bottom=0.1,
+        top=0.85,
+        left=0.1,
+        right=0.9,
+        wspace=0.5,
+        hspace=0.6
+    )
         
     # set row names
     for i, dFC_mat_name in enumerate(D):
-        axes[i, 0].set_ylabel(dFC_mat_name, fontdict={'fontsize': 18, 'fontweight': 'bold'}, rotation=90)
+        axes[i, 0].set_ylabel(dFC_mat_name, fontdict={'fontsize': 25, 'fontweight': 'bold'}, rotation=90)
     
     if save_image:
         folder = output_root[:output_root.rfind('/')]
