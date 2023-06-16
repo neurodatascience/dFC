@@ -494,6 +494,7 @@ visualize_conn_mat_2D_dict(RESULTS, node_networks=node_networks, segmented=True,
 '''
 
 RESULTS = ALL_RESULTS['var_across_func_conns'] 
+RATIO = ALL_RESULTS['var_across_func_conns_ratio'] 
 scatter_data = ALL_RESULTS['var_method_vs_time_across_func_conns_scatter'] 
 
 ############ method var / time var ############
@@ -530,6 +531,22 @@ scatter_plot(
     label_dict=label_dict,
     hist=True,
     equal_axis_lim=True, show_x_equal_y=True,
+    save_image=save_image, output_root=output_root+'variation/'
+)
+
+label_dict = {
+}
+visualize_conn_mat_dict(RATIO, node_networks=node_networks, segmented=False,
+    title='ratio of high variation regions', fix_lim=False,  
+    label_dict=label_dict,
+    disp_diag=False, cmap='seismic', center_0=True,
+    save_image=save_image, output_root=output_root+'variation/'
+)
+
+visualize_conn_mat_dict(RATIO, node_networks=node_networks, segmented=True,
+    title='segmented ratio of high variation regions', fix_lim=False,  
+    label_dict=label_dict,
+    disp_diag=False, cmap='seismic', center_0=True,
     save_image=save_image, output_root=output_root+'variation/'
 )
 
