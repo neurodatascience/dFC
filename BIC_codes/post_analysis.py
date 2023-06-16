@@ -687,25 +687,29 @@ for filter in ['default_values']:
     var_over_method = np.mean(var_over_method, axis=0) # (ROI, ROI)
 
     RESULTS = {}
-    RESULTS['var_over_time'] = np.divide(var_over_time, np.max(var_over_time))
-    RESULTS['var_over_method'] = np.divide(var_over_method, np.max(var_over_method))
-    RESULTS['var_over_method/var_over_time'] = np.divide(
-                                                        var_over_method, var_over_time, 
-                                                        out=np.zeros_like(var_over_method), 
-                                                        where=var_over_time!=0
-                                                        ) - 1 
-    RESULTS['var_over_method*var_over_time'] = np.multiply(var_over_method, var_over_time)
-    for key in RESULTS:
-        RESULTS[key] = rank_norm(RESULTS[key])
+    RESULTS['var_over_time'] = var_over_time
+    RESULTS['var_over_method'] = var_over_method
+
+    RATIO = {
+        'var across method / time - 1': np.divide(
+                                            var_over_method, var_over_time, 
+                                            out=np.zeros_like(var_over_method), 
+                                            where=var_over_time!=0
+                                        ) - 1 
+    }
 
     ALL_RESULTS['var_across_func_conns'] = deepcopy(RESULTS)
+    ALL_RESULTS['var_across_func_conns_ratio'] = deepcopy(RATIO)
     ALL_RESULTS['var_method_vs_time_across_func_conns_scatter'] = deepcopy(scatter_data)
+
+    for key in RESULTS:
+        RESULTS[key] = rank_norm(RESULTS[key])
 
     for key in RESULTS:
         RESULTS[key] = cat_data(RESULTS[key], N=10)
         RESULTS[key] = np.where(RESULTS[key] == np.max(RESULTS[key]), 1, 0)
 
-ALL_RESULTS['high_var_func_conns'] = deepcopy(RESULTS)
+    ALL_RESULTS['high_var_func_conns'] = deepcopy(RESULTS)
 
 ################################# Variation Value Comparison #################################
 '''

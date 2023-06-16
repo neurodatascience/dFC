@@ -583,14 +583,18 @@ def visualize_conn_mat_dict(data, title='',
     for i, key in enumerate(data):
         
         if segmented:
-            C = segment_FC(data[key], node_networks)
+            C = data[key]
+            if not disp_diag:
+                C = np.multiply(C, 1-np.eye(len(C)))
+                C = C + np.mean(C.flatten()) * np.eye(len(C))
+            C = segment_FC(C, node_networks)
         else:
             C = data[key]
 
         if normalize:
             C = dFC_mat_normalize(C[None,:,:], global_normalization=False, threshold=0.0)[0]
 
-        if not disp_diag:
+        if (not disp_diag) and (not segmented):
             C = np.multiply(C, 1-np.eye(len(C)))
             C = C + np.mean(C.flatten()) * np.eye(len(C))
 
