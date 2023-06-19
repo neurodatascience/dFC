@@ -500,9 +500,12 @@ scatter_data = ALL_RESULTS['var_method_vs_time_across_func_conns_scatter']
 ############ method var / time var ############
 
 ratio = list()
+ratio_std = list()
 for i, sample in enumerate(scatter_data['var_method']):
     ratio.append(scatter_data['var_method'][i]/scatter_data['var_time'][i])
+    ratio_std.append(np.sqrt(scatter_data['var_method_std'][i])/np.sqrt(scatter_data['var_time_std'][i]))
 ratio = np.mean(np.array(ratio))
+ratio_std = np.mean(np.array(ratio_std))    
 avg_var_time = np.mean(scatter_data['var_time'])
 avg_var_method = np.mean(scatter_data['var_method'])
 
@@ -514,6 +517,7 @@ filename = Path(folder+'/var_ratio.txt')
 filename.touch(exist_ok=True)
 text_file = open(filename, 'wt')
 text_file.write('Average of var method / var time ratio = '+ str(ratio)+'\n')
+text_file.write('Average of std method / std time ratio = '+ str(ratio_std)+'\n')
 text_file.write('Average var method = '+ str(avg_var_method)+'\n')
 text_file.write('Average var time = '+ str(avg_var_time)+'\n')
 text_file.write('Ratio of avg var method / avg var time = '+ str(avg_var_method/avg_var_time)+'\n')
