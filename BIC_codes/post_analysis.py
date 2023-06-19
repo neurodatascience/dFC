@@ -82,7 +82,7 @@ for filter in ['default_values']:
         SUBJs_output = np.load(assessment_results_root+FOLDER_name+s, allow_pickle='True').item()
 
         for measure_id in SUBJs_output[filter]['dFCM_samples']:
-            TRs = SUBJs_output[filter]['common_TRs'][:10]
+            TRs = SUBJs_output[filter]['common_TRs'][4:10]
 
             # rank the whole dFC
             dFC_mat = SUBJs_output[filter]['dFCM_samples'][measure_id]

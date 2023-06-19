@@ -279,7 +279,7 @@ scatter_plot(
     labels='labels', title='spatial similarity vs temporal similarity',
     label_dict=label_dict,
     c=0.3,
-    equal_axis_lim=True, show_x_equal_y=False,
+    equal_axis_lim=True, show_x_equal_y=True,
     save_image=save_image, output_root=output_root+'variation/'
 )
     
@@ -627,7 +627,7 @@ scatter_plot(
     labels='labels', title='var method vs time',
     label_dict=label_dict,
     c=0.5,
-    equal_axis_lim=True, show_x_equal_y=False,
+    equal_axis_lim=True, show_x_equal_y=True,
     save_image=save_image, output_root=output_root+'variation/'
 )
 
