@@ -503,7 +503,7 @@ ratio = list()
 ratio_std = list()
 for i, sample in enumerate(scatter_data['var_method']):
     ratio.append(scatter_data['var_method'][i]/scatter_data['var_time'][i])
-    ratio_std.append(np.sqrt(scatter_data['var_method_std'][i])/np.sqrt(scatter_data['var_time_std'][i]))
+    ratio_std.append(np.sqrt(scatter_data['var_method'][i])/np.sqrt(scatter_data['var_time'][i]))
 ratio = np.mean(np.array(ratio))
 ratio_std = np.mean(np.array(ratio_std))    
 avg_var_time = np.mean(scatter_data['var_time'])
@@ -539,6 +539,7 @@ scatter_plot(
 )
 
 label_dict = {
+    'var across method / time - 1': 'var across method / time - 1',
 }
 visualize_conn_mat_dict(RATIO, node_networks=node_networks, segmented=False,
     title='ratio of high variation regions', fix_lim=False,  
@@ -556,9 +557,7 @@ visualize_conn_mat_dict(RATIO, node_networks=node_networks, segmented=True,
 
 label_dict = {
     'var_over_method': 'variation over method',
-    'var_over_time': 'variation over time',
-    'var_over_method/var_over_time': 'division',
-    'var_over_method*var_over_time': 'multiplication',
+    'var_over_time': 'variation over time'
 }
 
 visualize_conn_mat_dict(RESULTS, node_networks=node_networks, 
@@ -580,9 +579,7 @@ RESULTS = ALL_RESULTS['high_var_func_conns']
 
 label_dict = {
     'var_over_method': 'variation over method',
-    'var_over_time': 'variation over time',
-    'var_over_method/var_over_time': 'division',
-    'var_over_method*var_over_time': 'multiplication',
+    'var_over_time': 'variation over time'
 }
 visualize_conn_mat_dict(RESULTS, node_networks=node_networks, 
     title='high variation regions', fix_lim=False,  
@@ -680,6 +677,180 @@ for clstr in scatter_data:
         save_image=save_image, output_root=output_root+'variation/'
     )
 text_file.close()
+
+################################# Inter-subject Variation #################################
+'''
+    - compute var over method and subject across all func conns 
+'''
+
+RESULTS = ALL_RESULTS['inter-subj_var_across_func_conns'] 
+RATIO = ALL_RESULTS['inter-subj_var_across_func_conns_ratio'] 
+scatter_data = ALL_RESULTS['var_method_vs_subj_across_func_conns_scatter'] 
+
+############ method var / subject var ############
+
+ratio = list()
+ratio_std = list()
+for i, sample in enumerate(scatter_data['var_method']):
+    ratio.append(scatter_data['var_method'][i]/scatter_data['var_subj'][i])
+    ratio_std.append(np.sqrt(scatter_data['var_method'][i])/np.sqrt(scatter_data['var_subj'][i]))
+ratio = np.mean(np.array(ratio))
+ratio_std = np.mean(np.array(ratio_std))    
+avg_var_subj = np.mean(scatter_data['var_subj'])
+avg_var_method = np.mean(scatter_data['var_method'])
+
+# write to a txt file
+folder = output_root+'variation'
+if not os.path.exists(folder):
+    os.makedirs(folder)
+filename = Path(folder+'/subj_var_ratio.txt')
+filename.touch(exist_ok=True)
+text_file = open(filename, 'wt')
+text_file.write('Average of var method / var subj ratio = '+ str(ratio)+'\n')
+text_file.write('Average of std method / std subj ratio = '+ str(ratio_std)+'\n')
+text_file.write('Average var method = '+ str(avg_var_method)+'\n')
+text_file.write('Average var subj = '+ str(avg_var_subj)+'\n')
+text_file.write('Ratio of avg var method / avg var subj = '+ str(avg_var_method/avg_var_subj)+'\n')
+text_file.close()
+
+############ VISUALIZE ############
+
+label_dict = {
+    'var_method': 'variation over method',
+    'var_subj': 'variation over subject'
+}
+scatter_plot(
+    data=scatter_data, x='var_subj', y='var_method', 
+    title='var method vs subj across func conns',
+    label_dict=label_dict,
+    hist=True,
+    equal_axis_lim=True, show_x_equal_y=True,
+    save_image=save_image, output_root=output_root+'variation/'
+)
+
+label_dict = {
+    'var across method / subj - 1': 'var across method / subj - 1',
+}
+visualize_conn_mat_dict(RATIO, node_networks=node_networks, segmented=False,
+    title='ratio of method subj var regions', fix_lim=False,  
+    label_dict=label_dict,
+    disp_diag=False, cmap='seismic', center_0=True,
+    save_image=save_image, output_root=output_root+'variation/'
+)
+
+visualize_conn_mat_dict(RATIO, node_networks=node_networks, segmented=True,
+    title='segmented ratio of method subj var regions', fix_lim=False,  
+    label_dict=label_dict,
+    disp_diag=False, cmap='seismic', center_0=True,
+    save_image=save_image, output_root=output_root+'variation/'
+)
+
+label_dict = {
+    'var_over_method': 'variation over method',
+    'var_over_subj': 'variation over subject',
+}
+
+visualize_conn_mat_dict(RESULTS, node_networks=node_networks, 
+    title='inter-subj variation across regions', fix_lim=False,  
+    label_dict=label_dict,
+    disp_diag=True, cmap='plasma', center_0=False,
+    save_image=save_image, output_root=output_root+'variation/'
+)
+
+# func conn segmented
+visualize_conn_mat_dict(RESULTS, node_networks=node_networks, segmented=True,
+    title='segmented inter-subj variation across regions', fix_lim=False,  
+    label_dict=label_dict,
+    disp_diag=True, cmap='plasma', center_0=False,
+    save_image=save_image, output_root=output_root+'variation/'
+)
+
+################################# Overall Variability #################################
+'''
+    - compute var over method and overall across all func conns 
+'''
+
+RESULTS = ALL_RESULTS['var_all_across_func_conns'] 
+RATIO = ALL_RESULTS['var_all_across_func_conns_ratio'] 
+scatter_data = ALL_RESULTS['var_method_vs_all_across_func_conns_scatter'] 
+
+############ method var / subject var ############
+
+ratio = list()
+ratio_std = list()
+for i, sample in enumerate(scatter_data['var_method']):
+    ratio.append(scatter_data['var_method'][i]/scatter_data['var_all'][i])
+    ratio_std.append(np.sqrt(scatter_data['var_method'][i])/np.sqrt(scatter_data['var_all'][i]))
+ratio = np.mean(np.array(ratio))
+ratio_std = np.mean(np.array(ratio_std))    
+avg_var_all = np.mean(scatter_data['var_all'])
+avg_var_method = np.mean(scatter_data['var_method'])
+
+# write to a txt file
+folder = output_root+'variation'
+if not os.path.exists(folder):
+    os.makedirs(folder)
+filename = Path(folder+'/all_var_ratio.txt')
+filename.touch(exist_ok=True)
+text_file = open(filename, 'wt')
+text_file.write('Average of var method / var all ratio = '+ str(ratio)+'\n')
+text_file.write('Average of std method / std all ratio = '+ str(ratio_std)+'\n')
+text_file.write('Average var method = '+ str(avg_var_method)+'\n')
+text_file.write('Average var subj = '+ str(avg_var_all)+'\n')
+text_file.write('Ratio of avg var method / avg var subj = '+ str(avg_var_method/avg_var_all)+'\n')
+text_file.close()
+
+############ VISUALIZE ############
+
+label_dict = {
+    'var_method': 'variation over method',
+    'var_all': 'variation over all'
+}
+scatter_plot(
+    data=scatter_data, x='var_all', y='var_method', 
+    title='var method vs all across func conns',
+    label_dict=label_dict,
+    hist=True,
+    equal_axis_lim=True, show_x_equal_y=True,
+    save_image=save_image, output_root=output_root+'variation/'
+)
+
+label_dict = {
+    'var across method / all - 1': 'var across method / all - 1',
+}
+visualize_conn_mat_dict(RATIO, node_networks=node_networks, segmented=False,
+    title='ratio of method all var regions', fix_lim=False,  
+    label_dict=label_dict,
+    disp_diag=False, cmap='seismic', center_0=True,
+    save_image=save_image, output_root=output_root+'variation/'
+)
+
+visualize_conn_mat_dict(RATIO, node_networks=node_networks, segmented=True,
+    title='segmented ratio of method all var regions', fix_lim=False,  
+    label_dict=label_dict,
+    disp_diag=False, cmap='seismic', center_0=True,
+    save_image=save_image, output_root=output_root+'variation/'
+)
+
+label_dict = {
+    'var_over_method': 'variation over method',
+    'var_over_all': 'variation over all',
+}
+
+visualize_conn_mat_dict(RESULTS, node_networks=node_networks, 
+    title='all variation across regions', fix_lim=False,  
+    label_dict=label_dict,
+    disp_diag=True, cmap='plasma', center_0=False,
+    save_image=save_image, output_root=output_root+'variation/'
+)
+
+# func conn segmented
+visualize_conn_mat_dict(RESULTS, node_networks=node_networks, segmented=True,
+    title='segmented all variation across regions', fix_lim=False,  
+    label_dict=label_dict,
+    disp_diag=True, cmap='plasma', center_0=False,
+    save_image=save_image, output_root=output_root+'variation/'
+)
 
 ################################# Randomization Tests #################################
 
