@@ -280,7 +280,7 @@ scatter_plot(
     label_dict=label_dict,
     c=0.3,
     equal_axis_lim=True, show_x_equal_y=True,
-    save_image=save_image, output_root=output_root+'variation/'
+    save_image=save_image, output_root=output_root+'variation/spatialVsTemporal/'
 )
     
 ################# graph-based #################
@@ -510,7 +510,7 @@ avg_var_time = np.mean(scatter_data['var_time'])
 avg_var_method = np.mean(scatter_data['var_method'])
 
 # write to a txt file
-folder = output_root+'variation'
+folder = output_root+'variation/timeVsMethod'
 if not os.path.exists(folder):
     os.makedirs(folder)
 filename = Path(folder+'/var_ratio.txt')
@@ -535,24 +535,24 @@ scatter_plot(
     label_dict=label_dict,
     hist=True,
     equal_axis_lim=True, show_x_equal_y=True,
-    save_image=save_image, output_root=output_root+'variation/'
+    save_image=save_image, output_root=output_root+'variation/timeVsMethod/'
 )
 
 label_dict = {
-    'var across method / time - 1': 'var across method / time - 1',
+    'var across method / time - 1': 'var over method / time - 1',
 }
 visualize_conn_mat_dict(RATIO, node_networks=node_networks, segmented=False,
     title='ratio of high variation regions', fix_lim=False,  
     label_dict=label_dict,
     disp_diag=False, cmap='seismic', center_0=True,
-    save_image=save_image, output_root=output_root+'variation/'
+    save_image=save_image, output_root=output_root+'variation/timeVsMethod/'
 )
 
 visualize_conn_mat_dict(RATIO, node_networks=node_networks, segmented=True,
     title='segmented ratio of high variation regions', fix_lim=False,  
     label_dict=label_dict,
     disp_diag=False, cmap='seismic', center_0=True,
-    save_image=save_image, output_root=output_root+'variation/'
+    save_image=save_image, output_root=output_root+'variation/timeVsMethod/'
 )
 
 label_dict = {
@@ -564,7 +564,7 @@ visualize_conn_mat_dict(RESULTS, node_networks=node_networks,
     title='variation across regions', fix_lim=False,  
     label_dict=label_dict,
     disp_diag=True, cmap='plasma', center_0=False,
-    save_image=save_image, output_root=output_root+'variation/'
+    save_image=save_image, output_root=output_root+'variation/timeVsMethod/'
 )
 
 # func conn segmented
@@ -572,7 +572,7 @@ visualize_conn_mat_dict(RESULTS, node_networks=node_networks, segmented=True,
     title='segmented high variation regions', fix_lim=False,  
     label_dict=label_dict,
     disp_diag=True, cmap='plasma', center_0=False,
-    save_image=save_image, output_root=output_root+'variation/'
+    save_image=save_image, output_root=output_root+'variation/timeVsMethod/'
 )
 
 RESULTS = ALL_RESULTS['high_var_func_conns'] 
@@ -585,7 +585,7 @@ visualize_conn_mat_dict(RESULTS, node_networks=node_networks,
     title='high variation regions', fix_lim=False,  
     label_dict=label_dict,
     disp_diag=True, cmap='plasma', center_0=False,
-    save_image=save_image, output_root=output_root+'variation/'
+    save_image=save_image, output_root=output_root+'variation/timeVsMethod/'
 )
 
 ################################# Variation Value Comparison #################################
@@ -603,7 +603,7 @@ visualize_sim_mat(
     RESULTS, mat_key='sim_mat', title='variation in different dimensions', 
     name_lst_key='name_lst', 
     cmap='viridis',
-    save_image=save_image, output_root=output_root+'variation/'
+    save_image=save_image, output_root=output_root+'variation/timeVsMethod/'
 )
 
 label_dict = {
@@ -616,7 +616,7 @@ pairwise_scatter_plots(
     label_dict=label_dict,
     hist=True,
     equal_axis_lim=True, show_x_equal_y=True,
-    save_image=save_image, output_root=output_root+'variation/'
+    save_image=save_image, output_root=output_root+'variation/timeVsMethod/'
 )
 
 label_dict = {
@@ -629,7 +629,7 @@ scatter_plot(
     label_dict=label_dict,
     c=0.5,
     equal_axis_lim=True, show_x_equal_y=True,
-    save_image=save_image, output_root=output_root+'variation/'
+    save_image=save_image, output_root=output_root+'variation/timeVsMethod/'
 )
 
 ################################# Var method vs. Time Clstrwise #################################
@@ -674,7 +674,7 @@ for clstr in scatter_data:
         label_dict=label_dict,
         hist=True,
         equal_axis_lim=True, show_x_equal_y=True,
-        save_image=save_image, output_root=output_root+'variation/'
+        save_image=save_image, output_root=output_root+'variation/timeVsMethod/'
     )
 text_file.close()
 
@@ -700,7 +700,7 @@ avg_var_subj = np.mean(scatter_data['var_subj'])
 avg_var_method = np.mean(scatter_data['var_method'])
 
 # write to a txt file
-folder = output_root+'variation'
+folder = output_root+'variation/subjVsMethod'
 if not os.path.exists(folder):
     os.makedirs(folder)
 filename = Path(folder+'/subj_var_ratio.txt')
@@ -725,24 +725,24 @@ scatter_plot(
     label_dict=label_dict,
     hist=True,
     equal_axis_lim=True, show_x_equal_y=True,
-    save_image=save_image, output_root=output_root+'variation/'
+    save_image=save_image, output_root=output_root+'variation/subjVsMethod/'
 )
 
 label_dict = {
-    'var across method / subj - 1': 'var across method / subj - 1',
+    'var across method / subj - 1': 'var over method / subj - 1',
 }
 visualize_conn_mat_dict(RATIO, node_networks=node_networks, segmented=False,
     title='ratio of method subj var regions', fix_lim=False,  
     label_dict=label_dict,
     disp_diag=False, cmap='seismic', center_0=True,
-    save_image=save_image, output_root=output_root+'variation/'
+    save_image=save_image, output_root=output_root+'variation/subjVsMethod/'
 )
 
 visualize_conn_mat_dict(RATIO, node_networks=node_networks, segmented=True,
     title='segmented ratio of method subj var regions', fix_lim=False,  
     label_dict=label_dict,
     disp_diag=False, cmap='seismic', center_0=True,
-    save_image=save_image, output_root=output_root+'variation/'
+    save_image=save_image, output_root=output_root+'variation/subjVsMethod/'
 )
 
 label_dict = {
@@ -754,7 +754,7 @@ visualize_conn_mat_dict(RESULTS, node_networks=node_networks,
     title='inter-subj variation across regions', fix_lim=False,  
     label_dict=label_dict,
     disp_diag=True, cmap='plasma', center_0=False,
-    save_image=save_image, output_root=output_root+'variation/'
+    save_image=save_image, output_root=output_root+'variation/subjVsMethod/'
 )
 
 # func conn segmented
@@ -762,7 +762,7 @@ visualize_conn_mat_dict(RESULTS, node_networks=node_networks, segmented=True,
     title='segmented inter-subj variation across regions', fix_lim=False,  
     label_dict=label_dict,
     disp_diag=True, cmap='plasma', center_0=False,
-    save_image=save_image, output_root=output_root+'variation/'
+    save_image=save_image, output_root=output_root+'variation/subjVsMethod/'
 )
 
 ################################# Overall Variability #################################
@@ -787,7 +787,7 @@ avg_var_all = np.mean(scatter_data['var_all'])
 avg_var_method = np.mean(scatter_data['var_method'])
 
 # write to a txt file
-folder = output_root+'variation'
+folder = output_root+'variation/allVsMethod'
 if not os.path.exists(folder):
     os.makedirs(folder)
 filename = Path(folder+'/all_var_ratio.txt')
@@ -812,24 +812,24 @@ scatter_plot(
     label_dict=label_dict,
     hist=True,
     equal_axis_lim=True, show_x_equal_y=True,
-    save_image=save_image, output_root=output_root+'variation/'
+    save_image=save_image, output_root=output_root+'variation/allVsMethod/'
 )
 
 label_dict = {
-    'var across method / all - 1': 'var across method / all - 1',
+    'var across method / all - 1': 'var over method / all - 1',
 }
 visualize_conn_mat_dict(RATIO, node_networks=node_networks, segmented=False,
     title='ratio of method all var regions', fix_lim=False,  
     label_dict=label_dict,
     disp_diag=False, cmap='seismic', center_0=True,
-    save_image=save_image, output_root=output_root+'variation/'
+    save_image=save_image, output_root=output_root+'variation/allVsMethod/'
 )
 
 visualize_conn_mat_dict(RATIO, node_networks=node_networks, segmented=True,
     title='segmented ratio of method all var regions', fix_lim=False,  
     label_dict=label_dict,
     disp_diag=False, cmap='seismic', center_0=True,
-    save_image=save_image, output_root=output_root+'variation/'
+    save_image=save_image, output_root=output_root+'variation/allVsMethod/'
 )
 
 label_dict = {
@@ -841,7 +841,7 @@ visualize_conn_mat_dict(RESULTS, node_networks=node_networks,
     title='all variation across regions', fix_lim=False,  
     label_dict=label_dict,
     disp_diag=True, cmap='plasma', center_0=False,
-    save_image=save_image, output_root=output_root+'variation/'
+    save_image=save_image, output_root=output_root+'variation/allVsMethod/'
 )
 
 # func conn segmented
@@ -849,7 +849,7 @@ visualize_conn_mat_dict(RESULTS, node_networks=node_networks, segmented=True,
     title='segmented all variation across regions', fix_lim=False,  
     label_dict=label_dict,
     disp_diag=True, cmap='plasma', center_0=False,
-    save_image=save_image, output_root=output_root+'variation/'
+    save_image=save_image, output_root=output_root+'variation/allVsMethod/'
 )
 
 ################################# Randomization Tests #################################

@@ -390,13 +390,13 @@ def scatter_plot(data, x, y,
     ylabel = g.get_ylabel()
     if ylabel in label_dict:
         ylabel = label_dict[ylabel]
-    g.set_ylabel(ylabel, fontdict={'fontsize': 25, 'fontweight': 'bold'})
+    g.set_ylabel(ylabel, fontdict={'fontsize': 35, 'fontweight': 'bold'})
     xlabel = g.get_xlabel()
     if xlabel in label_dict:
         xlabel = label_dict[xlabel]
-    g.set_xlabel(xlabel, fontdict={'fontsize': 25, 'fontweight': 'bold'})
-    g.tick_params(axis='x', which='major', labelsize=18)
-    g.tick_params(axis='y', which='major', labelsize=18)   
+    g.set_xlabel(xlabel, fontdict={'fontsize': 35, 'fontweight': 'bold'})
+    g.tick_params(axis='x', which='major', labelsize=30)
+    g.tick_params(axis='y', which='major', labelsize=30)   
     tick_labels = g.get_xticklabels() + g.get_yticklabels()
     for label in tick_labels:
         label.set_fontweight('bold')
