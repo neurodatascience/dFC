@@ -18,7 +18,7 @@ setup(
             'joblib', 'hdf5storage', 
             'networkx', 'nilearn', 'pandas', 'scikit-learn',
             'ksvd', 'hmmlearn', 'pycwt',
-            'pyclustering', 
+            'pyclustering', 'statsmodels', 
         ], 
         
         keywords=['python', 'dFC package'],

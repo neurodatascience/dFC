@@ -118,12 +118,12 @@ def get_subj_ts_dict(time_series_dict, subjs_id):
     return subj_ts_dict
 
 # test
-def filter_dFCM_lst(dFCM_lst, **param_dict):
-    dFCM_lst2check = list()
-    for dFCM in dFCM_lst:
-        if dFCM.measure.param_match(**param_dict):
-            dFCM_lst2check.append(dFCM) 
-    return dFCM_lst2check
+def filter_dFC_lst(dFC_lst, **param_dict):
+    dFC_lst2check = list()
+    for dFC in dFC_lst:
+        if dFC.measure.param_match(**param_dict):
+            dFC_lst2check.append(dFC) 
+    return dFC_lst2check
 
 def SW_downsample(data, Fs, W, n_overlap, tapered_window=False):
     '''
@@ -415,14 +415,14 @@ def intersection(lst1, lst2): # input is a list
     lst3 = [value for value in lst1 if value in lst2]
     return lst3
 
-def TR_intersection(dFCM_lst): # input is a list of dFCM objs
-    TRs_lst_old = dFCM_lst[0].TR_array
-    common_Fs = dFCM_lst[0].TS_info['Fs']
-    for dFCM in dFCM_lst:
-        assert dFCM.TS_info['Fs'] == common_Fs, \
+def TR_intersection(dFC_lst): # input is a list of dFC objs
+    TRs_lst_old = dFC_lst[0].TR_array
+    common_Fs = dFC_lst[0].TS_info['Fs']
+    for dFC in dFC_lst:
+        assert dFC.TS_info['Fs'] == common_Fs, \
             'Fs mismatch. Cannot find the common TRs'
             
-        TRs_lst_new = intersection(TRs_lst_old, dFCM.TR_array)
+        TRs_lst_new = intersection(TRs_lst_old, dFC.TR_array)
         TRs_lst_old = TRs_lst_new
     TRs_lst_old.sort()
     if len(TRs_lst_old)==0:

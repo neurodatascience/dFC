@@ -13,7 +13,7 @@ comparison                 --- implementation of dFC methods
 
 """
 
-from git_codes.multi_analysis_dfc import dfc_methods
+from . import dfc_methods
 from .multi_analysis import MultiAnalysis
 from .time_series import TIME_SERIES
 from .dfc import DFC

@@ -11,7 +11,7 @@ import hdf5storage
 import scipy.io as sio
 import os
 
-from dfc_utils import intersection
+from .dfc_utils import intersection
 from .time_series import TIME_SERIES
 
 ################################# DATA_LOADER class ######################################

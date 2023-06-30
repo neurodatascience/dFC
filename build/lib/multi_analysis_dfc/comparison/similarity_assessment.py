@@ -11,39 +11,39 @@ from scipy import stats
 from joblib import Parallel, delayed
 from copy import deepcopy
 
-from ..dfc_methods import (
+from ..dfc_utils import (
     calc_graph_propoerty, TR_intersection, 
     dFC_mat2vec, normalized_euc_dist, 
     mutual_information, find_new_order, 
-    filter_dFCM_lst
+    filter_dFC_lst
 )
 
 ################################# SimilarityAssessment class ####################################
 
 class SimilarityAssessment:
 
-    def __init__(self, dFCM_lst):
-        self.dFCM_lst = dFCM_lst
+    def __init__(self, dFC_lst):
+        self.dFC_lst = dFC_lst
 
     ##################### dFC FEATURES ######################
 
-    def FO_calc(self, dFCM_lst, common_TRs=None):
+    def FO_calc(self, dFC_lst, common_TRs=None):
 
         # returns, for each state the Fractional Occupancy (FO)
         # see Vidaurre et al., 2017
         # it only considers TRs in common_TRs
 
         if common_TRs is None:
-            common_TRs = TR_intersection(dFCM_lst)
+            common_TRs = TR_intersection(dFC_lst)
 
         FO_list = list()
-        for dFCM in dFCM_lst:
+        for dFC in dFC_lst:
         
             FO = {}
 
-            if dFCM.measure.is_state_based:
+            if dFC.measure.is_state_based:
 
-                state_act_dict = dFCM.state_act_dict(TRs=common_TRs)
+                state_act_dict = dFC.state_act_dict(TRs=common_TRs)
                 
                 for FCS_key in state_act_dict['state_TC']:
                     FO[FCS_key] = np.mean(state_act_dict['state_TC'][FCS_key]['act_TC'])
@@ -52,35 +52,35 @@ class SimilarityAssessment:
 
         return FO_list
 
-    def transition_stats(self, dFCM_lst, common_TRs=None):
+    def transition_stats(self, dFC_lst, common_TRs=None):
         # returns the number of total state transition within common_TRs -> trans_freq
         # and the number of total state transitions regardless of common_TRs
         # but normalized by total number of TRs -> trans_norm
         # and a list of all dwell times
 
         if common_TRs is None:
-            common_TRs = TR_intersection(dFCM_lst)
+            common_TRs = TR_intersection(dFC_lst)
 
         TRs_lst = list()
         for TR in common_TRs:
             TRs_lst.append('TR'+str(TR))
 
         output_lst = list()
-        for dFCM in dFCM_lst:
+        for dFC in dFC_lst:
         
             output_dict = {}
 
-            if dFCM.measure.is_state_based:
+            if dFC.measure.is_state_based:
 
                 #  downsampled 
                 trans_freq = 0
                 dwell_time_lst = list()
                 dwell_time = 0
                 last_TR = None
-                for TR in dFCM.FCS_idx:
+                for TR in dFC.FCS_idx:
                     if TR in TRs_lst:
                         if not last_TR is None:
-                            if dFCM.FCS_idx[TR]!=dFCM.FCS_idx[last_TR]:
+                            if dFC.FCS_idx[TR]!=dFC.FCS_idx[last_TR]:
                                 dwell_time_lst.append(dwell_time)
                                 dwell_time = 0
                                 trans_freq += 1
@@ -95,15 +95,15 @@ class SimilarityAssessment:
                 dwell_time_lst = list()
                 dwell_time = 0
                 last_TR = None
-                for TR in dFCM.FCS_idx:
+                for TR in dFC.FCS_idx:
                     if not last_TR is None:
-                        if dFCM.FCS_idx[TR]!=dFCM.FCS_idx[last_TR]:
-                            dwell_time_lst.append(dwell_time / len(dFCM.FCS_idx))
+                        if dFC.FCS_idx[TR]!=dFC.FCS_idx[last_TR]:
+                            dwell_time_lst.append(dwell_time / len(dFC.FCS_idx))
                             dwell_time = 0
                             trans_norm += 1
                     dwell_time += 1
                     last_TR = TR
-                trans_norm = trans_norm / len(dFCM.FCS_idx)
+                trans_norm = trans_norm / len(dFC.FCS_idx)
 
                 output_dict['dwell_time_norm'] = dwell_time_lst
                 output_dict['trans_norm'] = trans_norm
@@ -256,58 +256,58 @@ class SimilarityAssessment:
 
         return sim_mat_over_sample
 
-    def assess_similarity(self, dFCM_lst, downsampling_method='default', **param_dict):
+    def assess_similarity(self, dFC_lst, downsampling_method='default', **param_dict):
         '''
         downsampling_method: 'default' picks FCs at common_TRs 
         while 'SWed' uses a sliding window to downsample
         '''
         methods_assess = {}
 
-        # sort dFCM_lst according to methods names
-        old_list = [dFCM.measure.measure_name for dFCM in dFCM_lst]
+        # sort dFC_lst according to methods names
+        old_list = [dFC.measure.measure_name for dFC in dFC_lst]
         new_list = deepcopy(old_list)
         new_list.sort()
 
         new_order = find_new_order(old_list, new_list)
-        dFCM_lst = [dFCM_lst[i] for i in new_order]
+        dFC_lst = [dFC_lst[i] for i in new_order]
 
-        common_TRs = TR_intersection(dFCM_lst)
+        common_TRs = TR_intersection(dFC_lst)
 
         measure_lst = list()
         TS_info_lst = list()
         dFC_mat_lst = list()
-        for dFCM in dFCM_lst:
-            measure_lst.append(dFCM.measure)
-            TS_info_lst.append(dFCM.TS_info)
+        for dFC in dFC_lst:
+            measure_lst.append(dFC.measure)
+            TS_info_lst.append(dFC.TS_info)
             if downsampling_method=='SWed':
                 dFC_mat_lst.append( \
-                    dFCM.SWed_dFC_mat( \
+                    dFC.SWed_dFC_mat( \
                         W=param_dict['W'], \
                         n_overlap=param_dict['n_overlap'], \
                         tapered_window=param_dict['tapered_window'] \
                     )
                 )
             else:
-                dFC_mat_lst.append(dFCM.get_dFC_mat(TRs=common_TRs))
+                dFC_mat_lst.append(dFC.get_dFC_mat(TRs=common_TRs))
 
         methods_assess['measure_lst'] = measure_lst
         methods_assess['TS_info_lst'] = TS_info_lst
         methods_assess['common_TRs'] = common_TRs
 
-        ########## dFCM samples ##########
+        ########## dFC samples ##########
 
-        dFCM_samples = {}
+        dFC_samples = {}
         for i, dFC_mat in enumerate(dFC_mat_lst):
-            dFCM_samples[str(i)] = dFC_mat
-        methods_assess['dFCM_samples'] = dFCM_samples
+            dFC_samples[str(i)] = dFC_mat
+        methods_assess['dFC_samples'] = dFC_samples
 
         ########## time record ##########
         
         time_record_dict = {}
-        for i, dFCM in enumerate(dFCM_lst):
+        for i, dFC in enumerate(dFC_lst):
             time_record = {}
-            time_record['FCS_fit'] = dFCM.measure.FCS_fit_time
-            time_record['dFC_assess'] = dFCM.measure.dFC_assess_time
+            time_record['FCS_fit'] = dFC.measure.FCS_fit_time
+            time_record['dFC_assess'] = dFC.measure.dFC_assess_time
             time_record_dict[str(i)] = time_record
         methods_assess['time_record_dict'] = time_record_dict
 
@@ -371,14 +371,14 @@ class SimilarityAssessment:
         
         ########## Fractional Occupancy ##########
 
-        FO_lst = self.FO_calc(dFCM_lst, \
+        FO_lst = self.FO_calc(dFC_lst, \
             common_TRs=common_TRs \
             )
         methods_assess['FO'] = FO_lst
 
         ########## transition frequency ##########
 
-        transition_stats_lst = self.transition_stats(dFCM_lst, \
+        transition_stats_lst = self.transition_stats(dFC_lst, \
             common_TRs=common_TRs \
                 )
         methods_assess['transition_stats'] = transition_stats_lst
@@ -396,7 +396,7 @@ class SimilarityAssessment:
         if parallelize:
             out_lst = Parallel( \
                     n_jobs=4, verbose=0, backend='loky')( \
-                    delayed(self.assess_similarity)(dFCM_lst=filter_dFCM_lst(self.dFCM_lst, **FILTERS[filter]), \
+                    delayed(self.assess_similarity)(dFC_lst=filter_dFC_lst(self.dFC_lst, **FILTERS[filter]), \
                     downsampling_method=downsampling_method, \
                     **FILTERS[filter]) \
                         for filter in FILTERS)
@@ -405,9 +405,9 @@ class SimilarityAssessment:
         else:
             for filter in FILTERS:
                 param_dict = FILTERS[filter]
-                dFCM_lst2check = filter_dFCM_lst(self.dFCM_lst, **param_dict)
+                dFC_lst2check = filter_dFC_lst(self.dFC_lst, **param_dict)
                 output[filter] = self.assess_similarity( \
-                    dFCM_lst=dFCM_lst2check, \
+                    dFC_lst=dFC_lst2check, \
                     downsampling_method=downsampling_method, \
                     **param_dict \
                     )

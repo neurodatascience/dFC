@@ -12,6 +12,8 @@ multi_analysis_dfc.egg-info/dependency_links.txt
 multi_analysis_dfc.egg-info/requires.txt
 multi_analysis_dfc.egg-info/top_level.txt
 multi_analysis_dfc/comparison/__init__.py
+multi_analysis_dfc/comparison/analytical.py
+multi_analysis_dfc/comparison/plotting.py
 multi_analysis_dfc/comparison/similarity_assessment.py
 multi_analysis_dfc/dfc_methods/__init__.py
 multi_analysis_dfc/dfc_methods/base_dfc_method.py
