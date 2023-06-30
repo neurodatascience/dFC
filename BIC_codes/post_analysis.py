@@ -82,7 +82,7 @@ for filter in ['default_values']:
         SUBJs_output = np.load(assessment_results_root+FOLDER_name+s, allow_pickle='True').item()
 
         for measure_id in SUBJs_output[filter]['dFCM_samples']:
-            TRs = SUBJs_output[filter]['common_TRs'][:10]
+            TRs = SUBJs_output[filter]['common_TRs'][4:10]
 
             # rank the whole dFC
             dFC_mat = SUBJs_output[filter]['dFCM_samples'][measure_id]
@@ -687,25 +687,29 @@ for filter in ['default_values']:
     var_over_method = np.mean(var_over_method, axis=0) # (ROI, ROI)
 
     RESULTS = {}
-    RESULTS['var_over_time'] = np.divide(var_over_time, np.max(var_over_time))
-    RESULTS['var_over_method'] = np.divide(var_over_method, np.max(var_over_method))
-    RESULTS['var_over_method/var_over_time'] = np.divide(
-                                                        var_over_method, var_over_time, 
-                                                        out=np.zeros_like(var_over_method), 
-                                                        where=var_over_time!=0
-                                                        ) - 1 
-    RESULTS['var_over_method*var_over_time'] = np.multiply(var_over_method, var_over_time)
-    for key in RESULTS:
-        RESULTS[key] = rank_norm(RESULTS[key])
+    RESULTS['var_over_time'] = var_over_time
+    RESULTS['var_over_method'] = var_over_method
+
+    RATIO = {
+        'var across method / time - 1': np.divide(
+                                            var_over_method, var_over_time, 
+                                            out=np.zeros_like(var_over_method), 
+                                            where=var_over_time!=0
+                                        ) - 1 
+    }
 
     ALL_RESULTS['var_across_func_conns'] = deepcopy(RESULTS)
+    ALL_RESULTS['var_across_func_conns_ratio'] = deepcopy(RATIO)
     ALL_RESULTS['var_method_vs_time_across_func_conns_scatter'] = deepcopy(scatter_data)
+
+    for key in RESULTS:
+        RESULTS[key] = rank_norm(RESULTS[key])
 
     for key in RESULTS:
         RESULTS[key] = cat_data(RESULTS[key], N=10)
         RESULTS[key] = np.where(RESULTS[key] == np.max(RESULTS[key]), 1, 0)
 
-ALL_RESULTS['high_var_func_conns'] = deepcopy(RESULTS)
+    ALL_RESULTS['high_var_func_conns'] = deepcopy(RESULTS)
 
 ################################# Variation Value Comparison #################################
 '''
@@ -837,6 +841,111 @@ for filter in ['default_values']:
 
     ALL_RESULTS['var_method_vs_time_clstrwise']['scatter_data'] = deepcopy(scatter_data)
     ALL_RESULTS['var_method_vs_time_clstrwise']['clstrs_dict'] = deepcopy(clstrs_dict)
+
+################################# Inter-subject Variation #################################
+'''
+    - compute var over method and subject across all func conns 
+'''
+for filter in ['default_values']:
+    all_dFC = list()
+    for s in ALL_RECORDS:
+
+        SUBJs_output = np.load(assessment_results_root+FOLDER_name+s, allow_pickle='True').item()
+        node_networks = node_info2network(SUBJs_output[filter]['TS_info_lst'][0]['nodes_info'])
+
+        dFC_mat_lst = list()
+        for i, measure_i in enumerate(SUBJs_output[filter]['measure_lst']):
+
+            dFC_mat_i = SUBJs_output[filter]['dFCM_samples'][str(i)]
+
+            # rank normalization
+            dFC_mat_i = rank_norm(dFC_mat_i)
+
+            # dFC mat
+            dFC_mat_lst.append(dFC_mat_i)
+
+        dFC_mat_lst = np.array(dFC_mat_lst) # (method, time, ROI, ROI)
+        all_dFC.append(dFC_mat_lst)
+
+    all_dFC = np.array(all_dFC) # (subj, method, time, ROI, ROI)    
+    var_over_subj = np.mean(np.mean(np.var(all_dFC, axis=0), axis=0), axis=0) # (ROI, ROI)
+    var_over_method = np.mean(np.mean(np.var(all_dFC, axis=1), axis=0), axis=0) # (ROI, ROI)
+
+    # collect var over method and time across all func conns of all subjects
+    scatter_data = {
+        'var_method': dFC_mat2vec(var_over_method).flatten(), # ((ROI)*(ROI-1)/2,)
+        'var_subj': dFC_mat2vec(var_over_subj).flatten() # ((ROI)*(ROI-1)/2,)
+    }
+
+    RESULTS = {}
+    RESULTS['var_over_subj'] = var_over_subj
+    RESULTS['var_over_method'] = var_over_method
+
+    RATIO = {
+        'var across method / subj - 1': np.divide(
+                                            var_over_method, var_over_subj, 
+                                            out=np.zeros_like(var_over_method), 
+                                            where=var_over_subj!=0
+                                        ) - 1 
+    }
+
+    ALL_RESULTS['inter-subj_var_across_func_conns'] = deepcopy(RESULTS)
+    ALL_RESULTS['inter-subj_var_across_func_conns_ratio'] = deepcopy(RATIO)
+    ALL_RESULTS['var_method_vs_subj_across_func_conns_scatter'] = deepcopy(scatter_data)
+
+################################# Overall Variability #################################
+'''
+    - compute var over method and overall across all func conns 
+'''
+
+for filter in ['default_values']:
+    all_dFC = list()
+    for s in ALL_RECORDS:
+
+        SUBJs_output = np.load(assessment_results_root+FOLDER_name+s, allow_pickle='True').item()
+        node_networks = node_info2network(SUBJs_output[filter]['TS_info_lst'][0]['nodes_info'])
+
+        dFC_mat_lst = list()
+        for i, measure_i in enumerate(SUBJs_output[filter]['measure_lst']):
+
+            dFC_mat_i = SUBJs_output[filter]['dFCM_samples'][str(i)]
+
+            # rank normalization
+            dFC_mat_i = rank_norm(dFC_mat_i)
+
+            # dFC mat
+            dFC_mat_lst.append(dFC_mat_i)
+
+        dFC_mat_lst = np.array(dFC_mat_lst) # (method, time, ROI, ROI)
+        all_dFC.append(dFC_mat_lst)
+
+    all_dFC = np.array(all_dFC) # (subj, method, time, ROI, ROI)    
+    var_over_method = np.mean(np.mean(np.var(all_dFC, axis=1), axis=0), axis=0) # (ROI, ROI)
+    all_dFC = np.transpose(all_dFC, (1, 0, 2, 3, 4)) # (method, subj, time, ROI, ROI) 
+    all_dFC = all_dFC.reshape(all_dFC.shape[0], -1, all_dFC.shape[3], all_dFC.shape[4]) # (method, subj*time, ROI, ROI)   
+    var_over_all = np.mean(np.var(all_dFC, axis=1), axis=0) # (ROI, ROI)
+
+    # collect var over method and time across all func conns of all subjects
+    scatter_data = {
+        'var_method': dFC_mat2vec(var_over_method).flatten(), # ((ROI)*(ROI-1)/2,)
+        'var_all': dFC_mat2vec(var_over_all).flatten() # ((ROI)*(ROI-1)/2,)
+    }
+
+    RESULTS = {}
+    RESULTS['var_over_all'] = var_over_all
+    RESULTS['var_over_method'] = var_over_method
+
+    RATIO = {
+        'var across method / all - 1': np.divide(
+                                            var_over_method, var_over_all, 
+                                            out=np.zeros_like(var_over_method), 
+                                            where=var_over_all!=0
+                                        ) - 1 
+    }
+
+    ALL_RESULTS['var_all_across_func_conns'] = deepcopy(RESULTS)
+    ALL_RESULTS['var_all_across_func_conns_ratio'] = deepcopy(RATIO)
+    ALL_RESULTS['var_method_vs_all_across_func_conns_scatter'] = deepcopy(scatter_data)
 
 ################################# Randomization Tests #################################
 

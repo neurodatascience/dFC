@@ -1,0 +1,15 @@
+numpy
+scipy
+matplotlib
+seaborn
+joblib
+hdf5storage
+networkx
+nilearn
+pandas
+scikit-learn
+ksvd
+hmmlearn
+pycwt
+pyclustering
+statsmodels
