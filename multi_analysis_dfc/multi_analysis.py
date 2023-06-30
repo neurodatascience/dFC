@@ -190,13 +190,13 @@ class MultiAnalysis:
                         for measure in SB_MEASURES_lst)
             self.MEASURES_fit_lst_[session] = self.DD_MEASURES_lst(self.MEASURES_lst) + SB_MEASURES_lst_NEW
 
-    ##################### dFCM ASSESSMENT ######################
+    ##################### dFC ASSESSMENT ######################
 
-    def group_dFCM_assess(self, time_series_dict):
+    def group_dFC_assess(self, time_series_dict):
 
         # time_series_dict is a dict of time_series
 
-        SUBJ_s_dFCM_dict = {}
+        SUBJ_s_dFC_dict = {}
         
         SUBJECTs = common_subj_lst(time_series_dict) 
 
@@ -223,23 +223,23 @@ class MultiAnalysis:
 
         # time_series_dict is a dict of time_series
 
-        dFCM_dict = {}
+        dFC_dict = {}
         # dFC_corr_assess_dict = {}
 
         if self.params['n_jobs'] is None:
-            dFCM_lst = list()
+            dFC_lst = list()
             for measure in self.MEASURES_fit_lst_:
-                dFCM_lst.append( \
-                    measure.estimate_dFCM(time_series=time_series_dict[measure.params['session']]) \
+                dFC_lst.append( \
+                    measure.estimate_dFC(time_series=time_series_dict[measure.params['session']]) \
                 )
         else:
-            dFCM_lst = Parallel( \
+            dFC_lst = Parallel( \
                 n_jobs=self.params['n_jobs'], verbose=self.params['verbose'], backend=self.params['backend'])( \
-                delayed(measure.estimate_dFCM)(time_series=time_series_dict[measure.params['session']]) \
+                delayed(measure.estimate_dFC)(time_series=time_series_dict[measure.params['session']]) \
                     for measure in self.MEASURES_fit_lst_)
 
-        dFCM_dict['dFCM_lst'] = dFCM_lst
+        dFC_dict['dFC_lst'] = dFC_lst
 
-        return dFCM_dict
+        return dFC_dict
 
 ##############################################################################################################
