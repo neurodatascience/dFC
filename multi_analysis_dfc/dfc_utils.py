@@ -253,7 +253,7 @@ def calc_graph_propoerty(A, property, threshold=False, binarize=False):
     if property=='shortest_path' or property=='clustering_coef':
         threshold=True
 
-    G = nx.from_numpy_matrix(np.abs(A)) 
+    G = nx.from_numpy_array(np.abs(A)) 
     G.remove_edges_from(nx.selfloop_edges(G))
     # G = G.to_undirected()
 
@@ -988,9 +988,9 @@ def batch_Adj2Net(FCS, nodes_info, is_digraph=False):
   
     np.fill_diagonal(FCS, 0)
     if is_digraph:
-        G = nx.from_numpy_matrix(FCS, create_using=nx.DiGraph)
+        G = nx.from_numpy_array(FCS, create_using=nx.DiGraph)
     else:
-        G = nx.from_numpy_matrix(FCS)
+        G = nx.from_numpy_array(FCS)
 
     mapping = {}
     for i, node_info in enumerate(nodes_info):
