@@ -444,6 +444,19 @@ def node_info2network(nodes_info):
         node_networks.append(info[3])    
     return node_networks
 
+def label2network(label):
+    '''
+    returns the network name of a label
+    label format: Hemisphere_Network_ID
+    '''
+    return label[label.find('_')+1:label.find('_', label.find('_')+1)]
+
+def node_labels2networks(node_labels):
+    node_networks = []
+    for label in node_labels:
+        node_networks.append(label2network(label))
+    return node_networks
+
 def segment_FC(FC, node_networks):
     unique_node_networks = list(set(node_networks))
     segmented = np.zeros_like(FC)

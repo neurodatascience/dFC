@@ -11,7 +11,7 @@ import hdf5storage
 import scipy.io as sio
 import os
 
-from .dfc_utils import intersection
+from .dfc_utils import intersection, label2network
 from .time_series import TIME_SERIES
 
 ################################# DATA_LOADER functions ######################################
@@ -38,13 +38,6 @@ def find_subj_list(data_root):
 
     return SUBJECTS
 
-def label2network(label):
-    '''
-    returns the network name of a label
-    label format: Hemisphere_Network_ID
-    '''
-    return label[label.find('_')+1:label.find('_', label.find('_')+1)]
-
 def load_np_array(subj_id2load=None, **params):
     '''
     load fMRI data from numpy files
@@ -56,8 +49,9 @@ def load_np_array(subj_id2load=None, **params):
 
     - and the roi labels should be in the same folder
       with the name: params['roi_labels_file']
-      
+
     - labels should be in the format: Hemisphere_Network_ID
+        ow, the network2include will not work properly
     '''
 
     SESSIONs = params['SESSIONs'] #['Rest1_LR' , 'Rest1_RL', 'Rest2_LR', 'Rest2_RL']
