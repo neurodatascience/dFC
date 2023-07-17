@@ -50,11 +50,14 @@ def load_np_array(subj_id2load=None, **params):
     load fMRI data from numpy files
     returns a dictionary of TIME_SERIES objects
     each corresponding to a session
-    the roi locations should be in the same folder
-    with the name: params['roi_locs_file']
-    and the roi labels should be in the same folder
-    with the name: params['roi_labels_file']
-    labels should be in the format: Hemisphere_Network_ID
+
+    - the roi locations should be in the same folder
+      with the name: params['roi_locs_file']
+
+    - and the roi labels should be in the same folder
+      with the name: params['roi_labels_file']
+      
+    - labels should be in the format: Hemisphere_Network_ID
     '''
 
     SESSIONs = params['SESSIONs'] #['Rest1_LR' , 'Rest1_RL', 'Rest2_LR', 'Rest2_RL']
@@ -72,9 +75,14 @@ def load_np_array(subj_id2load=None, **params):
     labels = labels['labels']
 
     # apply networks2include
-    nodes2include = [i for i, x in enumerate(labels) if label2network(x) in params['networks2include']]
+    # if params['networks2include'] is None, all the regions will be included
+    if not params['networks2include'] is None:
+        nodes2include = [i for i, x in enumerate(labels) if label2network(x) in params['networks2include']]
+    else:
+        nodes2include = [i for i, x in enumerate(labels)]
     locs = locs[nodes2include, :]
     labels = [x for node, x in enumerate(labels) if node in nodes2include]
+
 
     BOLD = {}
     for session in SESSIONs:
