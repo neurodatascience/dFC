@@ -151,42 +151,59 @@ class BaseDFCMethod:
         pass
 
     def manipulate_time_series4FCS(self, time_series):
+        '''
+        passing None to params will not change the time series
+        num_realization is not implemented yet
+        '''
 
         new_time_series = deepcopy(time_series)
 
         # SUBJECTs
-        new_time_series.select_subjs(num_subj=self.params['num_subj'])
+        if not self.params['num_subj'] is None:
+            new_time_series.select_subjs(num_subj=self.params['num_subj'])
         # SPATIAL RESOLUTION
-        new_time_series.spatial_downsample(num_select_nodes=self.params['num_select_nodes'], rand_node_slct=False)
+        if not self.params['num_select_nodes'] is None:
+            new_time_series.spatial_downsample(num_select_nodes=self.params['num_select_nodes'], rand_node_slct=False)
         # TEMPORAL RESOLUTION
-        new_time_series.Fs_resample(Fs_ratio=self.params['Fs_ratio'])
+        if not self.params['Fs_ratio'] is None:
+            new_time_series.Fs_resample(Fs_ratio=self.params['Fs_ratio'])
         # NORMALIZE
         if self.params['normalization']:
             new_time_series.normalize()
         # NOISE
-        new_time_series.add_noise(noise_ratio=self.params['noise_ratio'], mean_noise=0)
+        if not self.params['noise_ratio'] is None:
+            new_time_series.add_noise(noise_ratio=self.params['noise_ratio'], mean_noise=0)
         # NUMBER OF TIME POINTS
-        new_time_series.truncate(start_point=0, end_point=self.params['num_time_point']-1)
+        if not self.params['num_time_point'] is None:
+            new_time_series.truncate(start_point=0, end_point=self.params['num_time_point']-1)
 
         self.TS_info_ = new_time_series.info_dict
 
         return new_time_series
 
     def manipulate_time_series4dFC(self, time_series):
+        '''
+        passing None to params will not change the time series
+        num_realization is not implemented yet
+        '''
 
         new_time_series = deepcopy(time_series)
 
         # SPATIAL RESOLUTION
-        new_time_series.spatial_downsample(num_select_nodes=self.params['num_select_nodes'], rand_node_slct=False)
+        if not self.params['num_select_nodes'] is None:
+            new_time_series.spatial_downsample(num_select_nodes=self.params['num_select_nodes'], rand_node_slct=False)
         # TEMPORAL RESOLUTION
-        new_time_series.Fs_resample(Fs_ratio=self.params['Fs_ratio'])
+        if not self.params['Fs_ratio'] is None:
+            new_time_series.Fs_resample(Fs_ratio=self.params['Fs_ratio'])
         # NORMALIZE
         if self.params['normalization']:
             new_time_series.normalize()
         # NOISE
-        new_time_series.add_noise(noise_ratio=self.params['noise_ratio'], mean_noise=0)
+        if not self.params['noise_ratio'] is None:
+            new_time_series.add_noise(noise_ratio=self.params['noise_ratio'], mean_noise=0)
         # NUMBER OF TIME POINTS
-        new_time_series.truncate(start_point=0, end_point=self.params['num_time_point']-1)
+        if not self.params['num_time_point'] is None:
+            new_time_series.truncate(start_point=0, end_point=self.params['num_time_point']-1)
 
         return new_time_series
     
