@@ -90,7 +90,7 @@ def load_np_array(subj_id2load=None, **params):
             # DATA = hdf5storage.loadmat(params['data_root']+subj_fldr+'/ROI_data_Gordon_333_surf.mat')
             # time_series = DATA['ROI_data']
 
-            DATA = np.load(params['data_root']+subj_fldr+'/bold_data.npy', allow_pickle='True').item()
+            DATA = np.load(params['data_root']+subj_fldr+'/'+params['file_name'], allow_pickle='True').item()
             time_series = DATA['ROI_data'] # time_series.shape = (time, roi)
 
             # change time_series.shape to (roi, time)
