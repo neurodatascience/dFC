@@ -131,10 +131,10 @@ class SLIDING_WINDOW(BaseDFCMethod):
             window = np.repeat(np.expand_dims(window, axis=0), time_series.shape[0], axis=0)
 
             # int(l-W/2):int(l+3*W/2) is the nonzero interval after tapering
-            FCSs.append(self.FC( \
-                        np.multiply(time_series, window)[ \
-                            :,max(int(l-W/2),0):min(int(l+3*W/2),L) \
-                                                        ] \
+            FCSs.append(self.FC( 
+                        np.multiply(time_series, window)[ 
+                            :,max(int(l-W/2),0):min(int(l+3*W/2),L) 
+                                                        ] 
                                 )
                         )
             TR_array.append(int((l + (l+W)) / 2) )
@@ -158,10 +158,10 @@ class SLIDING_WINDOW(BaseDFCMethod):
         tic = time.time()
 
         # W is converted from sec to samples
-        FCSs, TR_array = self.dFC(time_series=time_series.data, \
-            W=int(self.params['W'] * time_series.Fs) , \
-            n_overlap=self.params['n_overlap'], \
-            tapered_window=self.params['tapered_window'] \
+        FCSs, TR_array = self.dFC(time_series=time_series.data,
+            W=int(self.params['W'] * time_series.Fs) ,
+            n_overlap=self.params['n_overlap'],
+            tapered_window=self.params['tapered_window']
             )
 
         # record time

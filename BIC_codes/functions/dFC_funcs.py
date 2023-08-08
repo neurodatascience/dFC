@@ -866,10 +866,14 @@ def visualize_FCS(
 
     # plot mean activity
     for i, mean_act in enumerate(measure.mean_act):
+        # setting vmin=-vmax to make 0 correspond to white color
+        max_activity = np.max(np.abs(mean_act))
+        min_activity = -1*max_activity
         plot_markers(
             node_values=mean_act, 
             node_coords=measure.TS_info['nodes_locs'], 
-            node_cmap='hot', 
+            node_cmap='seismic', 
+            node_vmin=min_activity, node_vmax=max_activity,
             display_mode='z', 
             colorbar=False, axes=axes[1, i]
         )

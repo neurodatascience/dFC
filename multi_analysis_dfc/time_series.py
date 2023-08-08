@@ -34,7 +34,7 @@ todo:
 
 class TIME_SERIES():
     def __init__(self, data=None, subj_id=None, Fs=None, time_array=None, \
-                locs=None, nodes_info=None, TS_name='', session_name=''):
+                locs=None, node_labels=None, TS_name='', session_name=''):
         
         '''
         subj_id is an id to identify the subjects
@@ -46,6 +46,11 @@ class TIME_SERIES():
 
         assert (not data is None) and (not Fs is None) and (not subj_id is None), \
             "data, subj_id, and Fs args must be provided."
+        
+        assert type(locs) is np.ndarray, 'locs must be a numpy array'
+        assert type(node_labels) is list, 'node_labels must be a list'
+        assert locs.shape[0] == len(node_labels), 'locs and node_labels must have the same length'
+        assert locs.shape[1] == 3, 'locs must have 3 columns'
 
         self.data_dict_ = {}
         self.data_dict_[subj_id] = {}
@@ -69,7 +74,7 @@ class TIME_SERIES():
             self.time_array_ = time_array
 
         self.locs_ = locs
-        self.nodes_info_ = nodes_info
+        self.node_labels_ = node_labels
 
         self.interval_ = np.arange(0, self.n_time_, dtype=int)
         self.nodes_selection_ = list(range(self.n_regions_))
@@ -87,7 +92,7 @@ class TIME_SERIES():
         info_dict['Fs_ratio'] = self.Fs_ratio_
         info_dict['noise_ratio'] = self.noise_ratio
         info_dict['nodes_lst'] = self.nodes_lst
-        info_dict['nodes_info'] = self.nodes_info
+        info_dict['node_labels'] = self.node_labels
         info_dict['nodes_locs'] = self.locs
         info_dict['subj_id_lst'] = self.subj_id_lst
         info_dict['interval'] = self.interval
@@ -139,11 +144,11 @@ class TIME_SERIES():
             return self.locs_[self.nodes_lst, :]
 
     @property
-    def nodes_info(self):
-        if self.nodes_info_ is None:
+    def node_labels(self):
+        if self.node_labels_ is None:
             return None
         else:
-            return [self.nodes_info_[i] for i in self.nodes_lst] 
+            return [self.node_labels_[i] for i in self.nodes_lst] 
 
     @property
     def Fs(self):

@@ -8,7 +8,7 @@ Created on Jun 29 2023
 
 import numpy as np
 
-from .dfc_utils import node_info2network, visualize_conn_mat_dict, SW_downsample
+from .dfc_utils import node_info2network, node_labels2networks, visualize_conn_mat_dict, SW_downsample
 
 ################################# DFC class ######################################
 
@@ -257,7 +257,7 @@ class DFC():
         self.TR_array_ = TR_array
 
 
-    def visualize_dFC(self, TRs=None, normalize=False, 
+    def visualize_dFC(self, TRs=None, normalize=False, show_networks=False,
         threshold=0.0, save_image=False, fig_name=None, fix_lim=False):
 
         assert not self.measure is None, \
@@ -266,7 +266,13 @@ class DFC():
         if TRs is None:
             TRs = self.TR_array
 
-        node_networks = node_info2network(self.TS_info['nodes_info'])
+        if show_networks:
+            if 'nodes_info' in self.TS_info:
+                node_networks = node_info2network(self.TS_info['nodes_info'])
+            elif 'node_labels' in self.TS_info:
+                node_networks = node_labels2networks(self.TS_info['node_labels'])
+        else:
+            node_networks = None
 
         visualize_conn_mat_dict(data=self.dFC2dict(TRs=TRs), 
             title=self.measure.measure_name+' dFC', 

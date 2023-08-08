@@ -444,6 +444,19 @@ def node_info2network(nodes_info):
         node_networks.append(info[3])    
     return node_networks
 
+def label2network(label):
+    '''
+    returns the network name of a label
+    label format: Hemisphere_Network_ID
+    '''
+    return label[label.find('_')+1:label.find('_', label.find('_')+1)]
+
+def node_labels2networks(node_labels):
+    node_networks = []
+    for label in node_labels:
+        node_networks.append(label2network(label))
+    return node_networks
+
 def segment_FC(FC, node_networks):
     unique_node_networks = list(set(node_networks))
     segmented = np.zeros_like(FC)
@@ -857,10 +870,14 @@ def visualize_FCS(
 
     # plot mean activity
     for i, mean_act in enumerate(measure.mean_act):
+        # setting vmin=-vmax to make 0 correspond to white color
+        max_activity = np.max(np.abs(mean_act))
+        min_activity = -1*max_activity
         plot_markers(
             node_values=mean_act, 
             node_coords=measure.TS_info['nodes_locs'], 
-            node_cmap='hot', 
+            node_cmap='seismic', 
+            node_vmin=min_activity, node_vmax=max_activity,
             display_mode='z', 
             colorbar=False, axes=axes[1, i]
         )
