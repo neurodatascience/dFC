@@ -46,6 +46,11 @@ class TIME_SERIES():
 
         assert (not data is None) and (not Fs is None) and (not subj_id is None), \
             "data, subj_id, and Fs args must be provided."
+        
+        assert type(locs) is np.ndarray, 'locs must be a numpy array'
+        assert type(node_labels) is list, 'node_labels must be a list'
+        assert locs.shape[0] == len(node_labels), 'locs and node_labels must have the same length'
+        assert locs.shape[1] == 3, 'locs must have 3 columns'
 
         self.data_dict_ = {}
         self.data_dict_[subj_id] = {}

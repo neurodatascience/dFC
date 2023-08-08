@@ -38,17 +38,22 @@ def find_subj_list(data_root):
 
     return SUBJECTS
 
-def load_np_array(subj_id2load=None, **params):
+def load_from_array(subj_id2load=None, **params):
     '''
-    load fMRI data from numpy files
+    load fMRI data from numpy or mat files
     returns a dictionary of TIME_SERIES objects
     each corresponding to a session
 
-    - the roi locations should be in the same folder
-      with the name: params['roi_locs_file']
+    - if the file_name is a .mat file, it will be loaded using hdf5storage
+      if the file_name is a .npy file, it will be loaded using np.load
 
-    - and the roi labels should be in the same folder
+    - the roi locations should be in the same folder and a .npy file
+      with the name: params['roi_locs_file']
+      it must 
+
+    - and the roi labels should be in the same folder and a .npy file
       with the name: params['roi_labels_file']
+      it must be a list of strings
 
     - labels should be in the format: Hemisphere_Network_ID
         ow, the network2include will not work properly
@@ -67,6 +72,11 @@ def load_np_array(subj_id2load=None, **params):
     # LOAD Region Labels DATA
     labels = np.load(params['data_root']+params['roi_labels_file'], allow_pickle='True').item()
     labels = labels['labels']
+
+    assert type(locs) is np.ndarray, 'locs must be a numpy array'
+    assert type(labels) is list, 'labels must be a list'
+    assert locs.shape[0] == len(labels), 'locs and labels must have the same length'
+    assert locs.shape[1] == 3, 'locs must have 3 columns'
 
     # apply networks2include
     # if params['networks2include'] is None, all the regions will be included
@@ -87,10 +97,10 @@ def load_np_array(subj_id2load=None, **params):
 
             # LOAD BOLD Data
 
-            # DATA = hdf5storage.loadmat(params['data_root']+subj_fldr+'/ROI_data_Gordon_333_surf.mat')
-            # time_series = DATA['ROI_data']
-
-            DATA = np.load(params['data_root']+subj_fldr+'/'+params['file_name'], allow_pickle='True').item()
+            if params['file_name'][params['file_name'].find('.'):] == '.mat':
+                DATA = hdf5storage.loadmat(params['data_root']+subj_fldr+'/'+params['file_name'])
+            elif params['file_name'][params['file_name'].find('.'):] == '.npy':
+                DATA = np.load(params['data_root']+subj_fldr+'/'+params['file_name'], allow_pickle='True').item()
             time_series = DATA['ROI_data'] # time_series.shape = (time, roi)
 
             # change time_series.shape to (roi, time)
