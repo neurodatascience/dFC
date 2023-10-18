@@ -132,6 +132,13 @@ def nifti2array(nifti_file, confound_strategy='none'):
 
     returns a numpy array of shape (time, roi)
     and labels and locs of rois
+
+    confound_strategy:
+        'none': no confounds are used
+        'no_motion': motion parameters are used
+        'no_motion_no_gsr': motion parameters are used 
+                            and global signal regression 
+                            is applied.
     '''
     from nilearn.input_data import NiftiLabelsMasker
     from nilearn import datasets
