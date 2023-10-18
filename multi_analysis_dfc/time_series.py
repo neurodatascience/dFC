@@ -107,10 +107,10 @@ class TIME_SERIES():
     @property
     def data(self):
         if self.data_ is None:
-            self.updatae_data()
+            self.update_data()
         return self.data_
 
-    def updatae_data(self):
+    def update_data(self):
         # after any change in data_dict, self.data_ is 
         # set to None and needs an update before being used
         data = None
