@@ -41,6 +41,7 @@ def find_subj_list(data_root):
 def load_from_array(subj_id2load=None, **params):
     '''
     load fMRI data from numpy or mat files
+    input time_series.shape must be (time, roi)
     returns a dictionary of TIME_SERIES objects
     each corresponding to a session
 
@@ -122,5 +123,75 @@ def load_from_array(subj_id2load=None, **params):
         print( 'number of regions= '+str(BOLD[session].n_regions) + ', number of TRs= ' + str(BOLD[session].n_time) )
 
     return BOLD
+
+
+def nifti2array(nifti_file, confound_strategy='none'):
+    '''
+    this function uses nilearn maskers to extract 
+    BOLD signals from nifti files
+
+    returns a numpy array of shape (time, roi)
+    and labels and locs of rois
+    '''
+    from nilearn.input_data import NiftiLabelsMasker
+    from nilearn import datasets
+    from nilearn.plotting import find_parcellation_cut_coords
+    from nilearn.interfaces.fmriprep import load_confounds
+
+    parc = datasets.fetch_atlas_schaefer_2018(n_rois=100)
+    atlas_filename = parc.maps
+    labels = parc.labels
+    # The list of labels does not contain ‘Background’ by default. 
+    # To have proper indexing, you should either manually add ‘Background’ to the list of labels:
+    # Prepend background label
+    labels = np.insert(labels, 0, 'Background')
+
+    # extract locs
+    # test!
+    # check if order is the same as labels
+    locs, labels_ = find_parcellation_cut_coords(
+                        atlas_filename, 
+                        background_label=0, 
+                        return_label_names=True
+                    )
+
+    # create the masker for extracting time series
+    masker = NiftiLabelsMasker(
+        labels_img=atlas_filename, 
+        labels=labels, 
+        resampling_target='data',
+        standardize="zscore_sample"
+    )
+    
+    labels = np.delete(labels, 0) # remove the background label
+    labels = [label.decode() for label in labels]
+    
+    ### extract the timeseries
+    if confound_strategy=='none':
+        time_series = masker.fit_transform(nifti_file)
+    elif confound_strategy=='no_motion':
+        confounds_simple, sample_mask = load_confounds(
+            nifti_file,
+            strategy=["high_pass", "motion", "wm_csf"],
+            motion="basic", wm_csf="basic"
+        )
+        time_series = masker.fit_transform(
+            nifti_file,
+            confounds=confounds_simple,
+            sample_mask=sample_mask
+        )
+    elif confound_strategy=='no_motion_no_gsr':
+        confounds_simple, sample_mask = load_confounds(
+            nifti_file,
+            strategy=["high_pass", "motion", "wm_csf", "global_signal"],
+            motion="basic", wm_csf="basic", global_signal="basic"
+        )
+        time_series = masker.fit_transform(
+            nifti_file,
+            confounds=confounds_simple,
+            sample_mask=sample_mask
+        )
+
+    return time_series, labels, locs
 
 ####################################################################################################################################
