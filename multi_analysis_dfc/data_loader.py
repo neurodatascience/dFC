@@ -120,12 +120,12 @@ def load_from_array(subj_id2load=None, **params):
                 BOLD[session].append_ts(new_time_series=time_series, subj_id=subject)
 
         print( '*** Session ' + session + ': ' )
-        print( 'number of regions= '+str(BOLD[session].n_regions) + ', number of TRs= ' + str(BOLD[session].n_time) )
+        print( 'number of regions= '+str(BOLD[session].n_regions) + ', number of time points= ' + str(BOLD[session].n_time) )
 
     return BOLD
 
 
-def nifti2array(nifti_file, confound_strategy='none'):
+def nifti2array(nifti_file, confound_strategy='none', standardize=False):
     '''
     this function uses nilearn maskers to extract 
     BOLD signals from nifti files
@@ -167,7 +167,7 @@ def nifti2array(nifti_file, confound_strategy='none'):
         labels_img=atlas_filename, 
         labels=labels, 
         resampling_target='data',
-        standardize=False,
+        standardize=standardize,
     )
     
     labels = np.delete(labels, 0) # remove the background label
