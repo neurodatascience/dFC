@@ -167,7 +167,7 @@ def nifti2array(nifti_file, confound_strategy='none'):
         labels_img=atlas_filename, 
         labels=labels, 
         resampling_target='data',
-        standardize="zscore_sample"
+        standardize=False,
     )
     
     labels = np.delete(labels, 0) # remove the background label
