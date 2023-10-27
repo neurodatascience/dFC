@@ -6,6 +6,7 @@ Created on Jun 29 2023
 @author: Mohammad Torabi
 """
 
+from re import S
 import numpy as np
 import hdf5storage
 import scipy.io as sio
@@ -16,7 +17,7 @@ from .time_series import TIME_SERIES
 
 ################################# DATA_LOADER functions ######################################
 
-def find_subj_list(data_root):
+def find_subj_list(data_root, sessions):
     '''
     find the list of subjects in data_root
     the files must follow the format: subjectID_sessionID
@@ -36,7 +37,19 @@ def find_subj_list(data_root):
 
     print( str(len(SUBJECTS)) + ' subjects were found. ')
 
-    return SUBJECTS
+    failed_subjs = []
+    kept_subjs = []
+    for subj in SUBJECTS:
+        kept_subjs.append(subj)
+        for session in sessions:
+            if not os.path.exists(data_root+subj+'_'+session):
+                failed_subjs.append(subj)
+                kept_subjs.remove(subj)
+                break
+
+    print( str(len(failed_subjs)) + ' subjects had missing sessions. ' + str(len(kept_subjs)) + ' subjects were kept. ')
+
+    return kept_subjs
 
 def load_from_array(subj_id2load=None, **params):
     '''
@@ -60,9 +73,9 @@ def load_from_array(subj_id2load=None, **params):
         ow, the network2include will not work properly
     '''
 
-    SESSIONs = params['SESSIONs'] #['Rest1_LR' , 'Rest1_RL', 'Rest2_LR', 'Rest2_RL']
+    SESSIONs = params['SESSIONs'] # list of sessions
     if subj_id2load is None:
-        SUBJECTS = find_subj_list(params['data_root'])
+        SUBJECTS = find_subj_list(params['data_root'], sessions=SESSIONs)
     else:
         SUBJECTS = [subj_id2load]
 
