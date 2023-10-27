@@ -40,13 +40,15 @@ class CAP(BaseDFCMethod):
         self.FCS_fit_time_ = None
         self.dFC_assess_time_ = None
 
-        self.params_name_lst = ['measure_name', 'is_state_based', 'n_states', \
-            'n_subj_clstrs', 'normalization', 'num_subj', 'num_select_nodes', 'num_time_point', \
+        self.params_name_lst = ['measure_name', 'is_state_based', 'n_states',
+            'n_subj_clstrs', 'normalization', 'num_subj', 'num_select_nodes', 'num_time_point',
             'Fs_ratio', 'noise_ratio', 'num_realization', 'session']
         self.params = {}
         for params_name in self.params_name_lst:
             if params_name in params:
                 self.params[params_name] = params[params_name]
+            else:
+                self.params[params_name] = None
 
         self.params['measure_name'] = 'CAP'
         self.params['is_state_based'] = True

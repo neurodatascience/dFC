@@ -50,16 +50,18 @@ class HMM_DISC(BaseDFCMethod):
         self.FCS_fit_time_ = None
         self.dFC_assess_time_ = None
         
-        self.params_name_lst = ['measure_name', 'is_state_based', 'clstr_base_measure', 'sw_method', 'tapered_window', \
-            'dhmm_obs_state_ratio', 'coi_correction', 'hmm_iter', \
-            'n_jobs', 'verbose', 'backend', \
-            'n_subj_clstrs', 'W', 'n_overlap', 'n_states', 'normalization', \
-            'num_subj', 'num_select_nodes', 'num_time_point', 'Fs_ratio', \
+        self.params_name_lst = ['measure_name', 'is_state_based', 'clstr_base_measure', 'sw_method', 'tapered_window',
+            'dhmm_obs_state_ratio', 'coi_correction', 'hmm_iter',
+            'n_jobs', 'verbose', 'backend',
+            'n_subj_clstrs', 'W', 'n_overlap', 'n_states', 'normalization',
+            'num_subj', 'num_select_nodes', 'num_time_point', 'Fs_ratio',
             'noise_ratio', 'num_realization', 'session']
         self.params = {}
         for params_name in self.params_name_lst:
             if params_name in params:
                 self.params[params_name] = params[params_name]
+            else:
+                self.params[params_name] = None
         
         self.params['measure_name'] = 'DiscreteHMM'
         self.params['is_state_based'] = True
