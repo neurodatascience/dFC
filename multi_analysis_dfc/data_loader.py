@@ -7,6 +7,7 @@ Created on Jun 29 2023
 """
 
 from re import S
+from tkinter import N
 import numpy as np
 import hdf5storage
 import scipy.io as sio
@@ -138,10 +139,16 @@ def load_from_array(subj_id2load=None, **params):
     return BOLD
 
 
-def nifti2array(nifti_file, confound_strategy='none', standardize=False):
+def nifti2array(nifti_file, 
+                confound_strategy='none', standardize=False,
+                n_rois=100
+    ):
     '''
     this function uses nilearn maskers to extract 
     BOLD signals from nifti files
+    For now it only works with schaefer atlas,
+    but you can set the number of rois to extract
+    {100, 200, 300, 400, 500, 600, 700, 800, 900, 1000}
 
     returns a numpy array of shape (time, roi)
     and labels and locs of rois
@@ -158,7 +165,7 @@ def nifti2array(nifti_file, confound_strategy='none', standardize=False):
     from nilearn.plotting import find_parcellation_cut_coords
     from nilearn.interfaces.fmriprep import load_confounds
 
-    parc = datasets.fetch_atlas_schaefer_2018(n_rois=100)
+    parc = datasets.fetch_atlas_schaefer_2018(n_rois=n_rois)
     atlas_filename = parc.maps
     labels = parc.labels
     # The list of labels does not contain ‘Background’ by default. 
@@ -213,5 +220,49 @@ def nifti2array(nifti_file, confound_strategy='none', standardize=False):
         )
 
     return time_series, labels, locs
+
+
+def nifti2timeseries(
+        nifti_file, 
+        n_rois, Fs,
+        subj_id,
+        confound_strategy='none', standardize=False,
+        TS_name=None,
+        session=None,
+    ):
+    '''
+    this function is only for single subject data loading
+    it uses nilearn maskers to extract ROI signals from nifti files
+    and returns a TIME_SERIES object
+
+    For now it only works with schaefer atlas,
+    but you can set the number of rois to extract
+    {100, 200, 300, 400, 500, 600, 700, 800, 900, 1000}
+    '''
+    time_series, labels, locs = nifti2array(
+        nifti_file=nifti_file, 
+        confound_strategy=confound_strategy, 
+        standardize=standardize,
+        n_rois=n_rois
+    )
+
+    assert type(locs) is np.ndarray, 'locs must be a numpy array'
+    assert type(labels) is list, 'labels must be a list'
+    assert locs.shape[0] == len(labels), 'locs and labels must have the same length'
+    assert locs.shape[1] == 3, 'locs must have 3 columns'
+    
+    # change time_series.shape to (roi, time)
+    time_series = time_series.T
+
+    BOLD = TIME_SERIES(
+                data=time_series, subj_id=subj_id,
+                Fs=Fs,
+                locs=locs, node_labels=labels,
+                TS_name=TS_name, session_name=session
+    )
+
+    return BOLD
+
+
 
 ####################################################################################################################################
