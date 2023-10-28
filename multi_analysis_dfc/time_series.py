@@ -7,6 +7,7 @@ Created on Jun 29 2023
 """
 
 import numpy as np
+from requests import session
 from scipy import signal
 import matplotlib.pyplot as plt
 from copy import deepcopy
@@ -138,6 +139,9 @@ class TIME_SERIES():
 
     @property
     def locs(self):
+        '''
+        locs shape is (n_region, 3)
+        '''
         if self.locs_ is None:
             return None
         else:
@@ -184,6 +188,8 @@ class TIME_SERIES():
             subjs_id = [subjs_id]
             flag = 1
 
+        # the reason we don't make it from scratch is that we want to 
+        # keep the node selection and manipulations
         new_TS = deepcopy(self)
 
         SUBJECTS = [subj_id for subj_id in new_TS.data_dict_]
@@ -222,6 +228,19 @@ class TIME_SERIES():
 
         self.data_ = None
 
+
+    def concat_ts(self, new_TS):
+        '''
+        concatenate another Time Series obj 
+        to the current one.
+        '''
+        assert self.Fs == new_TS.Fs, 'Fs mismatch!'
+        assert len(self.node_labels) == len(new_TS.node_labels), 'node_labels mismatch!'
+        for i in range(len(self.node_labels)):
+            assert self.node_labels[i] == new_TS.node_labels[i], 'node_labels mismatch!'
+            assert np.all(self.locs[i, :] == new_TS.locs[i, :]), 'locs mismatch!'
+
+        self.append_ts(new_time_series=new_TS.data, subj_id=new_TS.subj_id_lst[0])
 
     def truncate(self, start_time=None, end_time=None, start_point=None, end_point=None):
 
@@ -374,7 +393,13 @@ class TIME_SERIES():
         plt.figure(figsize=(15, 5))
         plt.plot(self.time[interval], self.data[nodes_lst, interval].T)
         plt.xlabel('time (sec)')
-        title = self.TS_name_ + ' ' + self.session_name_
+
+        if not self.session_name_ is None:
+            session_name = self.session_name_
+        else:
+            session_name = ''
+
+        title = self.TS_name_ + ' ' + session_name
         if show_title:
             plt.title(title)
         if save_image:
