@@ -250,10 +250,13 @@ def nifti2timeseries(
     assert type(labels) is list, 'labels must be a list'
     assert locs.shape[0] == len(labels), 'locs and labels must have the same length'
     assert locs.shape[1] == 3, 'locs must have 3 columns'
-    
+
     # change time_series.shape to (roi, time)
     time_series = time_series.T
 
+    if TS_name is None:
+        TS_name = subj_id + ' time series'
+    
     BOLD = TIME_SERIES(
                 data=time_series, subj_id=subj_id,
                 Fs=Fs,
