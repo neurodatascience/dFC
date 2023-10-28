@@ -226,7 +226,8 @@ def nifti2timeseries(
         nifti_file, 
         n_rois, Fs,
         subj_id,
-        confound_strategy='none', standardize=False,
+        confound_strategy='none', 
+        standardize=False,
         TS_name=None,
         session=None,
     ):
@@ -266,6 +267,44 @@ def nifti2timeseries(
 
     return BOLD
 
+
+def multi_nifti2timeseries(
+        nifti_files_list,
+        subj_id_list,
+        n_rois, Fs,
+        confound_strategy='none', 
+        standardize=False,
+        TS_name=None,
+        session=None,
+):
+    '''
+    loading data of multiple subjects from their niifti files
+    '''
+    BOLD_multi = None
+    for subj_id, nifti_file in zip(subj_id_list, nifti_files_list):
+        if BOLD_multi is None:
+            BOLD_multi = nifti2timeseries(
+                            nifti_file=nifti_file, 
+                            n_rois=n_rois, Fs=Fs,
+                            subj_id=subj_id,
+                            confound_strategy=confound_strategy,
+                            standardize=standardize,
+                            TS_name=TS_name,
+                            session=session,
+                    )
+        else:
+            BOLD_multi.concat_ts(
+                nifti2timeseries(
+                        nifti_file=nifti_file,
+                        n_rois=n_rois, Fs=Fs,
+                        subj_id=subj_id,
+                        confound_strategy=confound_strategy, 
+                        standardize=standardize,
+                        TS_name=TS_name,
+                        session=session,
+                    )
+            )
+    return BOLD_multi
 
 
 ####################################################################################################################################
