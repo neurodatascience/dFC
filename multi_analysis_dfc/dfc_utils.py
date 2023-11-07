@@ -328,6 +328,20 @@ def rank_norm(dFC_mat, global_norm=True):
 
     return dFC_mat_new
 
+
+def rank_norm_dFC_dict(dFC_dict, global_norm=True):
+    '''
+    rank normalize dFC matrices in dFC_dict
+    dFC_dict = {'TR1': FC_mat1, 'TR2': FC_mat2, ...}
+    '''
+    dFC_mat = np.array([dFC_dict[TR] for TR in dFC_dict])
+    dFC_mat_new = rank_norm(dFC_mat, global_norm=global_norm)
+    dFC_dict_new = {}
+    for i, TR in enumerate(dFC_dict):
+        dFC_dict_new[TR] = dFC_mat_new[i, :, :]
+    return dFC_dict_new
+
+
 def cat_data(X_t, N):
     '''
     X_t = (time, roi, roi)

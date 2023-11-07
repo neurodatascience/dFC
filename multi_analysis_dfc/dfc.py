@@ -8,7 +8,7 @@ Created on Jun 29 2023
 
 import numpy as np
 
-from .dfc_utils import node_info2network, node_labels2networks, visualize_conn_mat_dict, SW_downsample
+from .dfc_utils import node_info2network, node_labels2networks, rank_norm_dFC_dict, visualize_conn_mat_dict, SW_downsample
 
 ################################# DFC class ######################################
 
@@ -17,6 +17,7 @@ Parameters
     ----------
     TR_array : an array labeling 
         timepoints by their TRs
+        starts from 0
 
 Variables
     ----------
@@ -222,6 +223,8 @@ class DFC():
             FCSs = np.expand_dims(FCSs, axis=0)
 
         if FCS_idx is None:
+            # usually for state-free methods like sliding window when we don't have FCSs
+            # we consider each FC a FCS
             FCS_idx = np.arange(start=0, stop=FCSs.shape[0], step=1, dtype=int)
 
         if type(FCS_idx) is list:
@@ -234,9 +237,11 @@ class DFC():
                 "FC matrices must be square."
 
         assert self.n_time==-1, \
-            'why n_time is not -1 ?'
+            'why n_time is not -1 ? Are you adding a dFC to an existing dFC ?'
         
         if TR_array is None:
+            # self.n_time is -1 at first. if it is not -1, it means that a dFC is already set and
+            # we are adding a new dFC to it. 
             TR_array = np.arange(start=self.n_time+1, stop=self.n_time+len(FCS_idx)+1, step=1, dtype=int)
 
         assert np.sum(np.abs(np.sort(TR_array)-TR_array))==0.0, \
@@ -257,8 +262,13 @@ class DFC():
         self.TR_array_ = TR_array
 
 
-    def visualize_dFC(self, TRs=None, normalize=False, show_networks=False,
-        threshold=0.0, save_image=False, fig_name=None, fix_lim=False):
+    def visualize_dFC(self, TRs=None, normalize=False,
+                      show_networks=False,
+                      rank_norm=False,
+                      threshold=0.0, 
+                      fix_lim=False,
+                      save_image=False, fig_name=None, 
+    ):
 
         assert not self.measure is None, \
             'Measure is not provided.'
@@ -274,10 +284,20 @@ class DFC():
         else:
             node_networks = None
 
-        visualize_conn_mat_dict(data=self.dFC2dict(TRs=TRs), 
+        if rank_norm:
+            dFC_dict = rank_norm_dFC_dict(self.dFC2dict(TRs=TRs))
+            cmap = 'plasma'
+            center_0 = False
+        else:
+            dFC_dict = self.dFC2dict(TRs=TRs)
+            cmap = 'seismic'
+            center_0 = True
+        
+        visualize_conn_mat_dict(data=dFC_dict, 
             title=self.measure.measure_name+' dFC', 
             fix_lim=fix_lim, normalize=normalize,
             node_networks=node_networks,
+            cmap=cmap, center_0=center_0,
             save_image=save_image, 
             output_root=fig_name, 
         )
