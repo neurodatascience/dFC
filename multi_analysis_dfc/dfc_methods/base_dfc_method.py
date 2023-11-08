@@ -248,13 +248,15 @@ class method_name(dFC):
         self.FCS_ = []
         self.logs_ = ''
 
-        self.params_name_lst = ['measure_name', 'is_state_based', 'n_states', \
-            'normalization', 'num_subj', 'num_select_nodes', 'num_time_point', \
+        self.params_name_lst = ['measure_name', 'is_state_based', 'n_states',
+            'normalization', 'num_subj', 'num_select_nodes', 'num_time_point',
             'Fs_ratio', 'noise_ratio', 'num_realization', 'session']
         self.params = {}
         for params_name in self.params_name_lst:
             if params_name in params:
                 self.params[params_name] = params[params_name]
+            else:
+                self.params[params_name] = None
 
         self.params['specific_param'] = value
         self.params['measure_name'] = 'method_name'
