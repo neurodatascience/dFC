@@ -73,6 +73,7 @@ for task in TASKS:
         event_types = ['rest']
         event_labels = np.zeros((int(num_time_mri * oversampling), 1))
         task_labels = np.zeros((int(num_time_mri * oversampling), 1))
+        Fs_task = float(1/TR_mri) * oversampling
     else:
         task_events_root = f"{main_root}/{subj}/func/"
         ALL_EVENTS_FILES = os.listdir(task_events_root)

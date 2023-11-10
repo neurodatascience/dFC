@@ -34,8 +34,8 @@ def events_time_to_labels(events, TR_mri, num_time_mri, event_types=[], oversamp
         if events[i, 2] in event_types:
             start_time = float(events[i, 0])
             end_time = float(events[i, 0]) + float(events[i, 1])
-            start_TR = np.round(start_time*Fs)
-            end_TR = np.round(end_time*Fs)
+            start_TR = int(np.rint(start_time * Fs))
+            end_TR = int(np.rint(end_time * Fs))
             event_labels[start_TR:end_TR] = event_types.index(events[i, 2])
    
     if return_0_1:
