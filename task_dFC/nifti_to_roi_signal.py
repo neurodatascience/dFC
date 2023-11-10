@@ -39,7 +39,7 @@ subj = ALL_SUBJs[job_id-1] # SGE_TASK_ID starts from 1 not 0
 
 print(f"subject-level ROI signal extraction CODE started running ... for subject: {subj} ...")
 ################################# FIND THE FUNC FILE #################################
-
+info = {}
 for task in TASKS:
     # find the func file for this subject and task
     ALL_TASK_FILES = os.listdir(f"{fmriprep_root}/{subj}/func/")
@@ -115,6 +115,8 @@ for task in TASKS:
     np.save(f"{output_root}/{subj_folder}/time_series.npy", region_signals)
     np.save(f"{output_root}/{subj_folder}/task_data.npy", task_data)
 
+    info[task] = {'TR_mri': TR_mri}
 
+np.save(f"{output_root}/info.npy", info)
 print(f"subject-level ROI signal extraction CODE finished running ... for subject: {subj} ...")
 ####################################################################

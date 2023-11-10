@@ -1,3 +1,4 @@
+from math import e
 from multi_analysis_dfc import (
     data_loader,
     MultiAnalysis,
@@ -8,6 +9,8 @@ import os
 import json
 import warnings
 
+from task_dFC.nifti_to_roi_signal import TR_mri
+
 warnings.simplefilter('ignore')
 
 os.environ["MKL_NUM_THREADS"] = '16'
@@ -17,23 +20,41 @@ os.environ["OMP_NUM_THREADS"] = '16'
 ################################# Parameters #################################
 # data paths
 # main_root = '../../DATA/ds002785/' # for local
-main_root = '../../../DATA/task-based/openneuro/ds002785/' # for server
-roi_root = main_root + 'ROI_timeseries/'
-output_root = main_root + 'fitted_MEASURES/'
+main_root = '../../../DATA/task-based/openneuro/ds002785' # for server
+roi_root = f"{main_root}/derivatives/ROI_timeseries"
+output_root = f"{main_root}/derivatives/fitted_MEASURES"
 
 fmriprep_suffix = '_space-MNI152NLin2009cAsym_desc-preproc_bold.nii.gz'
 
-TR = 2.00 # check the json files?
+# for consistency we use 0 for resting state
+TASKS = [
+    'task-restingstate', 
+    'task-anticipation', 
+    'task-emomatching', 
+    'task-faces', 
+    'task-gstroop', 
+    'task-workingmemory'
+]
+
+job_id = int(os.getenv("SGE_TASK_ID"))
+TASK_id = job_id-1 # SGE_TASK_ID starts from 1 not 0
+if TASK_id > len(TASKS):
+    print("TASK_id out of TASKS")
+    exit()
+task = TASKS[TASK_id]
+# todo: read TR from json file
+TR_mri = None
+Fs_mri = 1/TR_mri
 
 ###### DATA PARAMETERS ######
 
 params_data_load = { 
     # data root
-    'data_root': roi_root,
+    'data_root': f"{roi_root}/",
     # file name
     'file_name': 'time_series.npy',
     # SESSION
-    'SESSIONs': ['task-all'], 
+    'SESSIONs': [task], 
     # networks to include in analysis
     'networks2include':None, 
     # locs
@@ -41,7 +62,7 @@ params_data_load = {
     # labels
     'roi_labels_file': 'region_labels.npy',
     # sampling frequency
-    'Fs': 1/TR,
+    'Fs': Fs_mri,
 }
 
 ###### MEASUREMENT PARAMETERS ######
@@ -62,15 +83,11 @@ params_methods = {
     # Parallelization Parameters
     'n_jobs': 2, 'verbose': 0, 'backend': 'loky', 
     # SESSION
-    'session': 'task-all', 
+    'session': task, 
     # Hyper Parameters
     'normalization': True, 
     'num_subj': None, # None or 216?
-    'num_select_nodes': None, # None or 100?
     'num_time_point': None,  # None or set?
-    'Fs_ratio': 1.00, 
-    'noise_ratio': 0.00, 
-    'num_realization': 1 
 }
 
 ###### HYPER PARAMETERS ALTERNATIVE ######
@@ -118,11 +135,11 @@ BOLD = data_loader.load_from_array(**params_data_load)
 ################################ Measures of dFC #################################
 
 MA = MultiAnalysis( 
-    analysis_name='task-based-dFC-ds002785', 
+    analysis_name=f"task-based-dFC-ds002785-{task}",
     **params_multi_analysis 
 )
 
-MEASURES_lst = MA.measures_initializer( 
+MEASURES_lst = MA.measures_initializer(
     MEASURES_name_lst, 
     params_methods, 
     alter_hparams 
@@ -133,15 +150,9 @@ print('Measurement Started ...')
 
 ################################# estimate FCS #################################
 
-job_id = int(os.getenv("SGE_TASK_ID"))
-MEASURE_id = job_id-1 # SGE_TASK_ID starts from 1 not 0
+for MEASURE_id, measure in enumerate(MEASURES_lst):
 
-
-if MEASURE_id >= len(MEASURES_lst):
-    print("MEASURE_id out of MEASURES_lst ")
-else:
-    measure = MEASURES_lst[MEASURE_id]
-
+    print('MEASURE: ' + measure.measure_name)
     print("FCS estimation started...")
 
     time_series = BOLD[measure.params['session']]
@@ -154,9 +165,9 @@ else:
     print('Measurement required %0.3f seconds.' % (time.time() - tic, ))
 
     # Save
-    if not os.path.exists(output_root):
-        os.makedirs(output_root)
-    np.save(output_root+'MEASURE_'+str(MEASURE_id)+'.npy', measure) 
-    np.save(output_root+'multi_analysis.npy', MA) 
+    if not os.path.exists(f"{output_root}/{task}"):
+        os.makedirs(f"{output_root}/{task}")
+    np.save(f"{output_root}/{task}/MEASURE_{str(MEASURE_id)}.npy", measure)
+    np.save(f"{output_root}/{task}/multi_analysis.npy", MA)
 
 #################################################################################
