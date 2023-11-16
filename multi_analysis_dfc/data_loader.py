@@ -232,7 +232,7 @@ def nifti2timeseries(
         session=None,
     ):
     '''
-    this function is only for single subject data loading
+    this function is only for single subject and single session data loading 
     it uses nilearn maskers to extract ROI signals from nifti files
     and returns a TIME_SERIES object
 
@@ -278,7 +278,7 @@ def multi_nifti2timeseries(
         session=None,
 ):
     '''
-    loading data of multiple subjects from their niifti files
+    loading data of multiple subjects, but single session, from their nifti files
     '''
     BOLD_multi = None
     for subj_id, nifti_file in zip(subj_id_list, nifti_files_list):
