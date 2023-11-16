@@ -57,6 +57,17 @@ for measure in ALL_RESULTS['measure_lst']:
         save_image=save_image, output_root=output_root+'FCS/'
     )
 
+################################# RSNs visualization #################################
+
+measure = ALL_RESULTS['measure_lst'][0]
+
+plot_rois(
+    node_networks, 
+    measure.TS_info['nodes_locs'], 
+    save_image=save_image, 
+    output_root=f"{output_root}RSNs/"
+)
+
 ################################# dFC values distributions #################################
 dFC_dist_plot = True
 
