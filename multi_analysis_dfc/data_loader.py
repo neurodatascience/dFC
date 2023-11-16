@@ -160,7 +160,7 @@ def nifti2array(nifti_file,
                             and global signal regression 
                             is applied.
     '''
-    from nilearn.input_data import NiftiLabelsMasker
+    from nilearn.maskers import NiftiLabelsMasker
     from nilearn import datasets
     from nilearn.plotting import find_parcellation_cut_coords
     from nilearn.interfaces.fmriprep import load_confounds
