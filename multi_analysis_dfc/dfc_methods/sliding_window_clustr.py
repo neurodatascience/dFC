@@ -179,7 +179,7 @@ class SLIDING_WINDOW_CLUSTR(BaseDFCMethod):
             if dFC_raw.n_time<self.params['n_subj_clstrs']:
                 print( \
                     'Number of subject-level clusters cannot be more than SW dFC samples! n_subj_clstrs was changed to ' \
-                        + str(dFC_raw.n_time))
+                        + str(dFC_raw.n_time) + '. This change will cause problems in similarity assessment.')
                 self.params['n_subj_clstrs'] = dFC_raw.n_time
 
             FCS, _ = self.cluster_FC( \
