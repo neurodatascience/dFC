@@ -763,15 +763,75 @@ def distance2Z(dist_mat, method='ward'):
     Z = shc.linkage(distArray, method=method)
     return Z
 
+
+def most_frequent(List):
+    return max(set(List), key = List.count)
+
+
+def find_measure_color(measure_name, cluster_colors_dict):
+    for color in cluster_colors_dict:
+        if measure_name in cluster_colors_dict[color]:
+            return color
+    return 'royalblue'
+
+
+def find_link_colors(
+        Z,
+        labels,
+        cluster_colors_dict, 
+        extra_colors,
+        threshold=None,
+    ):
+
+    extra_colors_copy = extra_colors.copy()
+    if threshold is None:
+        threshold = 0.7 * np.max(Z[:, 2])
+
+    clstring_labels = shc.fcluster(Z, t=threshold, criterion='distance') - 1
+    n_clusters = len(np.unique(clstring_labels))
+
+    cluster_colors = []
+    for clstr_id in range(n_clusters):
+        # find measures in this cluster
+        measures_lst = [labels[i] for i, l in enumerate(clstring_labels) if l == clstr_id]
+        # find the color of each measure based on cluster_colors_dict
+        colors_lst = [find_measure_color(measure_name, cluster_colors_dict) for measure_name in measures_lst]
+        # find the most frequent color in this cluster
+        clstr_color = most_frequent(colors_lst)
+        # if the color is not in cluster_colors, add it to cluster_colors
+        if clstr_color not in cluster_colors:
+            cluster_colors.append(clstr_color)
+        # otherwise, add the first color in extra_colors_copy
+        else:
+            cluster_colors.append(extra_colors_copy[0])
+            extra_colors_copy.pop(0)  
+
+    # assign each cluster's color to its measures
+    cluster_colors_array = [cluster_colors[l] for l in clstring_labels]
+    # assign link colors
+    link_cols = {}
+    for i, i12 in enumerate(Z[:,:2].astype(int)):
+        c1, c2 = (link_cols[x] if x > len(Z) else cluster_colors_array[x] for x in i12)
+        # the default color is royalblue
+        link_cols[i+1+len(Z)] = c1 if c1 == c2 else 'royalblue'
+
+    return link_cols
+
 def dist_mat_dendo(Z, labels, 
     distances_CI=None,
-    title='', \
-    save_image=False, output_root=None, \
+    threshold=None,
+    link_colors=None,
+    plot_threshold=False,
+    title='',
+    save_image=False, output_root=None,
     ):
     '''
-    if distances_CI is provided, confidence intervals (CI)
-    of the distances will be shown. the order should be the same as 
-    Z
+    distances_CI:
+        if  is provided, confidence intervals (CI)
+        of the distances will be shown. the order should be the same as Z
+    link_colors: 
+        is a dictionary of colors for each link in Z
+        can be used to fix the colors of clusters 
     '''
 
     sns.set_context("paper", 
@@ -783,12 +843,27 @@ def dist_mat_dendo(Z, labels,
 
     sns.set_style('darkgrid')
 
+    if threshold is None:
+        threshold = 0.7 * np.max(Z[:, 2])
+
+    # link colors
+    if link_colors is None:
+        link_color_func = None
+    else:
+        link_color_func=lambda k: link_colors[k]
+
     width = int(2.5*len(Z))
     fig = plt.figure(figsize=(width, 5))
     ax = fig.add_subplot(1, 1, 1)    
     with mpl.rc_context({'lines.linewidth': 3}):
 
-        dend = shc.dendrogram(Z, distance_sort='ascending', no_plot=False, labels=labels)
+        dend = shc.dendrogram(
+            Z, 
+            distance_sort='ascending', 
+            link_color_func=link_color_func,
+            no_plot=False, 
+            labels=labels
+        )
 
         # show confidence interval of distances
         if not distances_CI is None:
@@ -835,6 +910,9 @@ def dist_mat_dendo(Z, labels,
                     max_y_lim = max(y+Z_CI, max_y_lim)
             plt.ylim(0, max_y_lim*1.1)
                 
+    if plot_threshold:
+        plt.axhline(threshold, color='k', linestyle='dashed', linewidth=2)
+
     if show_title:
         plt.title(title, fontsize=15)
         
