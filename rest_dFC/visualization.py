@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from copy import deepcopy
 from pathlib import Path
+import os
 
 # sys.path.append('./BIC_codes/')
 from functions.dFC_funcs import *
@@ -22,6 +23,14 @@ ALL_RESULTS = np.load(output_root+'ALL_RESULTS.npy', allow_pickle='True').item()
 ################################ common variables #################################
 
 node_networks = ALL_RESULTS['node_networks']
+
+cluster_colors_dict = {
+    'forestgreen': ['SlidingWindow', 'Time-Freq'],
+    'coral': ['Clustering', 'ContinuousHMM', 'DiscreteHMM'],
+    'crimson': ['CAP', 'Windowless'],
+}
+
+extra_colors = ['khaki', 'orchid', 'aquamarine']
 
 ################################# dFC SAMPLES #################################
 
@@ -60,6 +69,23 @@ for measure in ALL_RESULTS['measure_lst']:
 ################################# RSNs visualization #################################
 
 measure = ALL_RESULTS['measure_lst'][0]
+
+# find ROI count in each RSN
+RSNs = np.unique(node_networks)
+num_ROIs = {}
+for RSN in RSNs:
+    num_ROIs[RSN] = np.sum([1 for node in node_networks if node==RSN])
+
+# write to a txt file
+folder = f"{output_root}RSNs/"
+if not os.path.exists(folder):
+    os.makedirs(folder)
+filename = Path(folder+'/ROI_count_in_RSNs.txt')
+filename.touch(exist_ok=True)
+text_file = open(filename, 'wt')
+for RSN in num_ROIs:
+    text_file.write(RSN + ' : ' + str(num_ROIs[RSN])+'\n')
+text_file.close()
 
 plot_rois(
     node_networks, 
@@ -146,7 +172,16 @@ for metric in ALL_RESULTS['dFC_similarity_overall'] :
     for filter in ['session_Rest1_LR']:
         dist_mat = corr2distance(RESULTS[filter]['avg_mat'], metric=metric)
         Z = distance2Z(dist_mat, method='ward')
+
+        # find link colors to fix the color of each cluster
+        link_cols = find_link_colors(Z=Z, labels=RESULTS[filter]['name_lst'],
+                                    cluster_colors_dict=cluster_colors_dict, 
+                                    extra_colors=extra_colors,
+                    )
+        
         dist_mat_dendo(Z=Z, labels=RESULTS[filter]['name_lst'], 
+            link_colors=link_cols,
+            plot_threshold=True,
             title='Hierarchical Clustering of Methods ' + filter+' using '+metric, 
             save_image=save_image, output_root=output_root+'dFC_similarity/'+metric+'/'
         )
@@ -176,8 +211,17 @@ for key in Z_clstrs:
         Z = list()
         for i, tree in enumerate(Z_clstrs[key]['Z']):
             Z.append([tree[0], tree[1], avg_distances[i], tree[3]])
+        Z = np.array(Z)
 
+        # find link colors to fix the color of each cluster
+        link_cols = find_link_colors(Z=Z, labels=measures_lst,
+                                    cluster_colors_dict=cluster_colors_dict, 
+                                    extra_colors=extra_colors,
+                    )
+        
         dist_mat_dendo(Z, labels=measures_lst, 
+            link_colors=link_cols,
+            plot_threshold=True,
             distances_CI=std_distances,
             title='Hierclstr clstr '+str(key)+'_'+str(n)+'subjects',
             save_image=save_image, output_root=output_root+'hierclstr_CI/',
@@ -271,7 +315,16 @@ for feature2extract in ALL_RESULTS['dFC_similarity_feature_based']:
     for filter in ['default_values']:
         dist_mat = corr2distance(RESULTS[filter]['avg_mat'], metric='spearman')
         Z = distance2Z(dist_mat, method='ward')
+
+        # find link colors to fix the color of each cluster
+        link_cols = find_link_colors(Z=Z, labels=RESULTS[filter]['name_lst'],
+                                    cluster_colors_dict=cluster_colors_dict, 
+                                    extra_colors=extra_colors,
+                    )
+        
         dist_mat_dendo(Z=Z, labels=RESULTS[filter]['name_lst'], 
+            link_colors=link_cols,
+            plot_threshold=True,
             title='Hierarchical Clustering of Methods ' + filter+' using '+feature2extract, 
             save_image=save_image, output_root=output_root+'feature_based/'+feature2extract+'/'
         )
@@ -330,7 +383,16 @@ for graph_property in ALL_RESULTS['dFC_similarity_graph']['spatial']:
     for filter in ['default_values']:
         dist_mat = corr2distance(RESULTS[filter]['avg_mat'], metric='spearman')
         Z = distance2Z(dist_mat, method='ward')
+
+        # find link colors to fix the color of each cluster
+        link_cols = find_link_colors(Z=Z, labels=RESULTS[filter]['name_lst'],
+                                    cluster_colors_dict=cluster_colors_dict, 
+                                    extra_colors=extra_colors,
+                    )
+        
         dist_mat_dendo(Z=Z, labels=RESULTS[filter]['name_lst'], 
+            link_colors=link_cols,
+            plot_threshold=True,
             title='Hierarchical Clustering of Methods ' + filter+' using '+ 'spatial '+ graph_property, 
             save_image=save_image, output_root=output_root+'graph_based/'+graph_property+'/'
         )
@@ -412,7 +474,16 @@ for subj_lvl_feature in ALL_RESULTS['subj_clustring']:
     for session in RESULTS['across_method']:
         dist_mat = corr2distance(RESULTS['across_method'][session]['sim_mat'], metric='spearman')
         Z = distance2Z(dist_mat, method='ward')
+
+        # find link colors to fix the color of each cluster
+        link_cols = find_link_colors(Z=Z, labels=RESULTS['across_method'][session]['name_lst'],
+                                    cluster_colors_dict=cluster_colors_dict, 
+                                    extra_colors=extra_colors,
+                    )
+        
         dist_mat_dendo(Z=Z, labels=RESULTS['across_method'][session]['name_lst'], 
+            link_colors=link_cols,
+            plot_threshold=True,
             title='Hierarchical Clustering of Methods ' + session +' using inter-subject similarity based on '+subj_lvl_feature, 
             save_image=save_image, output_root=output_root+'inter_subject/'+subj_lvl_feature+'/'
         )
