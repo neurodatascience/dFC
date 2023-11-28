@@ -106,7 +106,7 @@ class HMM_DISC(BaseDFCMethod):
 
         Models, Scores = [], []
         for i in range(self.params['hmm_iter']):
-            model = hmm.MultinomialHMM(n_components=self.params['n_states'])
+            model = hmm.CategoricalHMM(n_components=self.params['n_states'])
             model.fit(Obs_seq) 
             score = model.score(Obs_seq)
             Models.append(model)
