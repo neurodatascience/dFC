@@ -1,0 +1,15 @@
+Metadata-Version: 2.1
+Name: pydfc
+Version: 1.0.1
+Summary: pydfc Python package
+Author: Mohammad Torabi
+Author-email: mohammad.torabi@mail.mcgill.ca
+Keywords: python,dFC package,neuroimaging
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Education
+Classifier: Programming Language :: Python :: 2
+Classifier: Programming Language :: Python :: 3
+Classifier: Operating System :: MacOS :: MacOS X
+Classifier: Operating System :: Microsoft :: Windows
+
+This package aims to provide a comprehensive framework for assessing dynamic functional connectivity (dFC) using multiple methods and comparing results across methods.

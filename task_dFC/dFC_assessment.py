@@ -1,4 +1,4 @@
-from multi_analysis_dfc import (
+from pydfc import (
     data_loader,
     MultiAnalysis,
 )
