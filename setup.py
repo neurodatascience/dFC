@@ -1,12 +1,12 @@
 from setuptools import setup, find_packages
 
-VERSION = '0.0.1' 
-DESCRIPTION = 'Multi-Analysis dFC Assessment Python package'
+VERSION = '1.0.1' 
+DESCRIPTION = 'pydfc Python package'
 LONG_DESCRIPTION = 'This package aims to provide a comprehensive framework for assessing dynamic functional connectivity (dFC) using multiple methods and comparing results across methods.'
 
 # Setting up
 setup(
-        name="multi_analysis_dfc", 
+        name="pydfc", 
         version=VERSION,
         author="Mohammad Torabi",
         author_email="mohammad.torabi@mail.mcgill.ca",
@@ -21,7 +21,7 @@ setup(
             'pyclustering', 'statsmodels', 
         ], 
         
-        keywords=['python', 'dFC package'],
+        keywords=['python', 'dFC package', 'neuroimaging'],
         classifiers= [
             "Development Status :: 3 - Alpha", #change later
             "Intended Audience :: Education",
