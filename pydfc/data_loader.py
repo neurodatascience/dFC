@@ -21,6 +21,9 @@ def find_subj_list(data_root, sessions):
     the files must follow the format: subjectID_sessionID
     only these files should be in the data_root
     '''
+    if data_root[-1] != '/':
+        data_root += '/'
+
     ALL_FILES = os.listdir(data_root)
     FOLDERS = [item for item in ALL_FILES if os.path.isdir(data_root+item)]
     
@@ -40,7 +43,7 @@ def find_subj_list(data_root, sessions):
     for subj in SUBJECTS:
         kept_subjs.append(subj)
         for session in sessions:
-            if not os.path.exists(data_root+subj+'_'+session):
+            if not os.path.exists(f"{data_root}{subj}_{session}"):
                 failed_subjs.append(subj)
                 kept_subjs.remove(subj)
                 break
