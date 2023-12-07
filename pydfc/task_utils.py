@@ -76,23 +76,21 @@ def event_labels_conv_hrf(event_labels, TR_mri, TR_task):
     '''
     
     event_labels = np.array(event_labels)
-    print(event_labels.shape)
     L = event_labels.shape[0]
     event_ids = np.unique(event_labels)
     event_ids = event_ids.astype(int)
-    print(event_ids)
-    events_hrf = np.zeros((L, len(event_ids)-1)) # 0 is not an event, is the resting state
-    print(events_hrf.shape)
+    events_hrf = np.zeros((L, len(event_ids))) # 0 is the resting state
     for i, event_id in enumerate(event_ids):
-        print(event_id)
         # 0 is not an event, is the resting state
         if event_id == 0:
             continue
         event_signal = np.zeros(L)
         event_signal[event_labels[:, 0]==event_id] = 1.0
 
-        # -1 because the first event is the resting state
-        events_hrf[:, i-1] = event_conv_hrf(event_signal, TR_mri, TR_task)
+        events_hrf[:, i] = event_conv_hrf(event_signal, TR_mri, TR_task)
+
+    # the time points that are not in any event are considered as resting state
+    events_hrf[np.sum(events_hrf[:, 1:], axis=1)==0.0, 0] = 1.0
 
     # time_length_task = len(event_labels)*TR_task
 
