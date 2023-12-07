@@ -6,11 +6,8 @@ Created on Jun 29 2023
 @author: Mohammad Torabi
 """
 
-from re import S
-from tkinter import N
 import numpy as np
 import hdf5storage
-import scipy.io as sio
 import os
 
 from .dfc_utils import intersection, label2network
@@ -305,6 +302,45 @@ def multi_nifti2timeseries(
                     )
             )
     return BOLD_multi
+
+
+def load_TS(
+        data_root, 
+        file_name, 
+        SESSIONs, 
+        subj_id2load=None
+    ):
+    '''
+    load a TIME_SERIES object from a .npy file
+    if SESSIONs is a list, it will load all the sessions, 
+        if it is a string, it will load that session
+    if subj_id2load is None, it will load all the subjects
+    '''
+    # check if SESSIONs is a list or a string
+    if type(SESSIONs) is str:
+        SESSIONs = [SESSIONs]
+        flag = True
+
+    if subj_id2load is None:
+        SUBJECTS = find_subj_list(data_root, sessions=SESSIONs)
+    else:
+        SUBJECTS = [subj_id2load]
+
+    TS = {}
+    for session in SESSIONs:
+        TS[session] = None
+        for subj in SUBJECTS:
+            subj_fldr = f"{subj}_{session}"
+            time_series = np.load(f"{data_root}/{subj_fldr}/{file_name}", allow_pickle='True').item()
+            if TS[session] is None:
+                TS[session] = time_series
+            else:
+                TS[session].concat_ts(time_series)
+
+    if flag:
+        return TS[SESSIONs[0]]
+    return TS
+
 
 
 ####################################################################################################################################
