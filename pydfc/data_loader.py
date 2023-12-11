@@ -320,6 +320,7 @@ def load_TS(
     if subj_id2load is None, it will load all the subjects
     '''
     # check if SESSIONs is a list or a string
+    flag = False
     if type(SESSIONs) is str:
         SESSIONs = [SESSIONs]
         flag = True
