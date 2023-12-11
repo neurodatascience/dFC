@@ -32,7 +32,7 @@ TASKS = [
 
 job_id = int(os.getenv("SGE_TASK_ID"))
 TASK_id = job_id-1 # SGE_TASK_ID starts from 1 not 0
-if TASK_id > len(TASKS):
+if TASK_id >= len(TASKS):
     print("TASK_id out of TASKS")
     exit()
 task = TASKS[TASK_id]
