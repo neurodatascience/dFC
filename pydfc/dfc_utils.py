@@ -491,10 +491,13 @@ def visualize_conn_mat(C, axis=None, title='',
     cmap='seismic',
     V_MIN=None, V_MAX=None,
     node_networks=None,
-    title_fontsize=18
+    title_fontsize=18,
+    loc_x=None, loc_y=None,
     ):
     '''
     C is (regions, regions)
+    you can use loc_x and loc_y to set the location of the image
+    loc_x and loc_y are lists of two elements, [start, end]
     '''
 
     if axis is None:
@@ -508,8 +511,19 @@ def visualize_conn_mat(C, axis=None, title='',
     if V_MIN is None:
         V_MIN = -1*V_MAX
 
-    im = axis.imshow(C, interpolation='nearest', aspect='equal', cmap=cmap,    # 'viridis' or 'jet'
-        vmin=V_MIN, vmax=V_MAX)
+    if loc_x is None or loc_y is None:
+        im = axis.imshow(
+            C, 
+            interpolation='nearest', aspect='equal', cmap=cmap,    # 'viridis' or 'jet'
+            vmin=V_MIN, vmax=V_MAX
+        )
+    else:
+        im = axis.imshow(
+            C, 
+            interpolation='nearest', aspect='equal', cmap=cmap,    # 'viridis' or 'jet'
+            vmin=V_MIN, vmax=V_MAX, 
+            extent=[loc_x[0], loc_x[1], loc_y[0], loc_y[1]]
+        )
     
     # cluster node networks
     if not node_networks is None:
