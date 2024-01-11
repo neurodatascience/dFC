@@ -1,5 +1,6 @@
-.. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.10211966.svg
-    :target: https://doi.org/10.5281/zenodo.10211966
+.. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.10161176.svg
+    :target: https://zenodo.org/doi/10.5281/zenodo.10161176
+
     
 pydfc
 =======
