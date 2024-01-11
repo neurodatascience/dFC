@@ -1,0 +1,33 @@
+cff-version: 1.2.0
+
+title: "pydfc"
+
+version: 1.0.2
+
+abstract:
+  "An implementation of several well-known dynamic Functional Connectivity assessment methods."
+
+message: "If you use this software, please cite it as below."
+
+repository-code: "https://github.com/neurodatascience/dFC.git"
+
+
+contact:
+  - affiliation: "McGill University, Québec, Canada"
+    email: mohammad.torabi@mail.mcgill.ca
+    family-names: Torabi
+    given-names: Mohammad
+
+authors:
+  - family-names: "Torabi"
+    given-names: "Mohammad"
+    orcid: "https://orcid.org/0000-0002-4429-8481"
+    affiliation: Biological and Biomedical Engineering program, McGill University, Québec, Canada"
+
+license: MIT
+
+keywords:
+  - dynamic functional connectivity
+  - analytical flexibility
+  - neuroimaging
+  - reproducibility
