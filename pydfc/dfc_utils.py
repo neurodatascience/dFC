@@ -377,7 +377,7 @@ def dFC_mask(dFC_mat, mask):
 def dFC_mat2vec(C_t):
     '''
     C_t must be an array of matrices or a single matrix
-    diagonal values not included. if you want to include 
+    diagonal values will not be included. if you want to include 
     them set k=0
     if C_t is a single matrix, F will be one dim
     changing F will not change C_t

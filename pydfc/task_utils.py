@@ -97,12 +97,31 @@ def plot_task_dFC(task_labels, dFC_lst, event_types, Fs_mri, TR_step=12):
 
     plt.show()
 
+
+################################# PCA Functions ####################################
+
+# def BOLD
+
+
+################################# Prediction Functions ####################################
+
+from sklearn.linear_model import LinearRegression
+
+def linear_reg(X, y):
+    '''
+    X = (n_samples, n_features)
+    y = (n_samples, n_targets)
+    '''
+    reg = LinearRegression().fit(X, y)
+    print(reg.score(X, y))
+    return reg.predict(X)
+
 ################################# Validation Functions ####################################
 
 
 def event_conv_hrf(event_signal, TR_mri, TR_task):
     time_length_HRF = 32.0 # in sec
-    hrf_model = 'glover' # 'spm' or 'glover'
+    hrf_model = 'spm' # 'spm' or 'glover'
 
     TR_HRF = TR_task
     oversampling = TR_mri/TR_HRF # more samples per TR than the func data to have a better HRF resolution,  same as for event_labels
@@ -150,9 +169,27 @@ def event_labels_conv_hrf(event_labels, TR_mri, TR_task):
     return events_hrf
 
 
-def downsample_events_hrf(events_hrf, TR_mri, TR_task):
+def downsample_events_hrf(events_hrf, TR_mri, TR_task, method='uniform'):
+    '''
+    method:
+        uniform
+        resample
+        decimate
+    no major difference was observed between these methods
+    '''
     events_hrf_ds = []
     for i in range(events_hrf.shape[1]):
-        events_hrf_ds.append(events_hrf[::int(TR_mri/TR_task), i])
+        if method=='uniform':
+            events_hrf_ds.append(
+                events_hrf[::int(TR_mri/TR_task), i]
+            )
+        elif method=='resample':
+            events_hrf_ds.append(
+                signal.resample(events_hrf[:, i], int(events_hrf.shape[0]*TR_task/TR_mri))
+            )
+        elif method=='decimate':
+            events_hrf_ds.append(
+                signal.decimate(events_hrf[:, i], int(TR_mri/TR_task))
+            )
     events_hrf_ds = np.array(events_hrf_ds).T
     return events_hrf_ds

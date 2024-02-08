@@ -40,6 +40,36 @@ def title2file_name(title):
     '''
     return title.replace(" ", "_")
 
+
+def plot_TS(X, Fs, title=''):
+    '''
+    X = (n_time, n_features)
+    '''
+    if X.shape[1] > 10:
+        print('Too many features to plot')
+        return
+    fig_width = 35
+    fig_height = 2 * X.shape[1]
+    fig, axes = plt.subplots(X.shape[1], 1, figsize=(fig_width, fig_height),
+        facecolor='w', edgecolor='k')
+    time = np.arange(0, X.shape[0])/Fs
+    for i in range(0, X.shape[1]):
+        axes[i].plot(time, X[:, i], linewidth=4)
+        axes[i].set_title('TC'+str(i), fontdict={'fontsize': 15, 'fontweight': 'bold'})
+    plt.suptitle(title)
+    plt.xlabel('Time (s)')
+    plt.show()
+    # if save_image:
+    #     folder = output_root[:output_root.rfind('/')]
+    #     if not os.path.exists(folder):
+    #         os.makedirs(folder)
+    #     fig.savefig(output_root+title.replace(" ", "_")+'.'+save_fig_format, 
+    #         dpi=fig_dpi, bbox_inches=fig_bbox_inches, pad_inches=fig_pad, format=save_fig_format
+    #     ) 
+    #     plt.close()
+    # else:
+    #     plt.show()
+
 def plot_sample_dFC(D, x,
     title='',
     cmap='seismic',
