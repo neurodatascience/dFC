@@ -1,4 +1,3 @@
-from math import e
 from pydfc import (
     data_loader,
     MultiAnalysis,
@@ -6,10 +5,7 @@ from pydfc import (
 import time
 import numpy as np
 import os
-import json
 import warnings
-
-from task_dFC.nifti_to_roi_signal import TR_mri
 
 warnings.simplefilter('ignore')
 
@@ -24,8 +20,6 @@ main_root = '../../../DATA/task-based/openneuro/ds002785' # for server
 roi_root = f"{main_root}/derivatives/ROI_timeseries"
 output_root = f"{main_root}/derivatives/fitted_MEASURES"
 
-fmriprep_suffix = '_space-MNI152NLin2009cAsym_desc-preproc_bold.nii.gz'
-
 # for consistency we use 0 for resting state
 TASKS = [
     'task-restingstate', 
@@ -38,32 +32,10 @@ TASKS = [
 
 job_id = int(os.getenv("SGE_TASK_ID"))
 TASK_id = job_id-1 # SGE_TASK_ID starts from 1 not 0
-if TASK_id > len(TASKS):
+if TASK_id >= len(TASKS):
     print("TASK_id out of TASKS")
     exit()
 task = TASKS[TASK_id]
-# todo: read TR from json file
-TR_mri = None
-Fs_mri = 1/TR_mri
-
-###### DATA PARAMETERS ######
-
-params_data_load = { 
-    # data root
-    'data_root': f"{roi_root}/",
-    # file name
-    'file_name': 'time_series.npy',
-    # SESSION
-    'SESSIONs': [task], 
-    # networks to include in analysis
-    'networks2include':None, 
-    # locs
-    'roi_locs_file': 'center_locs.npy',
-    # labels
-    'roi_labels_file': 'region_labels.npy',
-    # sampling frequency
-    'Fs': Fs_mri,
-}
 
 ###### MEASUREMENT PARAMETERS ######
 
@@ -71,13 +43,13 @@ params_data_load = {
 
 params_methods = { 
     # Sliding Parameters
-    'W': 44, 'n_overlap': 0.5, 'sw_method':'pear_corr', 'tapered_window':True, 
+    'W': 44, 'n_overlap': 1.0, 'sw_method':'pear_corr', 'tapered_window':True, 
     # TIME_FREQ
     'TF_method':'WTC', 
     # CLUSTERING AND DHMM
     'clstr_base_measure':'SlidingWindow', 
     # HMM
-    'hmm_iter': 30, 'dhmm_obs_state_ratio': 16/24, 
+    'hmm_iter': 20, 'dhmm_obs_state_ratio': 16/24, 
     # State Parameters
     'n_states': 12, 'n_subj_clstrs': 20, 
     # Parallelization Parameters
@@ -124,12 +96,17 @@ params_multi_analysis = {
 
 ################################# LOAD DATA #################################
 
-BOLD = data_loader.load_from_array(**params_data_load)
+BOLD = data_loader.load_TS(
+        data_root=roi_root, 
+        file_name='time_series.npy', 
+        SESSIONs=task, 
+        subj_id2load=None
+)
 
 ################################# Visualize BOLD #################################
 
 # for session in BOLD:
-#     BOLD[session].visualize(start_time=0, end_time=2000, nodes_lst=list(range(10)), \
+#     BOLD.visualize(start_time=0, end_time=2000, nodes_lst=list(range(10)),
 #         save_image=False, output_root=None)
 
 ################################ Measures of dFC #################################
@@ -155,19 +132,18 @@ for MEASURE_id, measure in enumerate(MEASURES_lst):
     print('MEASURE: ' + measure.measure_name)
     print("FCS estimation started...")
 
-    time_series = BOLD[measure.params['session']]
     if measure.is_state_based:
-        measure.estimate_FCS(time_series=time_series)
+        measure.estimate_FCS(time_series=BOLD)
             
     # dFC_analyzer.estimate_group_FCS(time_series_dict=BOLD)
     print("FCS estimation done.")
-
-    print('Measurement required %0.3f seconds.' % (time.time() - tic, ))
 
     # Save
     if not os.path.exists(f"{output_root}/{task}"):
         os.makedirs(f"{output_root}/{task}")
     np.save(f"{output_root}/{task}/MEASURE_{str(MEASURE_id)}.npy", measure)
-    np.save(f"{output_root}/{task}/multi_analysis.npy", MA)
+
+print('Measurement required %0.3f seconds.' % (time.time() - tic, ))
+np.save(f"{output_root}/{task}/multi_analysis.npy", MA)
 
 #################################################################################

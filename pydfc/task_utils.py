@@ -9,6 +9,10 @@ Created on Oct 25 2023
 import numpy as np
 from nilearn import glm
 from scipy import signal
+import matplotlib.pyplot as plt
+from .dfc_utils import rank_norm
+from .dfc_utils import visualize_conn_mat
+from .dfc_utils import TR_intersection
 
 ################################# Preprocessing Functions ####################################
 
@@ -44,12 +48,80 @@ def events_time_to_labels(events, TR_mri, num_time_mri, event_types=[], oversamp
     return event_labels, Fs
 
 
+################################# Visualization Functions ####################################
+
+def plot_task_dFC(task_labels, dFC_lst, event_types, Fs_mri, TR_step=12):
+    '''
+    task_labels: numpy array of shape (num_time_task, num_event_types) containing the event or task labels
+    this function assumes that the task data has the same Fs as the dFC data, i.e. MRI data
+    and that the time points of the task data are aligned with the time points of the dFC data
+    '''
+    conn_mat_size = 20
+    scale_task_plot = 20
+
+    # plot task_data['event_labels']
+    fig = plt.figure(figsize=(50, 200))
+
+    ax = plt.gca()
+
+    time = np.arange(0, task_labels.shape[0])/Fs_mri
+    for i in range(0, task_labels.shape[1]):
+        ax.plot(time, task_labels[:, i]*scale_task_plot, label=event_types[i], linewidth=4)
+    plt.legend()
+    plt.xlabel('Time (s)')
+
+    comman_TRs = TR_intersection(dFC_lst)
+    TRs_dFC = comman_TRs[::TR_step]
+
+    for dFC_id, dFC in enumerate(dFC_lst):
+        dFC_mat = rank_norm(dFC.get_dFC_mat(), global_norm=True)
+        TR_array = dFC.TR_array
+        for i in range(0, len(TR_array), 1):
+            
+            C = dFC_mat[i, :, :]
+            TR = TR_array[i]
+            if not TR in TRs_dFC:
+                continue
+            visualize_conn_mat(
+                C=C, axis=ax, title='',
+                cmap='plasma',
+                V_MIN=0, V_MAX=None,
+                node_networks=None,
+                title_fontsize=18,
+                loc_x = [TR/Fs_mri-conn_mat_size/2, TR/Fs_mri+conn_mat_size/2], 
+                loc_y = [(1+dFC_id)*conn_mat_size, (2+dFC_id)*conn_mat_size],
+            )
+
+            x1, y1 = [TR/Fs_mri, TR/Fs_mri], [conn_mat_size, 0]
+            ax.plot(x1, y1, color='k', linestyle='-', linewidth=2)
+
+    plt.show()
+
+
+################################# PCA Functions ####################################
+
+# def BOLD
+
+
+################################# Prediction Functions ####################################
+
+from sklearn.linear_model import LinearRegression
+
+def linear_reg(X, y):
+    '''
+    X = (n_samples, n_features)
+    y = (n_samples, n_targets)
+    '''
+    reg = LinearRegression().fit(X, y)
+    print(reg.score(X, y))
+    return reg.predict(X)
+
 ################################# Validation Functions ####################################
 
 
 def event_conv_hrf(event_signal, TR_mri, TR_task):
     time_length_HRF = 32.0 # in sec
-    hrf_model = 'glover' # 'spm' or 'glover'
+    hrf_model = 'spm' # 'spm' or 'glover'
 
     TR_HRF = TR_task
     oversampling = TR_mri/TR_HRF # more samples per TR than the func data to have a better HRF resolution,  same as for event_labels
@@ -76,24 +148,48 @@ def event_labels_conv_hrf(event_labels, TR_mri, TR_task):
     '''
     
     event_labels = np.array(event_labels)
-    print(event_labels.shape)
     L = event_labels.shape[0]
     event_ids = np.unique(event_labels)
     event_ids = event_ids.astype(int)
-    print(event_ids)
-    events_hrf = np.zeros((L, len(event_ids)-1)) # 0 is not an event, is the resting state
-    print(events_hrf.shape)
+    events_hrf = np.zeros((L, len(event_ids))) # 0 is the resting state
     for i, event_id in enumerate(event_ids):
-        print(event_id)
         # 0 is not an event, is the resting state
         if event_id == 0:
             continue
         event_signal = np.zeros(L)
         event_signal[event_labels[:, 0]==event_id] = 1.0
 
-        # -1 because the first event is the resting state
-        events_hrf[:, i-1] = event_conv_hrf(event_signal, TR_mri, TR_task)
+        events_hrf[:, i] = event_conv_hrf(event_signal, TR_mri, TR_task)
+
+    # the time points that are not in any event are considered as resting state
+    events_hrf[np.sum(events_hrf[:, 1:], axis=1)==0.0, 0] = 1.0
 
     # time_length_task = len(event_labels)*TR_task
 
     return events_hrf
+
+
+def downsample_events_hrf(events_hrf, TR_mri, TR_task, method='uniform'):
+    '''
+    method:
+        uniform
+        resample
+        decimate
+    no major difference was observed between these methods
+    '''
+    events_hrf_ds = []
+    for i in range(events_hrf.shape[1]):
+        if method=='uniform':
+            events_hrf_ds.append(
+                events_hrf[::int(TR_mri/TR_task), i]
+            )
+        elif method=='resample':
+            events_hrf_ds.append(
+                signal.resample(events_hrf[:, i], int(events_hrf.shape[0]*TR_task/TR_mri))
+            )
+        elif method=='decimate':
+            events_hrf_ds.append(
+                signal.decimate(events_hrf[:, i], int(TR_mri/TR_task))
+            )
+    events_hrf_ds = np.array(events_hrf_ds).T
+    return events_hrf_ds

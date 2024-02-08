@@ -16,7 +16,7 @@ main_root = '../../../DATA/task-based/openneuro/ds002785' # for server
 fmriprep_root = f"{main_root}/derivatives/fmriprep"
 output_root = f"{main_root}/derivatives/ROI_timeseries"
 
-fmriprep_suffix = '_space-MNI152NLin2009cAsym_desc-preproc_bold.nii.gz'
+bold_suffix = '_space-MNI152NLin2009cAsym_desc-preproc_bold.nii.gz'
 
 # for consistency we use 0 for resting state
 TASKS = [
@@ -39,18 +39,17 @@ subj = ALL_SUBJs[job_id-1] # SGE_TASK_ID starts from 1 not 0
 
 print(f"subject-level ROI signal extraction CODE started running ... for subject: {subj} ...")
 ################################# FIND THE FUNC FILE #################################
-info = {}
 for task in TASKS:
     # find the func file for this subject and task
     ALL_TASK_FILES = os.listdir(f"{fmriprep_root}/{subj}/func/")
-    ALL_TASK_FILES = [i for i in ALL_TASK_FILES if (fmriprep_suffix in i) and (task in i)] # only keep the denoised files? or use the original files?
+    ALL_TASK_FILES = [i for i in ALL_TASK_FILES if (bold_suffix in i) and (task in i)] # only keep the denoised files? or use the original files?
     # print(ALL_TASK_FILES)
     if not len(ALL_TASK_FILES) == 1:
         # if the func file is not found, exclude the subject
         print('Func file not found for ' + subj + ' ' + task)
         continue
     fmriprep_file = f"{fmriprep_root}/{subj}/func/{ALL_TASK_FILES[0]}"
-    info_file = f"{main_root}/{subj}/func/{ALL_TASK_FILES[0].replace(fmriprep_suffix, '_bold.json')}"
+    info_file = f"{main_root}/{subj}/func/{ALL_TASK_FILES[0].replace(bold_suffix, '_bold.json')}"
 
     ################################# LOAD JSON INFO #########################
     # Opening JSON file as a dictionary
@@ -59,13 +58,17 @@ for task in TASKS:
     f.close()
     TR_mri = acquisition_data['RepetitionTime']
     ################################# EXTRACT TIME SERIES #########################
-    # extract ROI signals
-    time_series, labels, locs = data_loader.nifti2array(
+    # extract ROI signals and convert to TIME_SERIES object
+    time_series = data_loader.nifti2timeseries(
         nifti_file=fmriprep_file, 
-        confound_strategy='no_motion',
+        n_rois=100, Fs=1/TR_mri,
+        subj_id=subj,
+        confound_strategy='no_motion', 
         standardize='zscore',
+        TS_name='BOLD',
+        session=task,
     )
-    num_time_mri = time_series.shape[0]
+    num_time_mri = time_series.n_time
     ################################# EXTRACT TASK LABELS #########################
     oversampling = 50 # more samples per TR than the func data to have a better event_labels time resolution
     if task == 'task-restingstate':
@@ -97,10 +100,7 @@ for task in TASKS:
         # fill task labels with 0 (rest) and k (task's index)
         task_labels = np.multiply(event_labels!=0, TASKS.index(task))
     ################################# SAVE #################################
-    # save the ROI time series and labels
-    region_locs = {'locs': locs}
-    region_labels = {'labels': labels}
-    region_signals = {'ROI_data': time_series}
+    # save the ROI time series and task data
     task_data = {
         'task':task, 
         'task_labels':task_labels, 'task_types': TASKS,
@@ -110,13 +110,8 @@ for task in TASKS:
     subj_folder = f"{subj}_{task}"
     if not os.path.exists(f"{output_root}/{subj_folder}/"):
         os.makedirs(f"{output_root}/{subj_folder}/")
-    np.save(f"{output_root}/center_locs.npy", region_locs)
-    np.save(f"{output_root}/region_labels.npy", region_labels)
-    np.save(f"{output_root}/{subj_folder}/time_series.npy", region_signals)
+    np.save(f"{output_root}/{subj_folder}/time_series.npy", time_series)
     np.save(f"{output_root}/{subj_folder}/task_data.npy", task_data)
 
-    info[task] = {'TR_mri': TR_mri}
-
-np.save(f"{output_root}/info.npy", info)
 print(f"subject-level ROI signal extraction CODE finished running ... for subject: {subj} ...")
 ####################################################################
