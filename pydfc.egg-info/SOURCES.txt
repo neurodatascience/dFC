@@ -1,4 +1,4 @@
-README.md
+README.rst
 setup.py
 pydfc/__init__.py
 pydfc/data_loader.py
