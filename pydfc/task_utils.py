@@ -176,7 +176,12 @@ def downsample_events_hrf(events_hrf, TR_mri, TR_task, method='uniform'):
         resample
         decimate
     no major difference was observed between these methods
+    the shape of events_hrf is (num_time_task, num_event_types) or (num_time_task,)
+    the shape of the downsampled events_hrf is (num_time_mri, num_event_types)
     '''
+    if len(events_hrf.shape)==1:
+        flag = 1
+        events_hrf = np.expand_dims(events_hrf, axis=1)
     events_hrf_ds = []
     for i in range(events_hrf.shape[1]):
         if method=='uniform':
@@ -192,4 +197,51 @@ def downsample_events_hrf(events_hrf, TR_mri, TR_task, method='uniform'):
                 signal.decimate(events_hrf[:, i], int(TR_mri/TR_task))
             )
     events_hrf_ds = np.array(events_hrf_ds).T
+
+    if flag:
+        events_hrf_ds = events_hrf_ds[:, 0]
+
     return events_hrf_ds
+
+
+def extract_task_presence(event_labels, TR_task, TR_array, TR_mri, binary=True):
+    '''
+    event_labels: event labels including 0 and event ids at the time each event happens
+    TR_task: TR of task
+    TR_array: the time points of the dFC data
+    TR_mri: TR of MRI
+
+    This function extracts the task presence from the event labels and returns it in the same time points as the dFC data
+    It also downsamples the task presence to the time points of the dFC data
+    if binary is True, the task presence is binarized using the mean of the task presence
+    '''
+
+    # event_labels_all_task is all conditions together, rest vs. task times
+    event_labels_all_task = np.multiply(event_labels!=0, 1)
+
+    event_labels_all_task_hrf = event_labels_conv_hrf(
+        event_labels=event_labels_all_task, 
+        TR_mri=TR_mri, 
+        TR_task=TR_task
+    )
+
+    # keep the task signal of events_hrf_0_1_ds
+    if event_labels_all_task_hrf.shape[1] == 1:
+        # rest
+        # raise error if no task
+        raise ValueError('No task signal in the event data')
+    else:
+        # other tasks
+        event_labels_all_task_hrf = event_labels_all_task_hrf[:, 1]
+
+    if binary:
+        task_presence = np.where(event_labels_all_task_hrf > np.mean(event_labels_all_task_hrf), 1, 0)
+    else:
+        task_presence = event_labels_all_task_hrf
+
+    task_presence = downsample_events_hrf(task_presence, TR_mri, TR_task)
+
+    # some dFC measures (window-based) have a different TR than the task data
+    task_presence = task_presence[TR_array]
+
+    return task_presence
