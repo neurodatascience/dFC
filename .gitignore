@@ -13,3 +13,7 @@ sample_data/sub-0004_task-restingstate_acq-mb3_desc-confounds_regressors.tsv
 sample_data/sub-0005_task-restingstate_acq-mb3_space-MNI152NLin2009cAsym_desc-preproc_bold.nii.gz
 sample_data/sub-0005_task-restingstate_acq-mb3_desc-confounds_regressors.tsv
 
+# build related
+pydfc.egg-info
+build
+dist/

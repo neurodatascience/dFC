@@ -1,0 +1,34 @@
+[build-system]
+build-backend = "hatchling.build"
+requires = ["hatchling"]
+
+[project]
+authors = [{name = "Mohammad Torabi"}]
+version = "1.0.1"
+classifiers = [
+            "Development Status :: 3 - Alpha", #change later
+            "Intended Audience :: Education",
+            "Programming Language :: Python :: 2",
+            "Programming Language :: Python :: 3",
+            "Operating System :: MacOS :: MacOS X",
+            "Operating System :: Microsoft :: Windows", #change later
+]
+dependencies = [
+            'hdf5storage', 
+            'hmmlearn', 
+            'ksvd', 
+            'matplotlib', 
+            'networkx', 
+            'nilearn', 
+            'pyclustering', 
+            'pycwt',
+            'seaborn',
+            'statsmodels', 
+]
+description = 'This package aims to provide a comprehensive framework for assessing dynamic functional connectivity (dFC) using multiple methods and comparing results across methods.'
+license = {text = "MIT"}
+maintainers = [{name = "Mohammad Torabi", email = "mohammad.torabi@mail.mcgill.ca"}]
+name = "pydfc"
+readme = "README.rst"
+requires-python = ">=3.8"
+keywords = ['python', 'dFC package', 'neuroimaging']
