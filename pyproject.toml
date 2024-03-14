@@ -1,0 +1,18 @@
+[tool.black]
+line-length = 90
+
+[tool.codespell]
+builtin = "clear,rare"
+ignore-words-list = "grey,fo"
+skip = "*.ipynb"
+
+[tool.isort]
+combine_as_imports = true
+line_length = 90
+profile = "black"
+skip_gitignore = true
+src_paths = [
+    'rest_dFC',
+    'task_dFC',
+    'pydfc'
+]

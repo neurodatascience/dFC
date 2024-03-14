@@ -1,6 +1,6 @@
 .. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.10211966.svg
     :target: https://doi.org/10.5281/zenodo.10211966
-    
+
 pydfc
 =======
 An implementation of several well-known dynamic Functional Connectivity (dFC) assessment methods.
@@ -16,4 +16,4 @@ The ``multi_analysis_demo.ipynb`` illustrates how to use the ``pydfc`` toolbox t
 
 For more details about the implemented methods and the comparison analysis see `our paper <https://www.biorxiv.org/content/10.1101/2023.07.13.548883v2>`_.
 
-  * Torabi M, Mitsis GD, Poline JB. On the variability of dynamic functional connectivity assessment methods. bioRxiv. 2023:2023-07. 
+  * Torabi M, Mitsis GD, Poline JB. On the variability of dynamic functional connectivity assessment methods. bioRxiv. 2023:2023-07.

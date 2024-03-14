@@ -2,14 +2,4 @@
 __pycache__
 *.pyc
 *.cpython
-sample_data/sub-0001_task-restingstate_acq-mb3_space-MNI152NLin2009cAsym_desc-preproc_bold.nii.gz
-sample_data/sub-0001_task-restingstate_acq-mb3_desc-confounds_regressors.tsv
-sample_data/sub-0002_task-restingstate_acq-mb3_space-MNI152NLin2009cAsym_desc-preproc_bold.nii.gz
-sample_data/sub-0002_task-restingstate_acq-mb3_desc-confounds_regressors.tsv
-sample_data/sub-0003_task-restingstate_acq-mb3_space-MNI152NLin2009cAsym_desc-preproc_bold.nii.gz
-sample_data/sub-0003_task-restingstate_acq-mb3_desc-confounds_regressors.tsv
-sample_data/sub-0004_task-restingstate_acq-mb3_space-MNI152NLin2009cAsym_desc-preproc_bold.nii.gz
-sample_data/sub-0004_task-restingstate_acq-mb3_desc-confounds_regressors.tsv
-sample_data/sub-0005_task-restingstate_acq-mb3_space-MNI152NLin2009cAsym_desc-preproc_bold.nii.gz
-sample_data/sub-0005_task-restingstate_acq-mb3_desc-confounds_regressors.tsv
-
+sample_data/
