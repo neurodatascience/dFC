@@ -4,14 +4,13 @@ requires = ["hatchling"]
 
 [project]
 authors = [{name = "Mohammad Torabi"}]
-version = "1.0.1"
+version = "1.0.4"
 classifiers = [
-            "Development Status :: 3 - Alpha", #change later
+            "Development Status :: 5 - Production/Stable", #change later
             "Intended Audience :: Education",
-            "Programming Language :: Python :: 2",
             "Programming Language :: Python :: 3",
             "Operating System :: MacOS :: MacOS X",
-            "Operating System :: Microsoft :: Windows", #change later
+            "Operating System :: POSIX :: Linux", #change later
 ]
 dependencies = [
             'h5py',
@@ -19,7 +18,7 @@ dependencies = [
             'ksvd', 
             'matplotlib', 
             'networkx', 
-            'nilearn', 
+            'nilearn>=0.10.2,!=0.10.3', 
             'pyclustering', 
             'pycwt',
             'seaborn',
