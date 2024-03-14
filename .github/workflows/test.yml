@@ -1,0 +1,88 @@
+name: Build and test
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "*"
+  pull_request:
+    branches:
+      - main
+  # Run weekly to avoid missing deprecations during low activity
+  schedule:
+    - cron: '0 0 * * 1'
+  # Allow job to be triggered manually from GitHub interface
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash
+
+# Force tox and pytest to use color
+env:
+  FORCE_COLOR: true
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    # Check each OS, all supported Python, minimum versions and latest releases
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ['ubuntu-latest']
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+        include:
+          # Basic dependencies only
+          - os: ubuntu-latest
+            python-version: 3.8
+            dependencies: 'min'
+
+    env:
+      DEPENDS: ${{ matrix.dependencies }}
+      ARCH: ${{ !contains(fromJSON('["none", "min"]'), matrix.dependencies) && matrix.architecture }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          architecture: ${{ matrix.architecture }}
+          allow-prereleases: true
+      - name: Display Python version
+        run: python -c "import sys; print(sys.version)"
+      - name: Install tox
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install tox tox-gh-actions
+      - name: Show tox config
+        run: tox c
+      - name: Run tox
+        run: tox -v --exit-and-dump-after 1200
+
+  publish:
+    runs-on: ubuntu-latest
+    environment: "Package deployment"
+    needs: [test]
+    permissions:
+      # Required for trusted publishing
+      id-token: write
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+      - run: pipx run build
+      - uses: pypa/gh-action-pypi-publish@release/v1

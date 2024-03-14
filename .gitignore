@@ -1,5 +1,14 @@
 **/.DS_Store
+
 __pycache__
 *.pyc
 *.cpython
+
+.vscode
+
 sample_data/
+
+# build related
+pydfc.egg-info
+build
+dist/

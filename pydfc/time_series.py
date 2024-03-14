@@ -204,7 +204,7 @@ class TIME_SERIES():
 
 
     def append_ts(self, new_time_series, time_array=None, subj_id=None):
-        # append new time series to existing ones
+        # append new time series numpy array to existing ones
         # truncate and node selection , etc will be automatically applied to new TS;
         # However, at first the new TS must have the same properties as the original properties of 
         # the existing TSs 
