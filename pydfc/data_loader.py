@@ -7,7 +7,7 @@ Created on Jun 29 2023
 """
 
 import numpy as np
-import hdf5storage
+import h5py
 import os
 
 from .dfc_utils import intersection, label2network
@@ -59,7 +59,7 @@ def load_from_array(subj_id2load=None, **params):
     returns a dictionary of TIME_SERIES objects
     each corresponding to a session
 
-    - if the file_name is a .mat file, it will be loaded using hdf5storage
+    - if the file_name is a .mat file, it will be loaded using h5py
       if the file_name is a .npy file, it will be loaded using np.load
 
     - the roi locations should be in the same folder and a .npy file
@@ -113,7 +113,8 @@ def load_from_array(subj_id2load=None, **params):
             # LOAD BOLD Data
 
             if params['file_name'][params['file_name'].find('.'):] == '.mat':
-                DATA = hdf5storage.loadmat(params['data_root']+subj_fldr+'/'+params['file_name'])
+                with h5py.File(params['data_root']+subj_fldr+'/'+params['file_name'], 'r') as f:
+                    DATA = {k: np.array(f[k]) for k in f.keys()}
             elif params['file_name'][params['file_name'].find('.'):] == '.npy':
                 DATA = np.load(params['data_root']+subj_fldr+'/'+params['file_name'], allow_pickle='True').item()
             time_series = DATA['ROI_data'] # time_series.shape = (time, roi)
