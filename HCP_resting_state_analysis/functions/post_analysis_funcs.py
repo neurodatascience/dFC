@@ -6,142 +6,148 @@ Created on Wed Feb 8 2023
 @author: mte
 """
 
-import warnings
-import numpy as np
 import math
-import scipy.cluster.hierarchy as shc
-import scipy.spatial.distance as ssd
-import statsmodels.api as sm
-from statsmodels.formula.api import ols
-from sklearn.manifold import TSNE
+import os
+import sys
+import warnings
+from copy import deepcopy
 from math import ceil
 
-import matplotlib.pyplot as plt
 import matplotlib as mpl
-from nilearn.plotting import plot_markers
-from matplotlib.colors import ListedColormap
-import seaborn as sns
+import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
-import os
-from copy import deepcopy
-import sys
+import scipy.cluster.hierarchy as shc
+import scipy.spatial.distance as ssd
+import seaborn as sns
+import statsmodels.api as sm
+from matplotlib.colors import ListedColormap
+from nilearn.plotting import plot_markers
+from sklearn.manifold import TSNE
+from statsmodels.formula.api import ols
 
-sys.path.append('./../git_codes/BIC_codes/')
-from functions.dFC_funcs import dFC_mat2vec, visualize_conn_mat_dict, mat_reorder, zip_name, unzip_name
+sys.path.append("./../git_codes/BIC_codes/")
+from functions.dFC_funcs import (
+    dFC_mat2vec,
+    mat_reorder,
+    unzip_name,
+    visualize_conn_mat_dict,
+    zip_name,
+)
 
 ################################# Parameters ####################################
 
 fig_dpi = 120
-fig_bbox_inches = 'tight'
+fig_bbox_inches = "tight"
 fig_pad = 0.1
 show_title = False
-save_fig_format = 'png' # pdf, png, 
+save_fig_format = "png"  # pdf, png,
 
 ################################# Plotting Functions ####################################
 
+
 def title2file_name(title):
-    '''
+    """
     change all spaces in the title to _
-    the original string remains unchanged 
-    '''
+    the original string remains unchanged
+    """
     return title.replace(" ", "_")
 
-def plot_sample_dFC(D, x,
-    title='',
-    cmap='seismic',
+
+def plot_sample_dFC(
+    D,
+    x,
+    title="",
+    cmap="seismic",
     normalize=False,
     disp_diag=True,
-    save_image=False, output_root=None, 
-    fix_lim=True, center_0=True, 
-    node_networks=None, segmented=False 
-    ):
-    '''
+    save_image=False,
+    output_root=None,
+    fix_lim=True,
+    center_0=True,
+    node_networks=None,
+    segmented=False,
+):
+    """
     D is a dictionary of dFC samples. each
     key is the name of a dFC matrix (e.g. method
-    used for assessing it), and D[key][x] contains the 
-    the dFC matrix as a numpy ndarray 
-    '''
+    used for assessing it), and D[key][x] contains the
+    the dFC matrix as a numpy ndarray
+    """
 
     num_dFC = len(D)
     names_lst = [key for key in D]
     num_time = len(D[names_lst[0]][x])
 
-    fig_width = 48*(num_time/10)
-    fig_height = 55*(num_dFC/10)
+    fig_width = 48 * (num_time / 10)
+    fig_height = 55 * (num_dFC / 10)
 
-    fig, axes = plt.subplots(num_dFC, num_time, figsize=(fig_width, fig_height), \
-        facecolor='w', edgecolor='k')
-
-    fig.subplots_adjust(
-        bottom=0.1,
-        top=0.85,
-        left=0.1,
-        right=0.9,
-        wspace=0.5,
-        hspace=0.6
+    fig, axes = plt.subplots(
+        num_dFC, num_time, figsize=(fig_width, fig_height), facecolor="w", edgecolor="k"
     )
 
+    fig.subplots_adjust(bottom=0.1, top=0.85, left=0.1, right=0.9, wspace=0.5, hspace=0.6)
+
     for i, dFC_mat_name in enumerate(D):
-        visualize_conn_mat_dict(data=D[dFC_mat_name][x], 
-            node_networks=node_networks, 
-            title=dFC_mat_name, 
-            cmap=cmap, center_0=center_0,
-            normalize=normalize, fix_lim=fix_lim, 
+        visualize_conn_mat_dict(
+            data=D[dFC_mat_name][x],
+            node_networks=node_networks,
+            title=dFC_mat_name,
+            cmap=cmap,
+            center_0=center_0,
+            normalize=normalize,
+            fix_lim=fix_lim,
             disp_diag=disp_diag,
             segmented=segmented,
-            save_image=False, output_root=output_root,
-            axes=axes[i, :], fig=fig, 
+            save_image=False,
+            output_root=output_root,
+            axes=axes[i, :],
+            fig=fig,
         )
 
-    fig.subplots_adjust(
-        bottom=0.1,
-        top=0.85,
-        left=0.1,
-        right=0.9,
-        wspace=0.5,
-        hspace=0.6
-    )
-        
+    fig.subplots_adjust(bottom=0.1, top=0.85, left=0.1, right=0.9, wspace=0.5, hspace=0.6)
+
     # set row names
     for i, dFC_mat_name in enumerate(D):
-        axes[i, 0].set_ylabel(dFC_mat_name, fontdict={'fontsize': 25, 'fontweight': 'bold'}, rotation=90)
-    
+        axes[i, 0].set_ylabel(
+            dFC_mat_name, fontdict={"fontsize": 25, "fontweight": "bold"}, rotation=90
+        )
+
     if save_image:
-        folder = output_root[:output_root.rfind('/')]
+        folder = output_root[: output_root.rfind("/")]
         if not os.path.exists(folder):
             os.makedirs(folder)
-        fig.savefig(output_root+title.replace(" ", "_")+'.'+save_fig_format, 
-            dpi=fig_dpi, bbox_inches=fig_bbox_inches, pad_inches=fig_pad, format=save_fig_format
-        ) 
+        fig.savefig(
+            output_root + title.replace(" ", "_") + "." + save_fig_format,
+            dpi=fig_dpi,
+            bbox_inches=fig_bbox_inches,
+            pad_inches=fig_pad,
+            format=save_fig_format,
+        )
         plt.close()
     else:
         plt.show()
 
 
-def plot_rois(
-        node_networks, 
-        nodes_locs, 
-        save_image=False, 
-        output_root=None
-    ):
+def plot_rois(node_networks, nodes_locs, save_image=False, output_root=None):
 
     networks = list(np.unique(node_networks))
 
     fig_width = 25
     fig_height = len(networks)
 
-    fig, axes = plt.subplots(ceil(len(networks)/3), 3, figsize=(fig_width, fig_height), 
-        facecolor='w', edgecolor='k')
-    
+    fig, axes = plt.subplots(
+        ceil(len(networks) / 3),
+        3,
+        figsize=(fig_width, fig_height),
+        facecolor="w",
+        edgecolor="k",
+    )
+
     axes = axes.ravel()
 
     fig.subplots_adjust(
-        bottom=0.1, 
-        top=0.85, 
-        left=0.1, 
-        right=0.9,
-        wspace=0.03, 
-        hspace=0.3
+        bottom=0.1, top=0.85, left=0.1, right=0.9, wspace=0.03, hspace=0.3
     )
 
     for i, target_network in enumerate(networks):
@@ -157,14 +163,15 @@ def plot_rois(
         locs = np.array(locs)
 
         plot_markers(
-            node_values=node_values, 
-            node_coords=locs, 
+            node_values=node_values,
+            node_coords=locs,
             node_size=100,
-            node_cmap='Reds', 
+            node_cmap="Reds",
             node_vmax=1,
             node_vmin=0,
             annotate=True,
-            colorbar=False, axes=axes[i],
+            colorbar=False,
+            axes=axes[i],
         )
 
     title = f"Resting State Networks"
@@ -172,73 +179,90 @@ def plot_rois(
     for i, network in enumerate(networks):
         axes[i].title.set_text(f"{network} network")
         axes[i].title.set_size(20)
-        axes[i].title.set_weight('bold')
+        axes[i].title.set_weight("bold")
 
     if save_image:
-        folder = output_root[:output_root.rfind('/')]
+        folder = output_root[: output_root.rfind("/")]
         if not os.path.exists(folder):
             os.makedirs(folder)
-        fig.savefig(output_root+title.replace(" ", "_")+'.'+save_fig_format, 
-            dpi=fig_dpi, bbox_inches=fig_bbox_inches, pad_inches=fig_pad, format=save_fig_format
-        ) 
+        fig.savefig(
+            output_root + title.replace(" ", "_") + "." + save_fig_format,
+            dpi=fig_dpi,
+            bbox_inches=fig_bbox_inches,
+            pad_inches=fig_pad,
+            format=save_fig_format,
+        )
         plt.close()
     else:
         plt.show()
 
 
-def pairwise_cat_plots(data=None, x=None, y=None, z=None,
-    title='', 
+def pairwise_cat_plots(
+    data=None,
+    x=None,
+    y=None,
+    z=None,
+    title="",
     label_dict={},
-    save_image=False, output_root=None
-    ):
-    '''
-    data is a dictionary with different vars as keys 
-    if z is specidied, it will be used as a out of distribution 
-    sample, e.g. actual similarity when plotting randomized 
+    save_image=False,
+    output_root=None,
+):
+    """
+    data is a dictionary with different vars as keys
+    if z is specidied, it will be used as a out of distribution
+    sample, e.g. actual similarity when plotting randomized
     distribution.
-    '''
+    """
 
-    sns.set_context("paper", 
-        font_scale=2.5, 
-        rc={"lines.linewidth": 3.0}
-    )
+    sns.set_context("paper", font_scale=2.5, rc={"lines.linewidth": 3.0})
 
     row_keys = [key for key in data]
     n_rows = len(row_keys)
     column_keys = [key for key in data[row_keys[-1]]]
     n_columns = len(column_keys)
 
-    sns.set_style('darkgrid')
+    sns.set_style("darkgrid")
 
     fig_width = n_columns * 5
     fig_height = n_rows * 5
-    fig, axs = plt.subplots(n_rows, n_columns, figsize=(fig_width, fig_height), \
-        facecolor='w', edgecolor='k', sharex=True, sharey=True)
-    
+    fig, axs = plt.subplots(
+        n_rows,
+        n_columns,
+        figsize=(fig_width, fig_height),
+        facecolor="w",
+        edgecolor="k",
+        sharex=True,
+        sharey=True,
+    )
+
     axs_plotted = list()
     for i, key_i in enumerate(data):
         for j, key_j in enumerate(data[key_i]):
             df = pd.DataFrame(data[key_i][key_j])
 
             if not z is None:
-                sns.stripplot(ax=axs[i, j], data=df, x=x, y=z, color='red', jitter=False, size=10)
+                sns.stripplot(
+                    ax=axs[i, j], data=df, x=x, y=z, color="red", jitter=False, size=10
+                )
             sns.violinplot(ax=axs[i, j], data=df, x=x, y=y)
 
-            axs[i, j].set_title(key_i+'-'+key_j, fontdict={'fontsize': 25, 'fontweight': 'bold'})
+            axs[i, j].set_title(
+                key_i + "-" + key_j, fontdict={"fontsize": 25, "fontweight": "bold"}
+            )
 
             ## set labels
             ylabel = axs[i, j].get_ylabel()
             if ylabel in label_dict:
                 ylabel = label_dict[ylabel]
-            axs[i, j].set_ylabel(ylabel, fontdict={'fontsize': 20, 'fontweight': 'bold'})
+            axs[i, j].set_ylabel(ylabel, fontdict={"fontsize": 20, "fontweight": "bold"})
             xlabel = axs[i, j].get_xlabel()
             if xlabel in label_dict:
                 xlabel = label_dict[xlabel]
-            axs[i, j].set_xlabel(xlabel, fontdict={'fontsize': 20, 'fontweight': 'bold'})
-            # set font size of the tick labels and make them bold 
+            axs[i, j].set_xlabel(xlabel, fontdict={"fontsize": 20, "fontweight": "bold"})
+            # set font size of the tick labels and make them bold
             tick_labels = axs[i, j].get_xticklabels() + axs[i, j].get_yticklabels()
             for label in tick_labels:
-                label.set_fontweight('bold')
+                label.set_fontweight("bold")
 
             axs_plotted.append(axs[i, j])
 
@@ -246,41 +270,39 @@ def pairwise_cat_plots(data=None, x=None, y=None, z=None,
     for ax in axs.ravel():
         if not ax in axs_plotted:
             ax.set_axis_off()
-            ax.xaxis.set_tick_params(which='both', labelbottom=True)
-    
+            ax.xaxis.set_tick_params(which="both", labelbottom=True)
+
     if show_title:
         plt.suptitle(title, fontsize=15, y=0.90)
 
     if save_image:
-        folder = output_root[:output_root.rfind('/')]
+        folder = output_root[: output_root.rfind("/")]
         if not os.path.exists(folder):
             os.makedirs(folder)
-        plt.savefig(output_root+title2file_name(title)+'.'+save_fig_format, \
-            dpi=fig_dpi, bbox_inches=fig_bbox_inches, pad_inches=fig_pad, format=save_fig_format \
-        ) 
+        plt.savefig(
+            output_root + title2file_name(title) + "." + save_fig_format,
+            dpi=fig_dpi,
+            bbox_inches=fig_bbox_inches,
+            pad_inches=fig_pad,
+            format=save_fig_format,
+        )
         plt.close()
     else:
         plt.show()
 
-def joint_dist_plot(data,
-    title='',
-    label_dict={},
-    save_image=False, output_root=None
-    ):
-    '''
+
+def joint_dist_plot(data, title="", label_dict={}, save_image=False, output_root=None):
+    """
     data is a dictionary including list of dFC values
     of each dFC method
-    '''
+    """
     df = pd.DataFrame(data)
-    fig_width = 5*len(data)
-    fig_height = 5*len(data)
+    fig_width = 5 * len(data)
+    fig_height = 5 * len(data)
 
-    sns.set_context("paper", 
-        font_scale=2.5, 
-        rc={"lines.linewidth": 3.0}
-    )
-    
-    sns.set_style('darkgrid')
+    sns.set_context("paper", font_scale=2.5, rc={"lines.linewidth": 3.0})
+
+    sns.set_style("darkgrid")
 
     g = sns.PairGrid(df)
 
@@ -298,58 +320,77 @@ def joint_dist_plot(data,
             ylabel = g.axes[i, j].get_ylabel()
             if ylabel in label_dict:
                 ylabel = label_dict[ylabel]
-            g.axes[i, j].set_ylabel(ylabel, fontdict={'fontsize': 25, 'fontweight': 'bold'})
+            g.axes[i, j].set_ylabel(
+                ylabel, fontdict={"fontsize": 25, "fontweight": "bold"}
+            )
             xlabel = g.axes[i, j].get_xlabel()
             if xlabel in label_dict:
                 xlabel = label_dict[xlabel]
-            g.axes[i, j].set_xlabel(xlabel, fontdict={'fontsize': 25, 'fontweight': 'bold'})
+            g.axes[i, j].set_xlabel(
+                xlabel, fontdict={"fontsize": 25, "fontweight": "bold"}
+            )
 
-            # set font size of the tick labels and make them bold 
+            # set font size of the tick labels and make them bold
             tick_labels = g.axes[i, j].get_xticklabels() + g.axes[i, j].get_yticklabels()
             for label in tick_labels:
-                label.set_fontweight('bold')
+                label.set_fontweight("bold")
 
     if show_title:
         plt.suptitle(title, fontsize=50, y=0.98)
 
     if save_image:
-        folder = output_root[:output_root.rfind('/')]
+        folder = output_root[: output_root.rfind("/")]
         if not os.path.exists(folder):
             os.makedirs(folder)
-        plt.savefig(output_root+title2file_name(title)+'.'+save_fig_format, 
-            dpi=fig_dpi, bbox_inches=fig_bbox_inches, pad_inches=fig_pad, format=save_fig_format
-        ) 
+        plt.savefig(
+            output_root + title2file_name(title) + "." + save_fig_format,
+            dpi=fig_dpi,
+            bbox_inches=fig_bbox_inches,
+            pad_inches=fig_pad,
+            format=save_fig_format,
+        )
         plt.close()
     else:
         plt.show()
 
-def pairwise_scatter_plots(data, x, y,
-    title='', hist=False,
-    label_dict={},
-    equal_axis_lim=False, show_x_equal_y=False,
-    save_image=False, output_root=None
-    ):
-    '''
-    data is a dictionary with different vars as keys 
-    '''
 
-    sns.set_context("paper", 
-        font_scale=2.5, 
-        rc={"lines.linewidth": 3.0}
-    )
+def pairwise_scatter_plots(
+    data,
+    x,
+    y,
+    title="",
+    hist=False,
+    label_dict={},
+    equal_axis_lim=False,
+    show_x_equal_y=False,
+    save_image=False,
+    output_root=None,
+):
+    """
+    data is a dictionary with different vars as keys
+    """
+
+    sns.set_context("paper", font_scale=2.5, rc={"lines.linewidth": 3.0})
 
     row_keys = [key for key in data]
     n_rows = len(row_keys)
     column_keys = [key for key in data[row_keys[-1]]]
     n_columns = len(column_keys)
 
-    sns.set_style('darkgrid')
+    sns.set_style("darkgrid")
 
     fig_width = n_columns * 5
     fig_height = n_rows * 5
-    fig, axs = plt.subplots(n_rows, n_columns, figsize=(fig_width, fig_height), \
-        facecolor='w', edgecolor='k', sharex=True, sharey=True)
-    
+    fig, axs = plt.subplots(
+        n_rows,
+        n_columns,
+        figsize=(fig_width, fig_height),
+        facecolor="w",
+        edgecolor="k",
+        sharex=True,
+        sharey=True,
+    )
+
     # equal x_lim and y_lim
     if equal_axis_lim or show_x_equal_y:
         min_lim = None
@@ -365,10 +406,10 @@ def pairwise_scatter_plots(data, x, y,
                 else:
                     min_lim = np.minimum(m, min_lim)
                     max_lim = np.maximum(M, max_lim)
-                
+
         lim_L = max_lim - min_lim
-        min_lim = min_lim - lim_L*0.1
-        max_lim = max_lim + lim_L*0.1
+        min_lim = min_lim - lim_L * 0.1
+        max_lim = max_lim + lim_L * 0.1
 
     axs_plotted = list()
     for i, key_i in enumerate(data):
@@ -378,22 +419,24 @@ def pairwise_scatter_plots(data, x, y,
                 g = sns.histplot(ax=axs[i, j], data=df, x=x, y=y, bins=50)
             else:
                 g = sns.scatterplot(ax=axs[i, j], data=df, x=x, y=y, s=50)
-            axs[i, j].set_title(key_i+'-'+key_j, fontdict={'fontsize': 25, 'fontweight': 'bold'})
+            axs[i, j].set_title(
+                key_i + "-" + key_j, fontdict={"fontsize": 25, "fontweight": "bold"}
+            )
 
             ## set labels and font sizes
             ylabel = g.get_ylabel()
             if ylabel in label_dict:
                 ylabel = label_dict[ylabel]
-            g.set_ylabel(ylabel, fontdict={'fontsize': 18, 'fontweight': 'bold'})
+            g.set_ylabel(ylabel, fontdict={"fontsize": 18, "fontweight": "bold"})
             xlabel = g.get_xlabel()
             if xlabel in label_dict:
                 xlabel = label_dict[xlabel]
-            g.set_xlabel(xlabel, fontdict={'fontsize': 18, 'fontweight': 'bold'})
-            g.tick_params(axis='x', which='major', labelsize=18)
-            g.tick_params(axis='y', which='major', labelsize=18)   
+            g.set_xlabel(xlabel, fontdict={"fontsize": 18, "fontweight": "bold"})
+            g.tick_params(axis="x", which="major", labelsize=18)
+            g.tick_params(axis="y", which="major", labelsize=18)
             tick_labels = g.get_xticklabels() + g.get_yticklabels()
             for label in tick_labels:
-                label.set_fontweight('bold')
+                label.set_fontweight("bold")
 
             # equal x_lim and y_lim
             if equal_axis_lim:
@@ -404,52 +447,61 @@ def pairwise_scatter_plots(data, x, y,
             if show_x_equal_y:
                 X_plot = np.linspace(min_lim, max_lim, 100)
                 Y_plot = X_plot
-                axs[i, j].plot(X_plot, Y_plot, color='r')
+                axs[i, j].plot(X_plot, Y_plot, color="r")
 
             axs_plotted.append(axs[i, j])
     # remove extra subplots
     for ax in axs.ravel():
         if not ax in axs_plotted:
             ax.set_axis_off()
-            ax.xaxis.set_tick_params(which='both', labelbottom=True)
-    
+            ax.xaxis.set_tick_params(which="both", labelbottom=True)
+
     if show_title:
         plt.suptitle(title, fontsize=15, y=0.90)
 
     if save_image:
-        folder = output_root[:output_root.rfind('/')]
+        folder = output_root[: output_root.rfind("/")]
         if not os.path.exists(folder):
             os.makedirs(folder)
-        plt.savefig(output_root+title2file_name(title)+'.'+save_fig_format, 
-            dpi=fig_dpi, bbox_inches=fig_bbox_inches, pad_inches=fig_pad, format=save_fig_format 
-        ) 
+        plt.savefig(
+            output_root + title2file_name(title) + "." + save_fig_format,
+            dpi=fig_dpi,
+            bbox_inches=fig_bbox_inches,
+            pad_inches=fig_pad,
+            format=save_fig_format,
+        )
         plt.close()
     else:
         plt.show()
 
-def scatter_plot(data, x, y,
-    labels=None, hue=None,
-    title='', hist=False,
+
+def scatter_plot(
+    data,
+    x,
+    y,
+    labels=None,
+    hue=None,
+    title="",
+    hist=False,
     label_dict={},
-    equal_axis_lim=False, show_x_equal_y=False,
+    equal_axis_lim=False,
+    show_x_equal_y=False,
     c=0.25,
-    save_image=False, output_root=None
-    ):
-    '''
-    data is a dictionary with different vars as keys 
+    save_image=False,
+    output_root=None,
+):
+    """
+    data is a dictionary with different vars as keys
     c determines how far the annotation will be from dots
-    '''
+    """
     df = pd.DataFrame(data)
 
-    sns.set_context("paper", 
-        font_scale=2.5, 
-        rc={"lines.linewidth": 3.0}
-    )
+    sns.set_context("paper", font_scale=2.5, rc={"lines.linewidth": 3.0})
 
     fig_width = 20
-    fig_height = 20 
+    fig_height = 20
     plt.figure(figsize=(fig_width, fig_height))
-    sns.set_style('darkgrid')
+    sns.set_style("darkgrid")
     if hist:
         g = sns.histplot(data=df, x=x, y=y, hue=hue)
     else:
@@ -459,24 +511,24 @@ def scatter_plot(data, x, y,
     ylabel = g.get_ylabel()
     if ylabel in label_dict:
         ylabel = label_dict[ylabel]
-    g.set_ylabel(ylabel, fontdict={'fontsize': 35, 'fontweight': 'bold'})
+    g.set_ylabel(ylabel, fontdict={"fontsize": 35, "fontweight": "bold"})
     xlabel = g.get_xlabel()
     if xlabel in label_dict:
         xlabel = label_dict[xlabel]
-    g.set_xlabel(xlabel, fontdict={'fontsize': 35, 'fontweight': 'bold'})
-    g.tick_params(axis='x', which='major', labelsize=30)
-    g.tick_params(axis='y', which='major', labelsize=30)   
+    g.set_xlabel(xlabel, fontdict={"fontsize": 35, "fontweight": "bold"})
+    g.tick_params(axis="x", which="major", labelsize=30)
+    g.tick_params(axis="y", which="major", labelsize=30)
     tick_labels = g.get_xticklabels() + g.get_yticklabels()
     for label in tick_labels:
-        label.set_fontweight('bold')
-    
+        label.set_fontweight("bold")
+
     # equal x_lim and y_lim
     if equal_axis_lim:
         min_lim = np.minimum(df[x].min(), df[y].min())
         max_lim = np.maximum(df[x].max(), df[y].max())
         lim_L = max_lim - min_lim
-        min_lim = min_lim - lim_L*0.1
-        max_lim = max_lim + lim_L*0.1
+        min_lim = min_lim - lim_L * 0.1
+        max_lim = max_lim + lim_L * 0.1
         g.set_xlim(min_lim, max_lim)
         g.set_ylim(min_lim, max_lim)
 
@@ -485,100 +537,136 @@ def scatter_plot(data, x, y,
         min_lim = np.minimum(df[x].min(), df[y].min())
         max_lim = np.maximum(df[x].max(), df[y].max())
         lim_L = max_lim - min_lim
-        min_lim = min_lim - lim_L*0.1
-        max_lim = max_lim + lim_L*0.1
+        min_lim = min_lim - lim_L * 0.1
+        max_lim = max_lim + lim_L * 0.1
         X_plot = np.linspace(min_lim, max_lim, 100)
         Y_plot = X_plot
-        plt.plot(X_plot, Y_plot, color='r')
+        plt.plot(X_plot, Y_plot, color="r")
 
     if (not labels is None) and (not hist):
         # the labels are located smartly
         # the direction will be away from mean
-        # the distance will be inverse proportional to 
+        # the distance will be inverse proportional to
         # distance from mean
-        mid_x = (np.max(df[x]) + np.min(df[x]))/2
-        mid_y = (np.max(df[y]) + np.min(df[y]))/2
-        x_range = max(np.max(df[x])-mid_x, mid_x-np.min(df[x]))
-        y_range = max(np.max(df[y])-mid_y, mid_y-np.min(df[y]))
-        distance_from_mean_range = math.sqrt(x_range**2+y_range**2)
+        mid_x = (np.max(df[x]) + np.min(df[x])) / 2
+        mid_y = (np.max(df[y]) + np.min(df[y])) / 2
+        x_range = max(np.max(df[x]) - mid_x, mid_x - np.min(df[x]))
+        y_range = max(np.max(df[y]) - mid_y, mid_y - np.min(df[y]))
+        distance_from_mean_range = math.sqrt(x_range**2 + y_range**2)
         for i in range(len(df[x])):
-            distance_from_mean = math.sqrt((df[x][i]-mid_x)**2+(df[y][i]-mid_y)**2)
-            text_x = df[x][i]+c*np.sign(df[x][i]-mid_x)*np.abs(df[x][i]-mid_x)*(distance_from_mean_range-distance_from_mean)/distance_from_mean 
-            text_y = df[y][i]+c*np.sign(df[y][i]-mid_y)*np.abs(df[y][i]-mid_y)*(distance_from_mean_range-distance_from_mean)/distance_from_mean
+            distance_from_mean = math.sqrt(
+                (df[x][i] - mid_x) ** 2 + (df[y][i] - mid_y) ** 2
+            )
+            text_x = (
+                df[x][i]
+                + c
+                * np.sign(df[x][i] - mid_x)
+                * np.abs(df[x][i] - mid_x)
+                * (distance_from_mean_range - distance_from_mean)
+                / distance_from_mean
+            )
+            text_y = (
+                df[y][i]
+                + c
+                * np.sign(df[y][i] - mid_y)
+                * np.abs(df[y][i] - mid_y)
+                * (distance_from_mean_range - distance_from_mean)
+                / distance_from_mean
+            )
             plt.text(
-                x=text_x, 
-                y=text_y, 
-                s=df[labels][i], 
-                fontdict=dict(color='black', size=14, weight='bold'),
+                x=text_x,
+                y=text_y,
+                s=df[labels][i],
+                fontdict=dict(color="black", size=14, weight="bold"),
             )
-            plt.plot(
-                [df[x][i], text_x], [df[y][i], text_y], 
-                'k', linewidth=0.5
-            )
-    
+            plt.plot([df[x][i], text_x], [df[y][i], text_y], "k", linewidth=0.5)
+
     if show_title:
         plt.title(title, fontsize=15)
 
     if save_image:
-        folder = output_root[:output_root.rfind('/')]
+        folder = output_root[: output_root.rfind("/")]
         if not os.path.exists(folder):
             os.makedirs(folder)
-        plt.savefig(output_root+title2file_name(title)+'.'+save_fig_format, 
-            dpi=fig_dpi, bbox_inches=fig_bbox_inches, pad_inches=fig_pad, format=save_fig_format
-        ) 
+        plt.savefig(
+            output_root + title2file_name(title) + "." + save_fig_format,
+            dpi=fig_dpi,
+            bbox_inches=fig_bbox_inches,
+            pad_inches=fig_pad,
+            format=save_fig_format,
+        )
         plt.close()
     else:
         plt.show()
 
-def cat_plot(data, x, y, 
-    kind='bar',
+
+def cat_plot(
+    data,
+    x,
+    y,
+    kind="bar",
     scale_dist=False,
     log=False,
-    title='',
+    title="",
     label_dict={},
     y_lim=None,
-    save_image=False, output_root=None
-    ):
-    '''
-    data is a dictionary with different vars as keys 
+    save_image=False,
+    output_root=None,
+):
+    """
+    data is a dictionary with different vars as keys
     kind can be = box or violin or bar
     scale_dist is only for kind=='violin'
-    '''
+    """
 
-    sns.set_context("paper", 
-        font_scale=1.0, 
-        rc={"lines.linewidth": 1.0}
-    )
+    sns.set_context("paper", font_scale=1.0, rc={"lines.linewidth": 1.0})
 
-    sns.set_style('darkgrid')
+    sns.set_style("darkgrid")
 
     df = pd.DataFrame(data)
 
-    fig_width = 2*len(np.unique(data[x]))
-    fig_height = 5 
+    fig_width = 2 * len(np.unique(data[x]))
+    fig_height = 5
 
-    if kind=='violin' and scale_dist:
-        g = sns.catplot(data=df, x=x, y=y, kind=kind,
-            scale='width'
+    if kind == "violin" and scale_dist:
+        g = sns.catplot(
+            data=df,
+            x=x,
+            y=y,
+            kind=kind,
+            scale="width",
             # errorbar=("pi", 95)
         )
-    elif kind=='bar':
-        g = sns.catplot(data=df, x=x, y=y, kind=kind,
-                        width=0.25
+    elif kind == "bar":
+        g = sns.catplot(
+            data=df,
+            x=x,
+            y=y,
+            kind=kind,
+            width=0.25,
             # errorbar=("pi", 95)
         )
-    elif kind=='box':
-        g = sns.catplot(data=df, x=x, y=y, kind=kind,
-                        width=0.25, fliersize=1.0
+    elif kind == "box":
+        g = sns.catplot(
+            data=df,
+            x=x,
+            y=y,
+            kind=kind,
+            width=0.25,
+            fliersize=1.0,
             # errorbar=("pi", 95)
         )
     else:
-        g = sns.catplot(data=df, x=x, y=y, kind=kind,
+        g = sns.catplot(
+            data=df,
+            x=x,
+            y=y,
+            kind=kind,
             # errorbar=("pi", 95)
         )
 
     if log:
-        plt.yscale('log')
+        plt.yscale("log")
 
     g.fig.set_figwidth(fig_width)
     g.fig.set_figheight(fig_height)
@@ -587,95 +675,110 @@ def cat_plot(data, x, y,
     ylabel = g.ax.get_ylabel()
     if ylabel in label_dict:
         ylabel = label_dict[ylabel]
-    g.ax.set_ylabel(ylabel, fontdict={'fontsize': 13, 'fontweight': 'bold'})
+    g.ax.set_ylabel(ylabel, fontdict={"fontsize": 13, "fontweight": "bold"})
     xlabel = g.ax.get_xlabel()
     if xlabel in label_dict:
         xlabel = label_dict[xlabel]
-    g.ax.set_xlabel(xlabel, fontdict={'fontsize': 13, 'fontweight': 'bold'})
+    g.ax.set_xlabel(xlabel, fontdict={"fontsize": 13, "fontweight": "bold"})
     # set font size of the tick labels and make them bold
     tick_labels = g.ax.get_xticklabels() + g.ax.get_yticklabels()
     for label in tick_labels:
-        label.set_fontweight('bold')
+        label.set_fontweight("bold")
     if not y_lim is None:
         g.ax.set_ylim(y_lim)
 
     if show_title:
         plt.title(title, fontsize=15)
     if save_image:
-        folder = output_root[:output_root.rfind('/')]
+        folder = output_root[: output_root.rfind("/")]
         if not os.path.exists(folder):
             os.makedirs(folder)
-        plt.savefig(output_root+title2file_name(title)+'.'+save_fig_format, 
-            dpi=fig_dpi, bbox_inches=fig_bbox_inches, pad_inches=fig_pad, format=save_fig_format
-        ) 
+        plt.savefig(
+            output_root + title2file_name(title) + "." + save_fig_format,
+            dpi=fig_dpi,
+            bbox_inches=fig_bbox_inches,
+            pad_inches=fig_pad,
+            format=save_fig_format,
+        )
         plt.close()
     else:
         plt.show()
 
-def visualize_sim_mat(data, mat_key, title='', 
-    name_lst_key=None, 
-    cmap='viridis',
-    annot=True, fmt=2, 
-    label_dict={},
-    show_diag=False, show_sig=False, no_color=False,
-    save_image=False, output_root=None, axes=None, fig=None, 
-    ):
 
-    '''
+def visualize_sim_mat(
+    data,
+    mat_key,
+    title="",
+    name_lst_key=None,
+    cmap="viridis",
+    annot=True,
+    fmt=2,
+    label_dict={},
+    show_diag=False,
+    show_sig=False,
+    no_color=False,
+    save_image=False,
+    output_root=None,
+    axes=None,
+    fig=None,
+):
+    """
     - name_lst_key is the key to list of names
     - data must be a dict of correlation/connectivity matrices
     - masks the nan values
     sample:
     Suptitle1
         corr_mat
-            0.00 0.31 0.76 
-            0.31 0.00 0.43 
-            0.76 0.43 0.00 
+            0.00 0.31 0.76
+            0.31 0.00 0.43
+            0.76 0.43 0.00
         measure_lst
             ContinuousHMM
             Windowless
             Clustering_pear_corr
     Suptitle1
         corr_mat
-            0.00 0.32 0.76 
-            0.32 0.00 0.45 
-            0.76 0.45 0.00 
+            0.00 0.32 0.76
+            0.32 0.00 0.45
+            0.76 0.45 0.00
         measure_lst
             ContinuousHMM
             Windowless
             Clustering_pear_corr
-    '''
+    """
 
-    sns.set_context("paper", 
-        font_scale=1.0, 
-        rc={"lines.linewidth": 1.0}
-    )
+    sns.set_context("paper", font_scale=1.0, rc={"lines.linewidth": 1.0})
 
-    sns.set_style('white')
+    sns.set_style("white")
 
     if no_color:
-        cmap = ListedColormap(['white'])
-    
+        cmap = ListedColormap(["white"])
+
     if name_lst_key is None:
-        fig_width = int(25*(len(data)/10))
+        fig_width = int(25 * (len(data) / 10))
     else:
-        fig_width = int(60*(len(data)/10) + 1)
-    fig_height = 5 
+        fig_width = int(60 * (len(data) / 10) + 1)
+    fig_height = 5
 
     fig_flag = True
     if axes is None or fig is None:
         fig_flag = False
 
     if not fig_flag:
-        fig, axes = plt.subplots(1, len(data), figsize=(fig_width, fig_height),
-            facecolor='w', edgecolor='k', sharey=False
+        fig, axes = plt.subplots(
+            1,
+            len(data),
+            figsize=(fig_width, fig_height),
+            facecolor="w",
+            edgecolor="k",
+            sharey=False,
         )
 
     if not type(axes) is np.ndarray:
         axes = np.array([axes])
 
     if show_title:
-        fig.suptitle(title, fontsize=20, y=0.98) #, fontsize=20, size=20
+        fig.suptitle(title, fontsize=20, y=0.98)  # , fontsize=20, size=20
 
     axes = axes.ravel()
 
@@ -688,7 +791,7 @@ def visualize_sim_mat(data, mat_key, title='',
     # plot
     for i, key in enumerate(data):
 
-        C = sim_mats[i,:,:]
+        C = sim_mats[i, :, :]
 
         name_lst = None
         if not name_lst_key is None:
@@ -704,90 +807,117 @@ def visualize_sim_mat(data, mat_key, title='',
                 np.fill_diagonal(C_forlabels, np.nan)
             df = pd.DataFrame(C_forlabels)
             if show_sig:
-                annot_labels = df.applymap(lambda v: '' if np.isnan(v) else str(round(v, fmt))+''.join(['*' for t in [.05, .01, .001] if v<=t]))
+                annot_labels = df.applymap(
+                    lambda v: (
+                        ""
+                        if np.isnan(v)
+                        else str(round(v, fmt))
+                        + "".join(["*" for t in [0.05, 0.01, 0.001] if v <= t])
+                    )
+                )
             else:
-                annot_labels = df.applymap(lambda v: '' if np.isnan(v) else str(round(v, fmt)))
+                annot_labels = df.applymap(
+                    lambda v: "" if np.isnan(v) else str(round(v, fmt))
+                )
         else:
             annot_labels = False
 
         # borderlines color
         if no_color:
-            linecolor = 'black'
-            annot_kws={'weight': 'bold'}
+            linecolor = "black"
+            annot_kws = {"weight": "bold"}
         else:
-            linecolor = 'w'
-            annot_kws={'weight': 'bold'}
+            linecolor = "w"
+            annot_kws = {"weight": "bold"}
 
-        im = sns.heatmap(C, 
-            annot=annot_labels, annot_kws=annot_kws,
-            fmt='', cmap=cmap, 
-            xticklabels=name_lst, yticklabels=name_lst, 
-            ax=axes[i], cbar=cbar_flag,
-            square=True, linewidth=2, linecolor=linecolor
+        im = sns.heatmap(
+            C,
+            annot=annot_labels,
+            annot_kws=annot_kws,
+            fmt="",
+            cmap=cmap,
+            xticklabels=name_lst,
+            yticklabels=name_lst,
+            ax=axes[i],
+            cbar=cbar_flag,
+            square=True,
+            linewidth=2,
+            linecolor=linecolor,
         )
         axis_title = key
         if key in label_dict:
             axis_title = label_dict[key]
-        axes[i].set_title(axis_title, fontdict= {'fontsize': 18, 'fontweight':'bold'})
-        im.set_xticklabels(im.get_xticklabels(), fontdict= {'fontsize': 14, 'fontweight':'bold'}, rotation=90)
-        im.set_yticklabels(im.get_yticklabels(), fontdict= {'fontsize': 14, 'fontweight':'bold'}, rotation=0)
+        axes[i].set_title(axis_title, fontdict={"fontsize": 18, "fontweight": "bold"})
+        im.set_xticklabels(
+            im.get_xticklabels(),
+            fontdict={"fontsize": 14, "fontweight": "bold"},
+            rotation=90,
+        )
+        im.set_yticklabels(
+            im.get_yticklabels(),
+            fontdict={"fontsize": 14, "fontweight": "bold"},
+            rotation=0,
+        )
 
     if not fig_flag:
-            
+
         fig.subplots_adjust(
-            bottom=0.1, 
-            top=0.85, 
-            left=0.1, 
+            bottom=0.1,
+            top=0.85,
+            left=0.1,
             right=0.9,
         )
 
         if not name_lst is None:
-            fig.subplots_adjust(
-                wspace=0.5
-            )
+            fig.subplots_adjust(wspace=0.5)
 
     if save_image:
-        folder = output_root[:output_root.rfind('/')]
+        folder = output_root[: output_root.rfind("/")]
         if not os.path.exists(folder):
             os.makedirs(folder)
-        plt.savefig(output_root+title2file_name(title)+'.'+save_fig_format, 
-            dpi=fig_dpi, bbox_inches=fig_bbox_inches, pad_inches=fig_pad, format=save_fig_format
-        ) 
+        plt.savefig(
+            output_root + title2file_name(title) + "." + save_fig_format,
+            dpi=fig_dpi,
+            bbox_inches=fig_bbox_inches,
+            pad_inches=fig_pad,
+            format=save_fig_format,
+        )
         plt.close()
     else:
         plt.show()
 
-def distance2Z(dist_mat, method='ward'):
+
+def distance2Z(dist_mat, method="ward"):
     # convert the redundant n*n square matrix form into a condensed nC2 array
-    distArray = ssd.squareform(dist_mat) 
+    distArray = ssd.squareform(dist_mat)
     Z = shc.linkage(distArray, method=method)
     return Z
 
 
 def most_frequent(List):
-    return max(set(List), key = List.count)
+    return max(set(List), key=List.count)
 
 
 def find_measure_color(measure_name, cluster_colors_dict):
     for color in cluster_colors_dict:
         if measure_name in cluster_colors_dict[color]:
             return color
-    return 'royalblue'
+    return "royalblue"
 
 
 def find_link_colors(
-        Z,
-        labels,
-        cluster_colors_dict, 
-        extra_colors,
-        threshold=None,
-    ):
+    Z,
+    labels,
+    cluster_colors_dict,
+    extra_colors,
+    threshold=None,
+):
 
     extra_colors_copy = extra_colors.copy()
     if threshold is None:
         threshold = 0.7 * np.max(Z[:, 2])
 
-    clstring_labels = shc.fcluster(Z, t=threshold, criterion='distance') - 1
+    clstring_labels = shc.fcluster(Z, t=threshold, criterion="distance") - 1
     n_clusters = len(np.unique(clstring_labels))
 
     cluster_colors = []
@@ -795,7 +925,10 @@ def find_link_colors(
         # find measures in this cluster
         measures_lst = [labels[i] for i, l in enumerate(clstring_labels) if l == clstr_id]
         # find the color of each measure based on cluster_colors_dict
-        colors_lst = [find_measure_color(measure_name, cluster_colors_dict) for measure_name in measures_lst]
+        colors_lst = [
+            find_measure_color(measure_name, cluster_colors_dict)
+            for measure_name in measures_lst
+        ]
         # find the most frequent color in this cluster
         clstr_color = most_frequent(colors_lst)
         # if the color is not in cluster_colors, add it to cluster_colors
@@ -804,44 +937,45 @@ def find_link_colors(
         # otherwise, add the first color in extra_colors_copy
         else:
             cluster_colors.append(extra_colors_copy[0])
-            extra_colors_copy.pop(0)  
+            extra_colors_copy.pop(0)
 
     # assign each cluster's color to its measures
     cluster_colors_array = [cluster_colors[l] for l in clstring_labels]
     # assign link colors
     link_cols = {}
-    for i, i12 in enumerate(Z[:,:2].astype(int)):
+    for i, i12 in enumerate(Z[:, :2].astype(int)):
         c1, c2 = (link_cols[x] if x > len(Z) else cluster_colors_array[x] for x in i12)
         # the default color is royalblue
-        link_cols[i+1+len(Z)] = c1 if c1 == c2 else 'royalblue'
+        link_cols[i + 1 + len(Z)] = c1 if c1 == c2 else "royalblue"
 
     return link_cols
 
-def dist_mat_dendo(Z, labels, 
+
+def dist_mat_dendo(
+    Z,
+    labels,
     distances_CI=None,
     threshold=None,
     link_colors=None,
     plot_threshold=False,
-    title='',
-    save_image=False, output_root=None,
-    ):
-    '''
+    title="",
+    save_image=False,
+    output_root=None,
+):
+    """
     distances_CI:
         if  is provided, confidence intervals (CI)
         of the distances will be shown. the order should be the same as Z
-    link_colors: 
+    link_colors:
         is a dictionary of colors for each link in Z
-        can be used to fix the colors of clusters 
-    '''
+        can be used to fix the colors of clusters
+    """
 
-    sns.set_context("paper", 
-        font_scale=3.5, 
-        rc={"lines.linewidth": 3.0,
-            'font.weight': 'bold'
-            }
+    sns.set_context(
+        "paper", font_scale=3.5, rc={"lines.linewidth": 3.0, "font.weight": "bold"}
     )
 
-    sns.set_style('darkgrid')
+    sns.set_style("darkgrid")
 
     if threshold is None:
         threshold = 0.7 * np.max(Z[:, 2])
@@ -850,27 +984,27 @@ def dist_mat_dendo(Z, labels,
     if link_colors is None:
         link_color_func = None
     else:
-        link_color_func=lambda k: link_colors[k]
+        link_color_func = lambda k: link_colors[k]
 
-    width = int(2.5*len(Z))
+    width = int(2.5 * len(Z))
     fig = plt.figure(figsize=(width, 5))
-    ax = fig.add_subplot(1, 1, 1)    
-    with mpl.rc_context({'lines.linewidth': 3}):
+    ax = fig.add_subplot(1, 1, 1)
+    with mpl.rc_context({"lines.linewidth": 3}):
 
         dend = shc.dendrogram(
-            Z, 
-            distance_sort='ascending', 
+            Z,
+            distance_sort="ascending",
             link_color_func=link_color_func,
-            no_plot=False, 
-            labels=labels
+            no_plot=False,
+            labels=labels,
         )
 
         # show confidence interval of distances
         if not distances_CI is None:
 
             max_y_lim = None
-            for i, d in zip(dend['icoord'], dend['dcoord']):
-                
+            for i, d in zip(dend["icoord"], dend["dcoord"]):
+
                 # we have to match the distances in dcoord
                 # with those in Z, because the orders are not
                 # the same
@@ -880,119 +1014,121 @@ def dist_mat_dendo(Z, labels,
                         count += 1
                         Z_CI = distances_CI[idx]
 
-                if count > 1 or count==0:
-                    warnings.warn(
-                        'Error in finding std of linkage.',
-                        UserWarning
-                    )
+                if count > 1 or count == 0:
+                    warnings.warn("Error in finding std of linkage.", UserWarning)
 
                 x = 0.5 * sum(i[1:3])
                 y = d[1]
-                ci_line_y = np.linspace(y-Z_CI, y+Z_CI, 100)
+                ci_line_y = np.linspace(y - Z_CI, y + Z_CI, 100)
                 ci_line_x = x * np.ones(100)
                 # cut start and the end for better
                 # visualization
                 ci_line_y = ci_line_y[5:-5]
                 ci_line_x = ci_line_x[5:-5]
 
-                plt.plot(ci_line_x, ci_line_y, 'black')
-                plt.plot(x, y-Z_CI, 'k_', markersize=15, linewidth=15)
-                plt.plot(x, y+Z_CI, 'k_', markersize=15, linewidth=15)
-                plt.plot(x, y, 'wo', markersize=5, mec='k')
+                plt.plot(ci_line_x, ci_line_y, "black")
+                plt.plot(x, y - Z_CI, "k_", markersize=15, linewidth=15)
+                plt.plot(x, y + Z_CI, "k_", markersize=15, linewidth=15)
+                plt.plot(x, y, "wo", markersize=5, mec="k")
                 # plt.annotate("%.2g" % y, (x, y), xytext=(15, 13),
                 #             fontsize = 11,
                 #             fontweight= 'bold',
                 #             textcoords='offset points',
                 #             va='top', ha='center')
                 if max_y_lim is None:
-                    max_y_lim = y+Z_CI
+                    max_y_lim = y + Z_CI
                 else:
-                    max_y_lim = max(y+Z_CI, max_y_lim)
-            plt.ylim(0, max_y_lim*1.1)
-                
+                    max_y_lim = max(y + Z_CI, max_y_lim)
+            plt.ylim(0, max_y_lim * 1.1)
+
     if plot_threshold:
-        plt.axhline(threshold, color='k', linestyle='dashed', linewidth=2)
+        plt.axhline(threshold, color="k", linestyle="dashed", linewidth=2)
 
     if show_title:
         plt.title(title, fontsize=15)
-        
+
     # set font size of the tick labels and make them bold
-    ax.tick_params(axis='x', which='major', labelsize=15)
-    ax.tick_params(axis='y', which='major', labelsize=15)   
+    ax.tick_params(axis="x", which="major", labelsize=15)
+    ax.tick_params(axis="y", which="major", labelsize=15)
     tick_labels = ax.get_xticklabels() + ax.get_yticklabels()
     for label in tick_labels:
-        label.set_fontweight('bold')
+        label.set_fontweight("bold")
 
     # save figure
     if save_image:
-        folder = output_root[:output_root.rfind('/')]
+        folder = output_root[: output_root.rfind("/")]
         if not os.path.exists(folder):
             os.makedirs(folder)
-        plt.savefig(output_root+title2file_name(title)+'.'+save_fig_format, 
-            dpi=fig_dpi, bbox_inches=fig_bbox_inches, pad_inches=fig_pad, format=save_fig_format
-        ) 
+        plt.savefig(
+            output_root + title2file_name(title) + "." + save_fig_format,
+            dpi=fig_dpi,
+            bbox_inches=fig_bbox_inches,
+            pad_inches=fig_pad,
+            format=save_fig_format,
+        )
         plt.close()
 
-def plot_TSNE(
-        dist_mat, 
-        sample_measure_lst,
-        color_dict,
-        projection='2d',
-        title='',
-        save_image=False, output_root=None,
-    ):
 
-    sns.set_context("paper", 
-        font_scale=2.5, 
-        rc={
-            "lines.linewidth": 3.0,
-            "lines.markersize": 10.0
-            }
+def plot_TSNE(
+    dist_mat,
+    sample_measure_lst,
+    color_dict,
+    projection="2d",
+    title="",
+    save_image=False,
+    output_root=None,
+):
+
+    sns.set_context(
+        "paper", font_scale=2.5, rc={"lines.linewidth": 3.0, "lines.markersize": 10.0}
     )
 
-    sns.set_style('darkgrid')
+    sns.set_style("darkgrid")
 
     fig_width = 20
-    fig_height = 20 
-    
-    if projection=='2d':
+    fig_height = 20
+
+    if projection == "2d":
         X_embedded = TSNE(
-                        n_components=2, 
-                        learning_rate='auto',
-                        init='random', perplexity=30, 
-                        metric='precomputed'
-                    ).fit_transform(dist_mat)
+            n_components=2,
+            learning_rate="auto",
+            init="random",
+            perplexity=30,
+            metric="precomputed",
+        ).fit_transform(dist_mat)
 
         # 2D plot
         plt.figure(figsize=(fig_width, fig_height))
         sns.scatterplot(
-            x=X_embedded[:, 0], y=X_embedded[:, 1], 
-            hue=sample_measure_lst, 
+            x=X_embedded[:, 0],
+            y=X_embedded[:, 1],
+            hue=sample_measure_lst,
             palette=color_dict,
-            alpha=0.7
+            alpha=0.7,
         )
-    elif projection=='3d':
+    elif projection == "3d":
         X_embedded = TSNE(
-                        n_components=3, 
-                        learning_rate='auto',
-                        init='random', perplexity=30, 
-                        metric='precomputed'
-                    ).fit_transform(dist_mat)
-        
+            n_components=3,
+            learning_rate="auto",
+            init="random",
+            perplexity=30,
+            metric="precomputed",
+        ).fit_transform(dist_mat)
+
         measures_lst = list(set(sample_measure_lst))
         measures_lst.sort()
 
         # 3D plot
         fig = plt.figure(figsize=(fig_width, fig_height))
-        ax = fig.add_subplot(projection='3d')
+        ax = fig.add_subplot(projection="3d")
         sample_measure_array = np.array(sample_measure_lst)
         for measure in measures_lst:
             scatter = ax.scatter(
-                X_embedded[sample_measure_array==measure, 0], 
-                X_embedded[sample_measure_array==measure, 1], 
-                X_embedded[sample_measure_array==measure, 2],
+                X_embedded[sample_measure_array == measure, 0],
+                X_embedded[sample_measure_array == measure, 1],
+                X_embedded[sample_measure_array == measure, 2],
                 c=color_dict[measure],
-                label=measure
+                label=measure,
             )
         ax.legend()
 
@@ -1001,69 +1137,80 @@ def plot_TSNE(
 
     # save figure
     if save_image:
-        folder = output_root[:output_root.rfind('/')]
+        folder = output_root[: output_root.rfind("/")]
         if not os.path.exists(folder):
             os.makedirs(folder)
-        plt.savefig(output_root+title2file_name(title)+'.'+save_fig_format, 
-            dpi=fig_dpi, bbox_inches=fig_bbox_inches, pad_inches=fig_pad, format=save_fig_format
-        ) 
+        plt.savefig(
+            output_root + title2file_name(title) + "." + save_fig_format,
+            dpi=fig_dpi,
+            bbox_inches=fig_bbox_inches,
+            pad_inches=fig_pad,
+            format=save_fig_format,
+        )
         plt.close()
 
-def plot_brain_act(act_vec, locs, axes,
-    title='', save_image=False, output_root=''
-    ):
+
+def plot_brain_act(act_vec, locs, axes, title="", save_image=False, output_root=""):
 
     plot_markers(
-        node_values=act_vec, node_coords=locs, 
-        node_cmap='hot', 
-        display_mode='z', 
-        colorbar=False, axes=axes
+        node_values=act_vec,
+        node_coords=locs,
+        node_cmap="hot",
+        display_mode="z",
+        colorbar=False,
+        axes=axes,
     )
 
     if save_image:
-        folder = output_root[:output_root.rfind('/')]
+        folder = output_root[: output_root.rfind("/")]
         if not os.path.exists(folder):
             os.makedirs(folder)
-        plt.savefig(output_root+title2file_name(title)+'.'+save_fig_format, 
-            dpi=fig_dpi, bbox_inches=fig_bbox_inches, pad_inches=fig_pad, format=save_fig_format
-        ) 
+        plt.savefig(
+            output_root + title2file_name(title) + "." + save_fig_format,
+            dpi=fig_dpi,
+            bbox_inches=fig_bbox_inches,
+            pad_inches=fig_pad,
+            format=save_fig_format,
+        )
         plt.close()
 
-def visualize_state_TC(TC_lst, \
-    TRs, \
-    state_lst, \
-    TC_name_lst, \
-    title='', \
-    save_image=None, output_root=None\
-    ):
 
-    color_lst = ['k', 'b', 'g', 'r']
+def visualize_state_TC(
+    TC_lst, TRs, state_lst, TC_name_lst, title="", save_image=None, output_root=None
+):
 
-    if 'on' in state_lst and 'off' in state_lst:
+    color_lst = ["k", "b", "g", "r"]
+
+    if "on" in state_lst and "off" in state_lst:
         ticks = range(2)
     else:
-        ticks = range(1, len(state_lst)+1)
+        ticks = range(1, len(state_lst) + 1)
 
     plt.figure(figsize=(25, 5))
     for i, TC in enumerate(TC_lst):
         plt.plot(TRs, TC, color_lst[i], linewidth=2)
-    plt.xlabel('TR')
+    plt.xlabel("TR")
     plt.yticks(ticks=ticks, labels=state_lst)
     plt.legend(TC_name_lst)
     if show_title:
         plt.title(title)
     if save_image:
-        folder = output_root[:output_root.rfind('/')]
+        folder = output_root[: output_root.rfind("/")]
         if not os.path.exists(folder):
             os.makedirs(folder)
-        plt.savefig(output_root+title2file_name(title)+'.'+save_fig_format, 
-            dpi=fig_dpi, bbox_inches=fig_bbox_inches, pad_inches=fig_pad, format=save_fig_format
-        ) 
+        plt.savefig(
+            output_root + title2file_name(title) + "." + save_fig_format,
+            dpi=fig_dpi,
+            bbox_inches=fig_bbox_inches,
+            pad_inches=fig_pad,
+            format=save_fig_format,
+        )
         plt.close()
     # else:
     #     plt.show()
 
     return
+
 
 ################################# Analytical Functions ####################################
 
@@ -1071,19 +1218,20 @@ from scipy import stats
 
 ############## STAT Functions ##############
 
+
 def make_sim_distribution(sim_mats_lst, name_lst, zip_names=True):
-    '''
+    """
     each sim_mat in the sim_mat_lst corresponds
     to a subj. the name_lst must correspond to the
     columns and rows of sim_mats
-    '''
+    """
     output = {}
     for sim_mat in sim_mats_lst:
-        
+
         for i, name_i in enumerate(name_lst):
             for j, name_j in enumerate(name_lst):
 
-                if j>=i:
+                if j >= i:
                     continue
 
                 if zip_names:
@@ -1096,28 +1244,32 @@ def make_sim_distribution(sim_mats_lst, name_lst, zip_names=True):
                 if not name_i_used in output:
                     output[name_i_used] = {}
                 if not name_j_used in output[name_i_used]:
-                    output[name_i_used][name_j_used] = {'sim':list(), '':list()}
-            
-                output[name_i_used][name_j_used]['sim'].append(sim_mat[i, j])
-                output[name_i_used][name_j_used][''].append('sim')
+                    output[name_i_used][name_j_used] = {"sim": list(), "": list()}
+
+                output[name_i_used][name_j_used]["sim"].append(sim_mat[i, j])
+                output[name_i_used][name_j_used][""].append("sim")
     return output
 
+
 def two_way_anova(data):
-    '''
+    """
     perform two-way anova
     target: sim
     factor1: session
     factor2: direction
-    '''
+    """
     df = pd.DataFrame(data)
 
     # Performing two-way ANOVA
-    model = ols('sim ~ C(session) + C(direction) +\
-    C(session):C(direction)',
-                data=df).fit()
-    
+    model = ols(
+        "sim ~ C(session) + C(direction) +\
+    C(session):C(direction)",
+        data=df,
+    ).fit()
+
     return sm.stats.anova_lm(model, type=2)
-    
+
+
 def convert_pvalue_to_asterisks(pvalue):
     if pvalue <= 0.0001:
         return "****"
@@ -1129,16 +1281,17 @@ def convert_pvalue_to_asterisks(pvalue):
         return "*"
     return "ns"
 
+
 ############## Randomization Functions ##############
 
+
 def randomize_time(dFC_dict, N):
-    '''
-    '''
+    """ """
     output = {}
     for n in range(N):
 
         for i, measure_i_name in enumerate(dFC_dict):
-            
+
             dFC_mat_i = dFC_dict[measure_i_name]
 
             # randomize the temporal order
@@ -1149,13 +1302,13 @@ def randomize_time(dFC_dict, N):
             dFC_mat_i_vec = dFC_mat2vec(dFC_mat_i)
 
             for j, measure_j_name in enumerate(dFC_dict):
-            
-                if j>i:
+
+                if j > i:
                     continue
                 if not measure_i_name in output:
                     output[measure_i_name] = {}
                 if not measure_j_name in output[measure_i_name]:
-                    output[measure_i_name][measure_j_name] = {'sim':list(), '':list()}
+                    output[measure_i_name][measure_j_name] = {"sim": list(), "": list()}
 
                 dFC_mat_j = dFC_dict[measure_j_name]
 
@@ -1167,35 +1320,35 @@ def randomize_time(dFC_dict, N):
                 dFC_mat_j_vec = dFC_mat2vec(dFC_mat_j)
 
                 sim, p = stats.spearmanr(dFC_mat_i_vec.flatten(), dFC_mat_j_vec.flatten())
-                output[measure_i_name][measure_j_name]['sim'].append(sim)
-                output[measure_i_name][measure_j_name][''].append('sim')
+                output[measure_i_name][measure_j_name]["sim"].append(sim)
+                output[measure_i_name][measure_j_name][""].append("sim")
 
     return output
 
 
 def suffle_dFC(dFC_mat, mode):
-    '''
+    """
     dFC_mat = ndarray(time, region, region)
     mode can be 'temporal', 'spatial',
     or 'all'
-    '''
+    """
     new_dFC_mat = deepcopy(dFC_mat)
-    if mode=='temporal':
+    if mode == "temporal":
         n_time = new_dFC_mat.shape[0]
         new_order = np.random.choice(n_time, n_time, replace=False)
         new_dFC_mat = new_dFC_mat[new_order, :, :]
-    elif mode=='spatial':
+    elif mode == "spatial":
         n_region = new_dFC_mat.shape[1]
         new_order = np.random.choice(n_region, n_region, replace=False)
         for k, mat in enumerate(new_dFC_mat):
             new_dFC_mat[k, :, :] = mat_reorder(new_dFC_mat[k, :, :], new_order)
-    elif mode=='all':
-        #spatial
+    elif mode == "all":
+        # spatial
         n_region = new_dFC_mat.shape[1]
         new_order_regions = np.random.choice(n_region, n_region, replace=False)
         for k, mat in enumerate(new_dFC_mat):
             new_dFC_mat[k, :, :] = mat_reorder(new_dFC_mat[k, :, :], new_order_regions)
-        #temporal
+        # temporal
         n_time = new_dFC_mat.shape[0]
         new_order_time = np.random.choice(n_time, n_time, replace=False)
         new_dFC_mat = new_dFC_mat[new_order_time, :, :]
@@ -1204,7 +1357,7 @@ def suffle_dFC(dFC_mat, mode):
 
 
 def randomized_dFC_sim(dFC_dict, N, mode):
-    '''
+    """
     mode can be 'temporal', 'spatial',
     or 'all'
     'spatial': this will result in different methods having
@@ -1215,12 +1368,12 @@ def randomized_dFC_sim(dFC_dict, N, mode):
     same spatial order
     'all': this will result in different methods having
     different temporal orders AND different spatial order
-    '''
+    """
     output = {}
     for n in range(N):
 
         for i, measure_i_name in enumerate(dFC_dict):
-            
+
             dFC_mat_i = dFC_dict[measure_i_name]
 
             # randomize the spatial (regions) order
@@ -1229,13 +1382,13 @@ def randomized_dFC_sim(dFC_dict, N, mode):
             dFC_mat_i_vec = dFC_mat2vec(dFC_mat_i)
 
             for j, measure_j_name in enumerate(dFC_dict):
-            
-                if j>i:
+
+                if j > i:
                     continue
                 if not measure_i_name in output:
                     output[measure_i_name] = {}
                 if not measure_j_name in output[measure_i_name]:
-                    output[measure_i_name][measure_j_name] = {'sim':list(), '':list()}
+                    output[measure_i_name][measure_j_name] = {"sim": list(), "": list()}
 
                 dFC_mat_j = dFC_dict[measure_j_name]
 
@@ -1245,65 +1398,69 @@ def randomized_dFC_sim(dFC_dict, N, mode):
                 dFC_mat_j_vec = dFC_mat2vec(dFC_mat_j)
 
                 sim, p = stats.spearmanr(dFC_mat_i_vec.flatten(), dFC_mat_j_vec.flatten())
-                output[measure_i_name][measure_j_name]['sim'].append(sim)
-                output[measure_i_name][measure_j_name][''].append('sim')
+                output[measure_i_name][measure_j_name]["sim"].append(sim)
+                output[measure_i_name][measure_j_name][""].append("sim")
 
     return output
 
 
 def dFC_rand_generator(FCS, n_time):
-    '''
-    generate a dFC mat of length n_time 
+    """
+    generate a dFC mat of length n_time
     using spatial FC patterns in FCS = (num_pattern, ROI, ROI)
-    '''
+    """
     dFC_rand = None
     idx = np.random.choice(FCS.shape[0], n_time, replace=True)
     dFC_rand = FCS[idx, :, :]
     return dFC_rand
 
+
 def dFC_rand_sim(FCS_dict, n_time, N):
-    '''
+    """
     for random state TC similarity assessment
-    '''
+    """
     output = {}
     for n in range(N):
 
         for i, measure_i_name in enumerate(FCS_dict):
-                
+
             dFC_rand = dFC_rand_generator(FCS_dict[measure_i_name], n_time=n_time)
             dFC_mat_i = dFC_rand
             dFC_mat_i_vec = dFC_mat2vec(dFC_mat_i)
 
             for j, measure_j_name in enumerate(FCS_dict):
-            
-                if j>i:
+
+                if j > i:
                     continue
                 if not measure_i_name in output:
                     output[measure_i_name] = {}
                 if not measure_j_name in output[measure_i_name]:
-                    output[measure_i_name][measure_j_name] = {'sim':list(), '':list()}
+                    output[measure_i_name][measure_j_name] = {"sim": list(), "": list()}
 
                 dFC_rand = dFC_rand_generator(FCS_dict[measure_j_name], n_time=n_time)
                 dFC_mat_j = dFC_rand
                 dFC_mat_j_vec = dFC_mat2vec(dFC_mat_j)
 
                 sim, p = stats.spearmanr(dFC_mat_i_vec.flatten(), dFC_mat_j_vec.flatten())
-                output[measure_i_name][measure_j_name]['sim'].append(sim)
-                output[measure_i_name][measure_j_name][''].append('sim')
+                output[measure_i_name][measure_j_name]["sim"].append(sim)
+                output[measure_i_name][measure_j_name][""].append("sim")
     return output
+
 
 ############## Hierarchical Clustering ##############
 
+
 def correct_order(s):
-    list = s.split('-')
+    list = s.split("-")
     list = [int(item) for item in list]
     list.sort()
-    return '-'.join(str(x) for x in list)
+    return "-".join(str(x) for x in list)
+
 
 def open_trees(Z, num_leaf):
-    '''
+    """
     replace trees in Z by their leaves
-    '''
+    """
     Z_copy = deepcopy(Z)
     Z_new = []
     for tree in Z_copy:
@@ -1311,28 +1468,29 @@ def open_trees(Z, num_leaf):
     encode_dict = {}
     counter = num_leaf
     for tree in Z_new:
-        if tree[0]>=num_leaf:
+        if tree[0] >= num_leaf:
             tree[0] = encode_dict[tree[0]]
         else:
             tree[0] = str(int(tree[0]))
-        if tree[1]>=num_leaf:
+        if tree[1] >= num_leaf:
             tree[1] = encode_dict[tree[1]]
         else:
             tree[1] = str(int(tree[1]))
-        encode_dict[counter] = tree[0]+'-'+tree[1]
+        encode_dict[counter] = tree[0] + "-" + tree[1]
         encode_dict[counter] = correct_order(encode_dict[counter])
         counter += 1
     return Z_new
 
+
 def is_trees_equal(trees_1, trees_2):
-    '''
+    """
     trees_2 is the reference
-    '''
+    """
     for tree in trees_1:
-        if (not [tree[0], tree[1]] in trees_2) \
-            and (not [tree[1], tree[0]] in trees_2):
+        if (not [tree[0], tree[1]] in trees_2) and (not [tree[1], tree[0]] in trees_2):
             return False
     return True
+
 
 def is_in_Z_clstrs(trees, Z_clstrs, trees_key):
     for key in Z_clstrs:
@@ -1340,11 +1498,12 @@ def is_in_Z_clstrs(trees, Z_clstrs, trees_key):
             return key
     return None
 
+
 def cluster_Z(Z_lst, num_leaf):
-    '''
+    """
     Z_lst is the list of linkages of samples
     num_leaf is the number of objects in clustering
-    '''
+    """
     Z_clstrs = {}
     counter = 0
     for Z in Z_lst:
@@ -1352,17 +1511,17 @@ def cluster_Z(Z_lst, num_leaf):
         Z_open = open_trees(Z, num_leaf)
         trees = [[tree[0], tree[1]] for tree in Z_open]
         distances = [tree[2] for tree in Z]
-        clstr_idx = is_in_Z_clstrs(trees, Z_clstrs, trees_key='trees')
-        
+        clstr_idx = is_in_Z_clstrs(trees, Z_clstrs, trees_key="trees")
+
         if clstr_idx is None:
             Z_clstrs[counter] = {
-                'Z': Z, 
-                'trees': trees,
-                'freq': 1, 
-                'distance_lst': [distances]
+                "Z": Z,
+                "trees": trees,
+                "freq": 1,
+                "distance_lst": [distances],
             }
             counter += 1
         else:
-            Z_clstrs[clstr_idx]['freq'] += 1
-            Z_clstrs[clstr_idx]['distance_lst'].append(distances)
+            Z_clstrs[clstr_idx]["freq"] += 1
+            Z_clstrs[clstr_idx]["distance_lst"].append(distances)
     return Z_clstrs

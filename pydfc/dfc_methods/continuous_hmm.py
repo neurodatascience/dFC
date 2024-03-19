@@ -5,14 +5,14 @@ Created on Jun 29 2023
 @author: Mohammad Torabi
 """
 
-import numpy as np
 import time
+
+import numpy as np
 from hmmlearn import hmm
 
-from .base_dfc_method import BaseDFCMethod
-from ..time_series import TIME_SERIES
 from ..dfc import DFC
-
+from ..time_series import TIME_SERIES
+from .base_dfc_method import BaseDFCMethod
 
 ################################# HMM Continuous ###############################
 
@@ -31,19 +31,31 @@ todo:
 - ValueError: 'covars' must be symmetric, positive-definite
 """
 
+
 class HMM_CONT(BaseDFCMethod):
 
     def __init__(self, **params):
-        self.logs_ = ''
+        self.logs_ = ""
         self.TPM = []
         self.FCS_ = []
         self.mean_act = []
         self.FCS_fit_time_ = None
         self.dFC_assess_time_ = None
 
-        self.params_name_lst = ['measure_name', 'is_state_based', 'n_states', 'hmm_iter',
-            'normalization', 'num_subj', 'num_select_nodes', 'num_time_point',
-            'Fs_ratio', 'noise_ratio', 'num_realization', 'session']
+        self.params_name_lst = [
+            "measure_name",
+            "is_state_based",
+            "n_states",
+            "hmm_iter",
+            "normalization",
+            "num_subj",
+            "num_select_nodes",
+            "num_time_point",
+            "Fs_ratio",
+            "noise_ratio",
+            "num_realization",
+            "session",
+        ]
         self.params = {}
         for params_name in self.params_name_lst:
             if params_name in params:
@@ -51,17 +63,18 @@ class HMM_CONT(BaseDFCMethod):
             else:
                 self.params[params_name] = None
 
-        self.params['measure_name'] = 'ContinuousHMM'
-        self.params['is_state_based'] = True
+        self.params["measure_name"] = "ContinuousHMM"
+        self.params["is_state_based"] = True
 
     @property
     def measure_name(self):
-        return self.params['measure_name'] 
+        return self.params["measure_name"]
 
     def estimate_FCS(self, time_series):
 
-        assert type(time_series) is TIME_SERIES, \
-            "time_series must be of TIME_SERIES class."
+        assert (
+            type(time_series) is TIME_SERIES
+        ), "time_series must be of TIME_SERIES class."
 
         # start timing
         tic = time.time()
@@ -69,17 +82,19 @@ class HMM_CONT(BaseDFCMethod):
         time_series = self.manipulate_time_series4FCS(time_series)
 
         Models, Scores = [], []
-        for i in range(self.params['hmm_iter']):
-            model = hmm.GaussianHMM(n_components=self.params['n_states'], covariance_type="full")
-            model.fit(time_series.data.T) 
+        for i in range(self.params["hmm_iter"]):
+            model = hmm.GaussianHMM(
+                n_components=self.params["n_states"], covariance_type="full"
+            )
+            model.fit(time_series.data.T)
             score = model.score(time_series.data.T)
             Models.append(model)
             Scores.append(score)
-            
+
         self.hmm_model = Models[np.argmax(Scores)]
         self.Z = self.hmm_model.predict(time_series.data.T)
         self.means_ = self.hmm_model.means_
-        self.FCS_ = self.hmm_model.covars_ 
+        self.FCS_ = self.hmm_model.covars_
         self.TPM = self.hmm_model.transmat_
         self.pi = self.hmm_model.startprob_
 
@@ -93,11 +108,13 @@ class HMM_CONT(BaseDFCMethod):
 
     def estimate_dFC(self, time_series):
 
-        assert type(time_series) is TIME_SERIES, \
-            "time_series must be of TIME_SERIES class."
-        
-        assert len(time_series.subj_id_lst)==1, \
-            'this function takes only one subject as input.'
+        assert (
+            type(time_series) is TIME_SERIES
+        ), "time_series must be of TIME_SERIES class."
+
+        assert (
+            len(time_series.subj_id_lst) == 1
+        ), "this function takes only one subject as input."
 
         time_series = self.manipulate_time_series4dFC(time_series)
 
@@ -113,5 +130,6 @@ class HMM_CONT(BaseDFCMethod):
         dFC.set_dFC(FCSs=self.FCS_, FCS_idx=Z, TS_info=time_series.info_dict)
 
         return dFC
-    
+
+
 ################################################################################

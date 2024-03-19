@@ -1,10 +1,8 @@
-import pytest
-
 import nibabel as nb
 import numpy as np
+import pytest
 
 from pydfc.data_loader import nifti2timeseries
-
 
 # @pytest.fixture(scope="session")
 # def rest_file(tmp_path_factory):

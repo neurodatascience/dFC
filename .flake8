@@ -6,7 +6,7 @@ exclude =
     dist,
 --select = D,E,F,W
 docstring-convention = numpy
-max-line-length = 250
+max-line-length = 240
 # For PEP8 error codes see
 # http://pep8.readthedocs.org/en/latest/intro.html#error-codes
 	# D100-D104: missing docstring
@@ -37,6 +37,8 @@ ignore =
     W503,
     W504,
     W605,
+    F541,
+    E902
 # for compatibility with black
 # https://black.readthedocs.io/en/stable/guides/using_black_with_other_tools.html#flake8
 extend-ignore = E203
