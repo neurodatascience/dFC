@@ -708,7 +708,7 @@ def visualize_conn_mat_dict(
         cb_ax = fig.add_axes([0.91, b, 0.007, h])
     else:
         cb_ax = fig.add_axes([0.91, b, 0.01, h])
-    cbar = fig.colorbar(im, cax=cb_ax, shrink=0.8)  # shrink=0.8??
+    fig.colorbar(im, cax=cb_ax, shrink=0.8)  # shrink=0.8??
 
     if save_image:
         folder = output_root[: output_root.rfind("/")]
@@ -880,12 +880,12 @@ def visualize_conn_mat_2D_dict(
     if not node_networks is None:
         fig.subplots_adjust(wspace=0.45, hspace=0.50)
 
-    l, b, w, h = axs[-1][-1].get_position().bounds
+    _, _, _, h = axs[-1][-1].get_position().bounds
     if node_networks is None:
         cb_ax = fig.add_axes([0.91, 0.5 - h / 2, 0.007, h])
     else:
         cb_ax = fig.add_axes([0.91, 0.5 - h / 2, 0.015, h])
-    cbar = fig.colorbar(im, cax=cb_ax, shrink=0.8)  # shrink=0.8??
+    fig.colorbar(im, cax=cb_ax, shrink=0.8)  # shrink=0.8??
 
     if save_image:
         folder = output_root[: output_root.rfind("/")]
@@ -1415,9 +1415,6 @@ class DFC_ANALYZER:
     def group_dFCM_assess(self, time_series_dict):
 
         # time_series_dict is a dict of time_series
-
-        SUBJ_s_dFCM_dict = {}
-
         SUBJECTs = common_subj_lst(time_series_dict)
 
         if self.params["n_jobs"] is None:
@@ -2103,7 +2100,7 @@ class dFC:
 
         plt.figure(figsize=(5, 5))
         plt.imshow(np.squeeze(C), interpolation="nearest", aspect="equal", cmap="jet")
-        cb = plt.colorbar(shrink=0.8)
+        plt.colorbar(shrink=0.8)
         plt.title(self.measure_name + " TPM")
 
         if save_image:

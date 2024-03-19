@@ -25,7 +25,7 @@ def simulated_bold_data(tmp_path):
 
 
 def test_load(simulated_bold_data):
-    timeseries = nifti2timeseries(
+    nifti2timeseries(
         nifti_file=str(simulated_bold_data),
         n_rois=100,
         Fs=1 / 0.75,

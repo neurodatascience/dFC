@@ -742,7 +742,7 @@ def visualize_conn_mat_dict(
         cb_ax = fig.add_axes([0.91, b, 0.007, h])
     else:
         cb_ax = fig.add_axes([0.91, b, 0.01, h])
-    cbar = fig.colorbar(im, cax=cb_ax, shrink=0.8)  # shrink=0.8??
+    fig.colorbar(im, cax=cb_ax, shrink=0.8)  # shrink=0.8??
 
     if save_image:
         folder = output_root[: output_root.rfind("/")]
@@ -919,7 +919,7 @@ def visualize_conn_mat_2D_dict(
         cb_ax = fig.add_axes([0.91, 0.5 - h / 2, 0.007, h])
     else:
         cb_ax = fig.add_axes([0.91, 0.5 - h / 2, 0.015, h])
-    cbar = fig.colorbar(im, cax=cb_ax, shrink=0.8)  # shrink=0.8??
+    fig.colorbar(im, cax=cb_ax, shrink=0.8)  # shrink=0.8??
 
     if save_image:
         folder = output_root[: output_root.rfind("/")]

@@ -41,7 +41,7 @@ print(f"*** {len(ALL_RECORDS)} subjects were found.")
 
 if not num_subj2include is None:
     ALL_RECORDS = ALL_RECORDS[:num_subj2include]
-    print("*** %d subjects were included." % (num_subj2include))
+    print(f"*** {num_subj2include} subjects were included.")
 
 FILTERS = [key for key in output]
 print(FILTERS)

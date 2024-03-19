@@ -993,7 +993,7 @@ def plot_TSNE(
         ax = fig.add_subplot(projection="3d")
         sample_measure_array = np.array(sample_measure_lst)
         for measure in measures_lst:
-            scatter = ax.scatter(
+            ax.scatter(
                 X_embedded[sample_measure_array == measure, 0],
                 X_embedded[sample_measure_array == measure, 1],
                 X_embedded[sample_measure_array == measure, 2],

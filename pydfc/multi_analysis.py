@@ -205,9 +205,6 @@ class MultiAnalysis:
     def group_dFC_assess(self, time_series_dict):
 
         # time_series_dict is a dict of time_series
-
-        SUBJ_s_dFC_dict = {}
-
         SUBJECTs = common_subj_lst(time_series_dict)
 
         if self.params["n_jobs"] is None:

@@ -69,7 +69,7 @@ def plot_task_dFC(task_labels, dFC_lst, event_types, Fs_mri, TR_step=12):
     scale_task_plot = 20
 
     # plot task_data['event_labels']
-    fig = plt.figure(figsize=(50, 200))
+    plt.figure(figsize=(50, 200))
 
     ax = plt.gca()
 
