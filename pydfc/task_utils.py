@@ -46,9 +46,9 @@ def events_time_to_labels(
         if events[i, 2] in event_types:
             start_time = float(events[i, 0])
             end_time = float(events[i, 0]) + float(events[i, 1])
-            start_TR = int(np.rint(start_time * Fs))
-            end_TR = int(np.rint(end_time * Fs))
-            event_labels[start_TR:end_TR] = event_types.index(events[i, 2])
+            start_timepoint = int(np.rint(start_time * Fs))
+            end_timepoint = int(np.rint(end_time * Fs))
+            event_labels[start_timepoint:end_timepoint] = event_types.index(events[i, 2])
 
     if return_0_1:
         event_labels = np.multiply(event_labels != 0, 1)

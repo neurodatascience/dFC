@@ -1,7 +1,6 @@
 import os
 import time
 import warnings
-from calendar import c
 
 import numpy as np
 
