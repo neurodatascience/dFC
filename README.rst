@@ -5,7 +5,8 @@
     :alt: Pypi Package
 
 pydfc
-=======
+=====
+
 An implementation of several well-known dynamic Functional Connectivity (dFC) assessment methods.
 
 Simply install ``pydfc`` using the following steps:
@@ -18,4 +19,4 @@ The ``multi_analysis_demo.ipynb`` illustrates how to use the ``pydfc`` toolbox t
 
 For more details about the implemented methods and the comparison analysis see `our paper <https://www.biorxiv.org/content/10.1101/2023.07.13.548883v2>`_.
 
-  * Torabi M, Mitsis GD, Poline JB. On the variability of dynamic functional connectivity assessment methods. bioRxiv. 2023:2023-07. 
+  * Torabi M, Mitsis GD, Poline JB. On the variability of dynamic functional connectivity assessment methods. bioRxiv. 2023:2023-07.

@@ -1,10 +1,8 @@
-import pytest
-
 import nibabel as nb
 import numpy as np
+import pytest
 
 from pydfc.data_loader import nifti2timeseries
-
 
 # @pytest.fixture(scope="session")
 # def rest_file(tmp_path_factory):
@@ -27,7 +25,7 @@ def simulated_bold_data(tmp_path):
 
 
 def test_load(simulated_bold_data):
-    timeseries = nifti2timeseries(
+    nifti2timeseries(
         nifti_file=str(simulated_bold_data),
         n_rois=100,
         Fs=1 / 0.75,

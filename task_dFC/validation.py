@@ -1,38 +1,39 @@
-from pydfc import (
-    data_loader,
-    MultiAnalysis,
-)
-import time
-import numpy as np
 import os
+import time
 import warnings
 
-warnings.simplefilter('ignore')
+import numpy as np
 
-os.environ["MKL_NUM_THREADS"] = '16'
-os.environ["NUMEXPR_NUM_THREADS"] = '16'
-os.environ["OMP_NUM_THREADS"] = '16'
+from pydfc import MultiAnalysis, data_loader
+
+warnings.simplefilter("ignore")
+
+os.environ["MKL_NUM_THREADS"] = "16"
+os.environ["NUMEXPR_NUM_THREADS"] = "16"
+os.environ["OMP_NUM_THREADS"] = "16"
 
 ################################# Parameters #################################
 
 # Data parameters
 # main_root = '../../DATA/ds002785/' # for local
-main_root = '../../../DATA/task-based/openneuro/ds002785/' # for server
-dFC_assessed_root = main_root + 'dFC_assessed/'
-output_root = main_root + 'validation_results/'
+main_root = "../../../DATA/task-based/openneuro/ds002785/"  # for server
+dFC_assessed_root = main_root + "dFC_assessed/"
+output_root = main_root + "validation_results/"
 
 ################################# LOAD FIT MEASURES #################################
 
-SUBJECTS = data_loader.find_subj_list(data_root=roi_root, sessions=params_data_load['SESSIONs'])
+SUBJECTS = data_loader.find_subj_list(
+    data_root=roi_root, sessions=params_data_load["SESSIONs"]
+)
 
 ALL_RECORDS = os.listdir(dFC_assessed_root)
-ALL_RECORDS = [i for i in ALL_RECORDS if 'dFC' in i]
+ALL_RECORDS = [i for i in ALL_RECORDS if "dFC" in i]
 ALL_RECORDS.sort()
 dFC_lst = list()
 for s in ALL_RECORDS:
-    dFC = np.load(dFC_assessed_root+s, allow_pickle='TRUE').item()
+    dFC = np.load(dFC_assessed_root + s, allow_pickle="TRUE").item()
     dFC_lst.append(dFC)
-print('dFCs loaded ...')
+print("dFCs loaded ...")
 
 ################################# SIMILARITY MEASUREMENT #################################
 
@@ -52,6 +53,6 @@ print('dFCs loaded ...')
 # if not os.path.exists(folder):
 #     os.makedirs(folder)
 
-# np.save(folder+'/SUBJ_'+str(subj_id)+'_output.npy', SUBJ_output) 
+# np.save(folder+'/SUBJ_'+str(subj_id)+'_output.npy', SUBJ_output)
 
 #######################################################################################

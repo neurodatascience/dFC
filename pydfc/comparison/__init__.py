@@ -2,9 +2,4 @@
 
 from .similarity_assessment import SimilarityAssessment
 
-
-__all__ = [
-    'SimilarityAssessment', 
-    'plotting',
-    'analytical'
-]
+__all__ = ["SimilarityAssessment", "plotting", "analytical"]

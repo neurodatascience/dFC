@@ -1,0 +1,40 @@
+[flake8]
+exclude =
+    .git,
+    __pycache__,
+    build,
+    dist,
+--select = D,E,F,W
+docstring-convention = numpy
+max-line-length = 240
+# For PEP8 error codes see
+# http://pep8.readthedocs.org/en/latest/intro.html#error-codes
+	# D100-D104: missing docstring
+	# D105: missing docstring in magic method
+	# D107: missing docstring in __init__
+	# W504: line break after binary operator
+per-file-ignores =
+	**/__init__.py: D104
+ignore =
+    BLK100,
+    D105
+    D107,
+    E402,
+    E266,
+    E721,
+    E731,
+    E713,
+    E714,
+    E741,
+    F403,
+    F405,
+    E401,
+    F401,
+    F811,
+    F821,
+    W503,
+
+
+# for compatibility with black
+# https://black.readthedocs.io/en/stable/guides/using_black_with_other_tools.html#flake8
+extend-ignore = E203
