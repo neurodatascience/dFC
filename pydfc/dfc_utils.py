@@ -941,7 +941,7 @@ def visualize_FCS(
     measure, normalize=True, fix_lim=True, save_image=False, output_root=None
 ):
 
-    if measure.FCS == []:
+    if measure.FCS is []:
         return
 
     if normalize:
