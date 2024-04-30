@@ -363,9 +363,15 @@ def load_TS(
             if "{run}" in file_name:
                 assert run is not None, "run must be provided"
                 TS_file = TS_file.replace("{run}", run)
-            time_series = np.load(
-                f"{data_root}/{subj_fldr}/{TS_file}", allow_pickle="True"
-            ).item()
+
+            try:
+                time_series = np.load(
+                    f"{data_root}/{subj_fldr}/{TS_file}", allow_pickle="True"
+                ).item()
+            except FileNotFoundError:
+                print(f"File {TS_file} not found for {subj}")
+                continue
+
             if TS[session] is None:
                 TS[session] = time_series
             else:
