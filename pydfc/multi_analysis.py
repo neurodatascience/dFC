@@ -231,30 +231,34 @@ class MultiAnalysis:
 
         return OUT
 
-    def subj_lvl_dFC_assess(self, time_series_dict):
+    def subj_lvl_dFC_assess(self, time_series):
+        """
+        time_series can be a dict of time_series or a single time_series
+        if it is a dict, the time_series with key `measure.params["session"]`
+        will be used
+        """
 
-        # time_series_dict is a dict of time_series
+        if isinstance(time_series, dict):
+            if not measure.params["session"] in time_series:
+                raise ValueError(
+                    f"session {measure.params['session']} is not in time_series"
+                )
+            else:
+                time_series = time_series[measure.params["session"]]
 
         dFC_dict = {}
-        # dFC_corr_assess_dict = {}
 
         if self.params["n_jobs"] is None:
             dFC_lst = list()
             for measure in self.MEASURES_fit_lst_:
-                dFC_lst.append(
-                    measure.estimate_dFC(
-                        time_series=time_series_dict[measure.params["session"]]
-                    )
-                )
+                dFC_lst.append(measure.estimate_dFC(time_series=time_series))
         else:
             dFC_lst = Parallel(
                 n_jobs=self.params["n_jobs"],
                 verbose=self.params["verbose"],
                 backend=self.params["backend"],
             )(
-                delayed(measure.estimate_dFC)(
-                    time_series=time_series_dict[measure.params["session"]]
-                )
+                delayed(measure.estimate_dFC)(time_series=time_series)
                 for measure in self.MEASURES_fit_lst_
             )
 
