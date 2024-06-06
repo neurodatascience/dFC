@@ -17,6 +17,6 @@ Simply install ``pydfc`` using the following steps:
 The ``dFC_methods_demo.ipynb`` illustrates how to load data and apply each of the dFC methods implemented in the ``pydfc`` toolbox individually.
 The ``multi_analysis_demo.ipynb`` illustrates how to use the ``pydfc`` toolbox to apply multiple dFC methods at the same time on a dataset and compare their results.
 
-For more details about the implemented methods and the comparison analysis see `our paper <https://www.biorxiv.org/content/10.1101/2023.07.13.548883v2>`_.
+For more details about the implemented methods and the comparison analysis see `our paper <https://doi.org/10.1093/gigascience/giae009>`_.
 
-  * Torabi M, Mitsis GD, Poline JB. On the variability of dynamic functional connectivity assessment methods. bioRxiv. 2023:2023-07.
+  * Mohammad Torabi, Georgios D Mitsis, Jean-Baptiste Poline, On the variability of dynamic functional connectivity assessment methods, GigaScience, Volume 13, 2024, giae009, https://doi.org/10.1093/gigascience/giae009.
