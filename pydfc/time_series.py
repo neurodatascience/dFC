@@ -424,7 +424,7 @@ class TIME_SERIES:
         interval = list(range(start, end))
 
         if nodes_lst is None:
-            nodes_lst = self.nodes_lst
+            nodes_lst = self.nodes_lst[:, np.newaxis]
         else:
             nodes_lst = np.array(nodes_lst)[:, np.newaxis]
 
