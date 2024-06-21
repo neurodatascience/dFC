@@ -287,7 +287,7 @@ class DFC:
         threshold=0.0,
         fix_lim=False,
         save_image=False,
-        fig_name=None,
+        output_root=None,
     ):
 
         assert not self.measure is None, "Measure is not provided."
@@ -321,5 +321,5 @@ class DFC:
             cmap=cmap,
             center_0=center_0,
             save_image=save_image,
-            output_root=fig_name,
+            output_root=output_root,
         )
