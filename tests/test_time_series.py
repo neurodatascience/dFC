@@ -245,12 +245,15 @@ def test_select_nodes():
     )
 
     # select 5 nodes
-    nodes_idx = np.arange(0, 100, 20, dtype=int)
+    nodes_idx = np.array([0, 1, 23, 43, 87])
     time_series.select_nodes(nodes_idx=nodes_idx)
     assert time_series.data.shape == (5, 1000)
     assert np.all(time_series.data == data[nodes_idx, :])
     assert time_series.n_regions == 5
     assert np.all(time_series.nodes_lst == nodes_idx)
     assert np.all(time_series.locs == locs[nodes_idx])
-    assert np.all(time_series.node_labels == [f"Region {i}" for i in nodes_idx])
+    assert np.all(
+        time_series.node_labels
+        == ["Region 0", "Region 1", "Region 23", "Region 43", "Region 87"]
+    )
     assert np.all(time_series.nodes_selection_ == nodes_idx)
