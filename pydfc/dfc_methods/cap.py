@@ -78,6 +78,7 @@ class CAP(BaseDFCMethod):
     def cluster_act_vec(self, act_vecs, n_clusters):
 
         kmeans_ = KMeans(n_clusters=n_clusters, n_init=500).fit(act_vecs)
+        kmeans_.cluster_centers_ = kmeans_.cluster_centers_.astype(np.float32)
         act_centroids = kmeans_.cluster_centers_
 
         return act_centroids, kmeans_

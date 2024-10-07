@@ -156,6 +156,7 @@ class SLIDING_WINDOW_CLUSTR(BaseDFCMethod):
         else:
             ########### Euclidean Clustering ##############
             kmeans_ = KMeans(n_clusters=n_clusters, n_init=500).fit(F)
+            kmeans_.cluster_centers_ = kmeans_.cluster_centers_.astype(np.float32)
             F_cent = kmeans_.cluster_centers_
 
         FCS_ = self.dFC_vec2mat(F_cent, N=n_regions)
