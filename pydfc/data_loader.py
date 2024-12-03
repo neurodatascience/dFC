@@ -1,5 +1,5 @@
 """
-Implementation of dFC methods.
+Implementation of functions for leading fmri data.
 
 Created on Jun 29 2023
 @author: Mohammad Torabi
