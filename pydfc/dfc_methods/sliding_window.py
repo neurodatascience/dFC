@@ -161,6 +161,10 @@ class SLIDING_WINDOW(BaseDFCMethod):
 
         return np.array(FCSs), np.array(TR_array)
 
+    def estimate_FCS(self, time_series):
+
+        return self
+
     def estimate_dFC(self, time_series):
         """
         we assume calc is applied on subjects separately
