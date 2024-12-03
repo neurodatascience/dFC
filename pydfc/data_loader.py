@@ -1,5 +1,5 @@
 """
-Implementation of functions for leading fmri data.
+Implementation of functions for loading fmri data.
 
 Created on Jun 29 2023
 @author: Mohammad Torabi
