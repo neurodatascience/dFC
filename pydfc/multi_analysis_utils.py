@@ -127,21 +127,19 @@ def get_DD_MEASURES_lst(MEASURES_lst):
 
 def estimate_group_FCS(time_series, MEASURES_lst, n_jobs=None, verbose=0, backend="loky"):
 
-    SB_MEASURES_lst = get_SB_MEASURES_lst(MEASURES_lst)
     if n_jobs is None:
-        SB_MEASURES_lst_NEW = list()
-        for measure in SB_MEASURES_lst:
-            SB_MEASURES_lst_NEW.append(measure.estimate_FCS(time_series=time_series))
+        MEASURES_fit_lst = list()
+        for measure in MEASURES_lst:
+            MEASURES_fit_lst.append(measure.estimate_FCS(time_series=time_series))
     else:
-        SB_MEASURES_lst_NEW = Parallel(
+        MEASURES_fit_lst = Parallel(
             n_jobs=n_jobs,
             verbose=verbose,
             backend=backend,
         )(
             delayed(measure.estimate_FCS)(time_series=time_series)
-            for measure in SB_MEASURES_lst
+            for measure in MEASURES_lst
         )
-    MEASURES_fit_lst = get_DD_MEASURES_lst(MEASURES_lst) + SB_MEASURES_lst_NEW
 
     return MEASURES_fit_lst
 
