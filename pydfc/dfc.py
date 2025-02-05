@@ -170,7 +170,7 @@ class DFC:
         dFC_mat = self.get_dFC_mat(TRs=TRs)
         dFC_dict = {}
         for k, TR in enumerate(TRs):
-            dFC_dict["TR" + str(TR)] = dFC_mat[k, :, :]
+            dFC_dict[f"TR{TR}"] = dFC_mat[k, :, :]
         return dFC_dict
 
     # test this
@@ -199,7 +199,7 @@ class DFC:
 
         dFC_mat = list()
         for TR in TRs:
-            dFC_mat.append(self.FCSs[self.FCS_idx["TR" + str(TR)]])
+            dFC_mat.append(self.FCSs[self.FCS_idx[f"TR{TR}"]])
 
         dFC_mat = np.array(dFC_mat)
 
@@ -231,6 +231,10 @@ class DFC:
         return dFC_mat_new
 
     def set_dFC(self, FCSs, FCS_idx=None, TS_info=None, TR_array=None):
+        """
+        FCSs: a 3D numpy array of FC matrices with shape (n_time, n_regions, n_regions)
+        FCS_idx: a list of indices that correspond to each FC matrix in FCSs over time
+        """
 
         if len(FCSs.shape) == 2:
             FCSs = np.expand_dims(FCSs, axis=0)
@@ -267,11 +271,11 @@ class DFC:
         # the input FCS_idx is ranged from 0 to len(FCS)-1 but we shift it to 1 to len(FCS)
         self.FCSs_ = {}
         for i, FCS in enumerate(FCSs):
-            self.FCSs_["FCS" + str(i + 1)] = FCS
+            self.FCSs_[f"FCS{i + 1}"] = FCS
 
         self.FCS_idx_ = {}
         for i, idx in enumerate(FCS_idx):
-            self.FCS_idx_["TR" + str(TR_array[i])] = "FCS" + str(idx + 1)
+            self.FCS_idx_[f"TR{TR_array[i]}"] = f"FCS{idx + 1}"  # "FCS" + str(idx + 1)
 
         self.TS_info_ = TS_info
         self.n_regions_ = FCSs.shape[1]
@@ -287,7 +291,7 @@ class DFC:
         threshold=0.0,
         fix_lim=False,
         save_image=False,
-        fig_name=None,
+        output_root=None,
     ):
 
         assert not self.measure is None, "Measure is not provided."
@@ -321,5 +325,5 @@ class DFC:
             cmap=cmap,
             center_0=center_0,
             save_image=save_image,
-            output_root=fig_name,
+            output_root=output_root,
         )

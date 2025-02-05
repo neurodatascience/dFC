@@ -156,6 +156,7 @@ class SLIDING_WINDOW_CLUSTR(BaseDFCMethod):
         else:
             ########### Euclidean Clustering ##############
             kmeans_ = KMeans(n_clusters=n_clusters, n_init=500).fit(F)
+            kmeans_.cluster_centers_ = kmeans_.cluster_centers_.astype(np.float32)
             F_cent = kmeans_.cluster_centers_
 
         FCS_ = self.dFC_vec2mat(F_cent, N=n_regions)
@@ -228,7 +229,7 @@ class SLIDING_WINDOW_CLUSTR(BaseDFCMethod):
             n_clusters=self.params["n_states"],
             n_regions=dFC_raw.n_regions,
         )
-        self.Z = self.kmeans_.predict(self.dFC_mat2vec(SW_dFC))
+        self.Z = self.kmeans_.predict(self.dFC_mat2vec(SW_dFC).astype(np.float32))
 
         # mean activation of states
         self.set_mean_activity(time_series)
@@ -270,7 +271,7 @@ class SLIDING_WINDOW_CLUSTR(BaseDFCMethod):
             # Z = self.clusters_lst2idx(self.kmeans_.get_clusters())
         else:
             ########### Euclidean Clustering ##############
-            Z = self.kmeans_.predict(F)
+            Z = self.kmeans_.predict(F.astype(np.float32))
 
         # record time
         self.set_dFC_assess_time(time.time() - tic)

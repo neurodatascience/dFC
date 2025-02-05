@@ -6,11 +6,11 @@ Created on Jun 29 2023
 """
 
 import os
+import warnings
 from copy import deepcopy
 
 import matplotlib.pyplot as plt
 import numpy as np
-from requests import session
 from scipy import signal
 
 from .dfc_utils import print_dict
@@ -49,9 +49,8 @@ class TIME_SERIES:
         """
         subj_id is an id to identify the subjects
         all properties are applied to every subject separately
-        for instance interval applies to TS of each subj separately
 
-        time_array of all subjects must be equal
+        It is recommended that the time_array of all subjects is equal
         """
 
         assert (
@@ -76,22 +75,17 @@ class TIME_SERIES:
         self.TS_name_ = TS_name
         self.session_name_ = session_name
         self.n_regions_ = data.shape[0]
-        self.n_time_ = data.shape[1]
-
-        # assert self.n_regions_ < self.n_time_, \
-        #     "Probably you have to transpose the time_series."
 
         if time_array is None:
-            self.time_array_ = 1 / self.Fs_ + np.arange(
+            self.data_dict_[subj_id]["time_array"] = 1 / self.Fs_ + np.arange(
                 0, data.shape[1] / self.Fs_, 1 / self.Fs_
             )
         else:
-            self.time_array_ = time_array
+            self.data_dict_[subj_id]["time_array"] = time_array
 
         self.locs_ = locs
         self.node_labels_ = node_labels
 
-        self.interval_ = np.arange(0, self.n_time_, dtype=int)
         self.nodes_selection_ = list(range(self.n_regions_))
 
     @property
@@ -110,7 +104,6 @@ class TIME_SERIES:
         info_dict["node_labels"] = self.node_labels
         info_dict["nodes_locs"] = self.locs
         info_dict["subj_id_lst"] = self.subj_id_lst
-        info_dict["interval"] = self.interval
         info_dict["time"] = self.time
 
         return info_dict
@@ -147,11 +140,6 @@ class TIME_SERIES:
         return np.array(self.nodes_selection_)
 
     @property
-    def interval(self):
-        # output shape is (n_time,)
-        return self.interval_
-
-    @property
     def locs(self):
         """
         locs shape is (n_region, 3)
@@ -174,7 +162,11 @@ class TIME_SERIES:
 
     @property
     def n_time(self):
-        return len(self.time)
+        # if there are multiple subjects, the time_array is ambiguous, so None is returned
+        if len(self.subj_id_lst) > 1:
+            return None
+        else:
+            return len(self.time)
 
     @property
     def n_regions(self):
@@ -182,7 +174,11 @@ class TIME_SERIES:
 
     @property
     def time(self):
-        return self.time_array_[self.interval]
+        # if there are multiple subjects, the time_array is ambiguous, so None is returned
+        if len(self.subj_id_lst) > 1:
+            return None
+        else:
+            return self.data_dict[self.subj_id_lst[0]]["time_array"]
 
     @property
     def TS_name(self):
@@ -231,7 +227,11 @@ class TIME_SERIES:
         self.data_dict_[subj_id] = {}
 
         if not time_array is None:
-            assert self.time_array_ == time_array, "time array mismatch!"
+            self.data_dict_[subj_id]["time_array"] = time_array
+        else:
+            self.data_dict_[subj_id]["time_array"] = 1 / self.Fs_ + np.arange(
+                0, new_time_series.shape[1] / self.Fs_, 1 / self.Fs_
+            )
 
         self.data_dict_[subj_id]["data"] = new_time_series
 
@@ -241,12 +241,14 @@ class TIME_SERIES:
         """
         concatenate another Time Series obj
         to the current one.
+        It assumes that the new TS has only one subject
         """
         assert self.Fs == new_TS.Fs, "Fs mismatch!"
         assert len(self.node_labels) == len(new_TS.node_labels), "node_labels mismatch!"
         for i in range(len(self.node_labels)):
             assert self.node_labels[i] == new_TS.node_labels[i], "node_labels mismatch!"
             assert np.all(self.locs[i, :] == new_TS.locs[i, :]), "locs mismatch!"
+        assert len(new_TS.subj_id_lst) == 1, "new_TS must have only one subject."
 
         self.append_ts(new_time_series=new_TS.data, subj_id=new_TS.subj_id_lst[0])
 
@@ -255,34 +257,36 @@ class TIME_SERIES:
         # truncates TS of every subj separately
         # based on either time or samples
         # if all None -> whole time_series
-        # check if not out of total interval
 
-        start = 0
-        end = self.n_time
+        for subj_id in self.data_dict:
 
-        if not start_point is None:
-            start = start_point
+            time_array = self.data_dict[subj_id]["time_array"]
+            n_time = self.data_dict[subj_id]["data"].shape[1]
+            assert n_time == len(time_array), "time_array and data mismatch."
 
-        if not end_point is None:
-            end = end_point + 1
+            start = 0
+            end = n_time
 
-        if not start_time is None:
-            start = np.argwhere(self.time_array_ >= start_time)[0, 0]
+            if not start_point is None:
+                start = start_point
 
-        if not end_time is None:
-            end = np.argwhere(self.time_array_ <= end_time)[-1, 0] + 1
+            if not end_point is None:
+                end = end_point + 1
 
-        if start > self.interval_[0] or end < self.interval_[-1]:
-            # make sure the interval is not out of range
+            if not start_time is None:
+                start = np.argwhere(time_array >= start_time)[0, 0]
+
+            if not end_time is None:
+                end = np.argwhere(time_array <= end_time)[-1, 0] + 1
+
             start = max(start, 0)
-            end = min(end, self.n_time)
+            end = min(end, n_time)
+            assert start < end, "start must be less than end."
 
-            self.interval_ = np.arange(start, end, dtype=int)
-
-            for subj in self.data_dict_:
-                self.data_dict_[subj]["data"] = self.data_dict_[subj]["data"][
-                    :, self.interval
-                ]
+            self.data_dict_[subj_id]["data"] = self.data_dict[subj_id]["data"][
+                :, start:end
+            ]
+            self.data_dict_[subj_id]["time_array"] = time_array[start:end]
 
             self.data_ = None
 
@@ -336,21 +340,16 @@ class TIME_SERIES:
                         new_time_series[n, :], int(new_time_series.shape[1] * Fs_ratio)
                     )
                 self.data_dict_[subj_id]["data"] = downsampled_time_series
+
+                # find the new time_array after resampling
+                _, new_time_array = signal.resample(
+                    new_time_series[n, :],
+                    int(new_time_series.shape[1] * Fs_ratio),
+                    t=self.data_dict[subj_id]["time_array"],
+                )
+                self.data_dict_[subj_id]["time_array"] = new_time_array
+
             self.Fs_ratio_ = Fs_ratio
-
-            start_time = self.time_array_[self.interval_[0]]
-            end_time = self.time_array_[self.interval_[-1]]
-
-            _, self.time_array_ = signal.resample(
-                new_time_series[n, :],
-                int(new_time_series.shape[1] * Fs_ratio),
-                t=self.time_array_,
-            )
-
-            start = np.argwhere(self.time_array_ >= start_time)[0, 0]
-            end = np.argwhere(self.time_array_ <= end_time)[-1, 0] + 1
-            self.interval_ = np.arange(start, end, dtype=int)
-
             self.data_ = None
 
     def add_noise(self, noise_ratio, mean_noise=0):
@@ -373,7 +372,7 @@ class TIME_SERIES:
     def select_subjs(self, num_subj):
         # selects the first num_subj subjects in self.subj_id_lst
 
-        SUBJECTS = [subj_id for subj_id in self.data_dict_]
+        SUBJECTS = self.subj_id_lst
         if num_subj < len(SUBJECTS):
             for subj_id in SUBJECTS:
                 if not subj_id in SUBJECTS[:num_subj]:
@@ -412,6 +411,13 @@ class TIME_SERIES:
         nodes_lst is a list of indices
         """
 
+        if len(self.subj_id_lst) > 1:
+            # raise a user warning
+            warnings.warn(
+                "Multiple subjects are not supported in visualization.", UserWarning
+            )
+            return
+
         start = 0
         end = self.n_time
 
@@ -424,7 +430,7 @@ class TIME_SERIES:
         interval = list(range(start, end))
 
         if nodes_lst is None:
-            nodes_lst = self.nodes_lst
+            nodes_lst = self.nodes_lst[:, np.newaxis]
         else:
             nodes_lst = np.array(nodes_lst)[:, np.newaxis]
 

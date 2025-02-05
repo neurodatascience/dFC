@@ -78,6 +78,7 @@ class CAP(BaseDFCMethod):
     def cluster_act_vec(self, act_vecs, n_clusters):
 
         kmeans_ = KMeans(n_clusters=n_clusters, n_init=500).fit(act_vecs)
+        kmeans_.cluster_centers_ = kmeans_.cluster_centers_.astype(np.float32)
         act_centroids = kmeans_.cluster_centers_
 
         return act_centroids, kmeans_
@@ -122,7 +123,7 @@ class CAP(BaseDFCMethod):
             act_vecs=act_center_1st_level, n_clusters=self.params["n_states"]
         )
         self.FCS_ = self.act_vec2FCS(group_act_centroids)
-        self.Z = self.kmeans_.predict(time_series.data.T)
+        self.Z = self.kmeans_.predict(time_series.data.T.astype(np.float32))
 
         # mean activation of states
         self.set_mean_activity(time_series)
@@ -149,7 +150,7 @@ class CAP(BaseDFCMethod):
 
         act_vecs = time_series.data.T
 
-        Z = self.kmeans_.predict(act_vecs)
+        Z = self.kmeans_.predict(act_vecs.astype(np.float32))
 
         # record time
         self.set_dFC_assess_time(time.time() - tic)

@@ -183,6 +183,10 @@ class TIME_FREQ(BaseDFCMethod):
 
         return wt
 
+    def estimate_FCS(self, time_series):
+
+        return self
+
     def estimate_dFC(self, time_series):
         """
         we assume calc is applied on subjects separately

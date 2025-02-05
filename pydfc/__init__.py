@@ -9,6 +9,9 @@ multi_analysis             --- multi analysis class implementing
 time_series                --- time series class
 dfc                        --- dfc class
 data_loader                --- load data
+multi_analysis_utils       --- utility functions for multi analysis
+                               to implement multiple dFC methods
+                               simultaneously
 dfc_utils                  --- functions used for dFC analysis
 comparison                 --- functions used for dFC results comparison
 
@@ -24,6 +27,7 @@ __all__ = [
     "TIME_SERIES",
     "DFC",
     "data_loader",
+    "multi_analysis_utils",
     "dfc_methods",
     "dfc_utils",
     "comparison",
