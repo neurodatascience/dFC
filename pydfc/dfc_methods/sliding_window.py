@@ -9,7 +9,7 @@ import time
 
 import numpy as np
 from scipy import signal
-from sklearn.covariance import GraphicalLassoCV, graphical_lasso
+from sklearn.covariance import GraphicalLasso, GraphicalLassoCV
 
 from ..dfc import DFC
 from ..time_series import TIME_SERIES
@@ -38,6 +38,7 @@ class SLIDING_WINDOW(BaseDFCMethod):
         self.FCS_ = []
         self.FCS_fit_time_ = None
         self.dFC_assess_time_ = None
+        self.graphical_lasso_alpha_ = None
 
         self.params_name_lst = [
             "measure_name",
@@ -96,8 +97,13 @@ class SLIDING_WINDOW(BaseDFCMethod):
     def FC(self, time_series):
 
         if self.params["sw_method"] == "GraphLasso":
-            model = GraphicalLassoCV()
-            model.fit(time_series.T)
+            # Standardize the data (zero mean, unit variance for each feature)
+            mean = np.mean(time_series, axis=1, keepdims=True)
+            std = np.std(time_series, axis=1, keepdims=True)
+            time_series_standardized = np.where(std != 0, (time_series - mean) / std, 0)
+            model = GraphicalLasso(alpha=self.graphical_lasso_alpha_)
+            model.fit(time_series_standardized.T)
+            # the covariance matrix will equal the correlation matrix
             C = model.covariance_
         else:
             C = np.zeros((time_series.shape[0], time_series.shape[0]))
@@ -128,6 +134,12 @@ class SLIDING_WINDOW(BaseDFCMethod):
         step = int((1 - n_overlap) * W)
         if step == 0:
             step = 1
+
+        # find the L1 penalty for GraphLasso
+        if self.params["sw_method"] == "GraphLasso":
+            model = GraphicalLassoCV()
+            model.fit(time_series.T)
+            self.graphical_lasso_alpha_ = model.alpha_
 
         window_taper = signal.windows.gaussian(W, std=3 * W / 22)
         # C = DFC(measure=self)
