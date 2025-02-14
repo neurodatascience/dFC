@@ -45,6 +45,7 @@ class SLIDING_WINDOW(BaseDFCMethod):
             "is_state_based",
             "sw_method",
             "tapered_window",
+            "window_std",
             "W",
             "n_overlap",
             "normalization",
@@ -127,7 +128,7 @@ class SLIDING_WINDOW(BaseDFCMethod):
 
         return C
 
-    def dFC(self, time_series, W=None, n_overlap=None, tapered_window=False):
+    def dFC(self, time_series, W=None, n_overlap=None, tapered_window=False, window_std=None):
         # W is in time samples
 
         L = time_series.shape[1]
@@ -141,36 +142,25 @@ class SLIDING_WINDOW(BaseDFCMethod):
             model.fit(time_series.T)
             self.graphical_lasso_alpha_ = model.alpha_
 
-        window_taper = signal.windows.gaussian(W, std=3 * W / 22)
-        # C = DFC(measure=self)
         FCSs = list()
         TR_array = list()
         for l in range(0, L - W + 1, step):
 
-            ######### creating a rectangel window ############
+            # Create rectangular window
             window = np.zeros((L))
             window[l : l + W] = 1
 
-            ########### tapering the window ##############
+            # Taper the window
             if tapered_window:
-                window = signal.convolve(window, window_taper, mode="same") / sum(
-                    window_taper
-                )
-
-            window = np.repeat(
-                np.expand_dims(window, axis=0), time_series.shape[0], axis=0
-            )
-
-            # int(l-W/2):int(l+3*W/2) is the nonzero interval after tapering
-            FCSs.append(
-                self.FC(
-                    np.multiply(time_series, window)[
-                        :, max(int(l - W / 2), 0) : min(int(l + 3 * W / 2), L)
-                    ]
-                )
-            )
+                std = window_std if window_std is not None else 3 * W / 22
+                window_taper = signal.windows.gaussian(W, std=std)
+                #window = signal.convolve(window, window_taper, mode="same") / sum(window_taper)
+                window[l:l+W] = window_taper
+            
+            window = np.repeat(np.expand_dims(window, axis=0), time_series.shape[0], axis=0)
+            FCSs.append(self.FC(np.multiply(time_series, window)[:,l:l+W]))
             TR_array.append(int((l + (l + W)) / 2))
-
+    
         return np.array(FCSs), np.array(TR_array)
 
     def estimate_FCS(self, time_series):
@@ -200,6 +190,7 @@ class SLIDING_WINDOW(BaseDFCMethod):
             W=int(self.params["W"] * time_series.Fs),
             n_overlap=self.params["n_overlap"],
             tapered_window=self.params["tapered_window"],
+            window_std=self.params["window_std"]
         )
 
         # record time
