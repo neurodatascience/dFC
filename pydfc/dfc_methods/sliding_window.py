@@ -96,35 +96,24 @@ class SLIDING_WINDOW(BaseDFCMethod):
         return MI
 
     def FC(self, time_series):
-
-        if self.params["sw_method"] == "GraphLasso":
-            # Standardize the data (zero mean, unit variance for each feature)
-            mean = np.mean(time_series, axis=1, keepdims=True)
-            std = np.std(time_series, axis=1, keepdims=True)
-            time_series_standardized = np.where(std != 0, (time_series - mean) / std, 0)
-            model = GraphicalLasso(alpha=self.graphical_lasso_alpha_)
-            model.fit(time_series_standardized.T)
-            # the covariance matrix will equal the correlation matrix
+        # Graphical Lasso
+        if self.params['sw_method']=='GraphLasso':
+            model = GraphicalLassoCV()
+            model.fit(time_series.T)
             C = model.covariance_
-        else:
+        # Mutual information
+        elif self.params['sw_method']=='MI':
             C = np.zeros((time_series.shape[0], time_series.shape[0]))
+            
             for i in range(time_series.shape[0]):
-                for j in range(i, time_series.shape[0]):
-
+                for j in range(i, time_series.shape[0]):      
                     X = time_series[i, :]
                     Y = time_series[j, :]
-
-                    if self.params["sw_method"] == "MI":
-                        ########### Mutual Information ##############
-                        C[j, i] = self.calc_MI(X, Y)
-                    else:
-                        ########### Pearson Correlation ##############
-                        if np.var(X) == 0 or np.var(Y) == 0:
-                            C[j, i] = 0
-                        else:
-                            C[j, i] = np.corrcoef(X, Y)[0, 1]
-
-                    C[i, j] = C[j, i]
+                    C[j, i] = self.calc_MI(X, Y)
+        # Pearson correlation
+        else:
+            C = np.corrcoef(time_series)
+            C[np.isnan(C)] = 0
 
         return C
 
