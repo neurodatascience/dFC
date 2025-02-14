@@ -67,6 +67,7 @@ class SLIDING_WINDOW_CLUSTR(BaseDFCMethod):
             "coi_correction",
             "n_subj_clstrs",
             "W",
+            "window_std",
             "n_overlap",
             "n_states",
             "normalization",

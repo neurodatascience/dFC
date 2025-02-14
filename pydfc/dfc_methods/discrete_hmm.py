@@ -65,6 +65,7 @@ class HMM_DISC(BaseDFCMethod):
             "backend",
             "n_subj_clstrs",
             "W",
+            "window_std",
             "n_overlap",
             "n_states",
             "normalization",
