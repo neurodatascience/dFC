@@ -151,8 +151,7 @@ class SLIDING_WINDOW(BaseDFCMethod):
             if tapered_window:
                 std = window_std if window_std is not None else 3 * W / 22
                 window_taper = signal.windows.gaussian(W, std=std)
-                #window = signal.convolve(window, window_taper, mode="same") / sum(window_taper)
-                window[l:l+W] = window_taper
+                window = signal.convolve(window, window_taper, mode="same") / sum(window_taper)
             
             window = np.repeat(np.expand_dims(window, axis=0), time_series.shape[0], axis=0)
             FCSs.append(self.FC(np.multiply(time_series, window)[:,l:l+W]))
