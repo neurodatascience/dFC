@@ -114,7 +114,8 @@ class SLIDING_WINDOW(BaseDFCMethod):
         else:
             C = np.corrcoef(time_series)
             C[np.isnan(C)] = 0
-
+            # make the diagonal elements 1 (for nan values on the diagonal)
+            C[np.diag_indices_from(C)] = 1
         return C
 
     def dFC(self, time_series, W=None, n_overlap=None, tapered_window=False, window_std=None):
