@@ -98,9 +98,15 @@ class SLIDING_WINDOW(BaseDFCMethod):
     def FC(self, time_series):
         # Graphical Lasso
         if self.params['sw_method']=='GraphLasso':
-            model = GraphicalLassoCV()
-            model.fit(time_series.T)
+            # Standardize the data (zero mean, unit variance for each feature)
+            mean = np.mean(time_series, axis=1, keepdims=True)
+            std = np.std(time_series, axis=1, keepdims=True)
+            time_series_standardized = np.where(std != 0, (time_series - mean) / std, 0)
+            model = GraphicalLasso(alpha=self.graphical_lasso_alpha_)
+            model.fit(time_series_standardized.T)
+            # the covariance matrix will equal the correlation matrix
             C = model.covariance_
+       
         # Mutual information
         elif self.params['sw_method']=='MI':
             C = np.zeros((time_series.shape[0], time_series.shape[0]))
@@ -110,6 +116,7 @@ class SLIDING_WINDOW(BaseDFCMethod):
                     X = time_series[i, :]
                     Y = time_series[j, :]
                     C[j, i] = self.calc_MI(X, Y)
+        
         # Pearson correlation
         else:
             C = np.corrcoef(time_series)
