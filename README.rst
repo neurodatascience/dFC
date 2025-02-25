@@ -1,3 +1,7 @@
+.. image:: docs/PydFC_logo_dark_round.png
+    :alt: pydfc Logo
+    :align: left
+    :width: 250px
 .. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.10161176.svg
     :target: https://zenodo.org/doi/10.5281/zenodo.10161176
 .. image:: https://img.shields.io/pypi/v/pydfc.svg
