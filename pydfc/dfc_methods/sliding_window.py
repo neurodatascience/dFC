@@ -45,6 +45,7 @@ class SLIDING_WINDOW(BaseDFCMethod):
             "is_state_based",
             "sw_method",
             "tapered_window",
+            "window_std",
             "W",
             "n_overlap",
             "normalization",
@@ -95,7 +96,7 @@ class SLIDING_WINDOW(BaseDFCMethod):
         return MI
 
     def FC(self, time_series):
-
+        # Graphical Lasso
         if self.params["sw_method"] == "GraphLasso":
             # Standardize the data (zero mean, unit variance for each feature)
             mean = np.mean(time_series, axis=1, keepdims=True)
@@ -105,29 +106,28 @@ class SLIDING_WINDOW(BaseDFCMethod):
             model.fit(time_series_standardized.T)
             # the covariance matrix will equal the correlation matrix
             C = model.covariance_
-        else:
+
+        # Mutual information
+        elif self.params["sw_method"] == "MI":
             C = np.zeros((time_series.shape[0], time_series.shape[0]))
+
             for i in range(time_series.shape[0]):
                 for j in range(i, time_series.shape[0]):
-
                     X = time_series[i, :]
                     Y = time_series[j, :]
+                    C[j, i] = self.calc_MI(X, Y)
 
-                    if self.params["sw_method"] == "MI":
-                        ########### Mutual Information ##############
-                        C[j, i] = self.calc_MI(X, Y)
-                    else:
-                        ########### Pearson Correlation ##############
-                        if np.var(X) == 0 or np.var(Y) == 0:
-                            C[j, i] = 0
-                        else:
-                            C[j, i] = np.corrcoef(X, Y)[0, 1]
-
-                    C[i, j] = C[j, i]
-
+        # Pearson correlation
+        else:
+            C = np.corrcoef(time_series)
+            C[np.isnan(C)] = 0
+            # make the diagonal elements 1 (for nan values on the diagonal)
+            C[np.diag_indices_from(C)] = 1
         return C
 
-    def dFC(self, time_series, W=None, n_overlap=None, tapered_window=False):
+    def dFC(
+        self, time_series, W=None, n_overlap=None, tapered_window=False, window_std=None
+    ):
         # W is in time samples
 
         L = time_series.shape[1]
@@ -141,18 +141,18 @@ class SLIDING_WINDOW(BaseDFCMethod):
             model.fit(time_series.T)
             self.graphical_lasso_alpha_ = model.alpha_
 
-        window_taper = signal.windows.gaussian(W, std=3 * W / 22)
-        # C = DFC(measure=self)
         FCSs = list()
         TR_array = list()
         for l in range(0, L - W + 1, step):
 
-            ######### creating a rectangel window ############
+            # Create rectangular window
             window = np.zeros((L))
             window[l : l + W] = 1
 
-            ########### tapering the window ##############
+            # Taper the window
             if tapered_window:
+                std = window_std if window_std is not None else 3 * W / 22
+                window_taper = signal.windows.gaussian(W, std=std)
                 window = signal.convolve(window, window_taper, mode="same") / sum(
                     window_taper
                 )
@@ -160,15 +160,7 @@ class SLIDING_WINDOW(BaseDFCMethod):
             window = np.repeat(
                 np.expand_dims(window, axis=0), time_series.shape[0], axis=0
             )
-
-            # int(l-W/2):int(l+3*W/2) is the nonzero interval after tapering
-            FCSs.append(
-                self.FC(
-                    np.multiply(time_series, window)[
-                        :, max(int(l - W / 2), 0) : min(int(l + 3 * W / 2), L)
-                    ]
-                )
-            )
+            FCSs.append(self.FC(np.multiply(time_series, window)[:, l : l + W]))
             TR_array.append(int((l + (l + W)) / 2))
 
         return np.array(FCSs), np.array(TR_array)
@@ -200,6 +192,7 @@ class SLIDING_WINDOW(BaseDFCMethod):
             W=int(self.params["W"] * time_series.Fs),
             n_overlap=self.params["n_overlap"],
             tapered_window=self.params["tapered_window"],
+            window_std=self.params["window_std"],
         )
 
         # record time
