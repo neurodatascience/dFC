@@ -106,17 +106,17 @@ class SLIDING_WINDOW(BaseDFCMethod):
             model.fit(time_series_standardized.T)
             # the covariance matrix will equal the correlation matrix
             C = model.covariance_
-       
+
         # Mutual information
         elif self.params["sw_method"] == "MI":
             C = np.zeros((time_series.shape[0], time_series.shape[0]))
-            
+
             for i in range(time_series.shape[0]):
                 for j in range(i, time_series.shape[0]):
                     X = time_series[i, :]
                     Y = time_series[j, :]
                     C[j, i] = self.calc_MI(X, Y)
-        
+
         # Pearson correlation
         else:
             C = np.corrcoef(time_series)
@@ -156,13 +156,13 @@ class SLIDING_WINDOW(BaseDFCMethod):
                 window = signal.convolve(window, window_taper, mode="same") / sum(
                     window_taper
                 )
-            
+
             window = np.repeat(
                 np.expand_dims(window, axis=0), time_series.shape[0], axis=0
             )
             FCSs.append(self.FC(np.multiply(time_series, window)[:, l : l + W]))
             TR_array.append(int((l + (l + W)) / 2))
-    
+
         return np.array(FCSs), np.array(TR_array)
 
     def estimate_FCS(self, time_series):
