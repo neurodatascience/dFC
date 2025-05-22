@@ -38,12 +38,8 @@ Parameters
 
 class SLIDING_WINDOW_CLUSTR(BaseDFCMethod):
 
-    def __init__(self, clstr_distance="euclidean", **params):
+    def __init__(self, **params):
 
-        assert (
-            clstr_distance == "euclidean" or clstr_distance == "manhattan"
-        ), "Clustering distance not recognized. It must be either \
-                euclidean or manhattan."
         self.logs_ = ""
         self.TPM = []
         self.FCS_ = []
@@ -85,7 +81,12 @@ class SLIDING_WINDOW_CLUSTR(BaseDFCMethod):
 
         self.params["measure_name"] = "Clustering"
         self.params["is_state_based"] = True
-        self.params["clstr_distance"] = clstr_distance
+
+        assert (
+            self.params["clstr_distance"] == "euclidean"
+            or self.params["clstr_distance"] == "manhattan"
+        ), "Clustering distance not recognized. It must be either \
+                euclidean or manhattan."
 
         assert (
             self.params["clstr_base_measure"] in self.base_methods_name_lst

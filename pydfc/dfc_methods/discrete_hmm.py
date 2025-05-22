@@ -55,6 +55,7 @@ class HMM_DISC(BaseDFCMethod):
             "measure_name",
             "is_state_based",
             "clstr_base_measure",
+            "clstr_distance",
             "sw_method",
             "tapered_window",
             "dhmm_obs_state_ratio",
