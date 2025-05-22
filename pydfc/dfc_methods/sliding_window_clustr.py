@@ -116,7 +116,7 @@ class SLIDING_WINDOW_CLUSTR(BaseDFCMethod):
             ########### Manhattan Clustering ##############
             kmeans_ = KMeansCustom(
                 n_clusters=n_clusters,
-                n_init=100,
+                n_init=500,
                 init="k-means++",
                 metric="manhattan",
             ).fit(F)
