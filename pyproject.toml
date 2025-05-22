@@ -18,7 +18,6 @@ dependencies = [
     'matplotlib',
     'networkx',
     'nilearn>=0.10.2,!=0.10.3',
-    'pyclustering',
     'pycwt',
     'seaborn',
     'statsmodels'

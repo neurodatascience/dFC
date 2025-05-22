@@ -15,6 +15,8 @@ import numpy as np
 import seaborn as sns
 from nilearn.plotting import plot_markers
 from scipy import signal, stats
+from sklearn.cluster import kmeans_plusplus
+from sklearn.metrics import pairwise_distances
 
 # np.seterr(invalid='ignore')
 
@@ -436,6 +438,79 @@ def dFC_vec2mat(F, N):
         C.append(K)
     C = np.array(C)
     return C
+
+
+############################ K-means Clustering with Manhattan distance ############################
+
+
+class KMeansCustom:
+    def __init__(
+        self, n_clusters, max_iter=300, n_init=100, init="k-means++", metric="manhattan"
+    ):
+        self.n_clusters = n_clusters
+        self.max_iter = max_iter
+        self.n_init = n_init
+        self.init = init
+        self.metric = metric
+        self.labels_ = None
+        self.cluster_centers_ = None
+        self.inertia_ = None
+
+    def _custom_distance(self, p1, p2):
+        return pairwise_distances([p1], [p2], metric=self.metric)[0][0]
+
+    def _assign_clusters(self, X, centroids):
+        clusters = []
+        for x in X:
+            distances = [self._custom_distance(x, c) for c in centroids]
+            clusters.append(np.argmin(distances))
+        return clusters
+
+    def _compute_centroids(self, X, labels):
+        centroids = []
+        for i in range(self.n_clusters):
+            points = X[np.array(labels) == i]
+            centroids.append(points.mean(axis=0))
+        return np.array(centroids)
+
+    def fit(self, X):
+        X = deepcopy(X)
+        min_inertia = None
+        best_centroids = None
+        best_labels = None
+        for _ in range(self.n_init):
+            if self.init == "random":
+                centroids = X[np.random.choice(len(X), self.n_clusters, replace=False)]
+            elif self.init == "k-means++":
+                centroids, _ = kmeans_plusplus(X, n_clusters=self.n_clusters)
+            for _ in range(self.max_iter):
+                labels = self._assign_clusters(X, centroids)
+                new_centroids = self._compute_centroids(X, labels)
+                if np.allclose(centroids, new_centroids, atol=1e-6):
+                    break
+                centroids = new_centroids
+            inertia = np.sum(
+                [
+                    self._custom_distance(x, centroids[label]) ** 2
+                    for x, label in zip(X, labels)
+                ]
+            )
+            if min_inertia is None or inertia < min_inertia:
+                min_inertia = inertia
+                best_centroids = centroids
+                best_labels = labels
+
+        self.labels_ = np.array(best_labels)
+        self.cluster_centers_ = np.array(best_centroids)
+        self.inertia_ = min_inertia
+        return self
+
+    def predict(self, X):
+        X = deepcopy(X)
+        return self._assign_clusters(X, self.cluster_centers_)
+
+
+####################################################################################################
 
 
 # test
