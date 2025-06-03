@@ -8,13 +8,10 @@ Created on Jun 29 2023
 import time
 
 import numpy as np
-from pyclustering.cluster.center_initializer import kmeans_plusplus_initializer
-from pyclustering.cluster.kmeans import kmeans
-from pyclustering.utils.metric import distance_metric, type_metric
 from sklearn.cluster import KMeans
 
 from ..dfc import DFC
-from ..dfc_utils import dFC_mat2vec, dFC_vec2mat
+from ..dfc_utils import KMeansCustom, dFC_mat2vec, dFC_vec2mat
 from ..time_series import TIME_SERIES
 from .base_dfc_method import BaseDFCMethod
 from .sliding_window import SLIDING_WINDOW
@@ -36,20 +33,13 @@ Parameters
         Input signals.
     dt : float
         Sample spacing.
-
-todo:
-- pyclustering(manhattan) has a problem when suing predict
 """
 
 
 class SLIDING_WINDOW_CLUSTR(BaseDFCMethod):
 
-    def __init__(self, clstr_distance="euclidean", **params):
+    def __init__(self, **params):
 
-        assert (
-            clstr_distance == "euclidean" or clstr_distance == "manhattan"
-        ), "Clustering distance not recognized. It must be either \
-                euclidean or manhattan."
         self.logs_ = ""
         self.TPM = []
         self.FCS_ = []
@@ -91,7 +81,12 @@ class SLIDING_WINDOW_CLUSTR(BaseDFCMethod):
 
         self.params["measure_name"] = "Clustering"
         self.params["is_state_based"] = True
-        self.params["clstr_distance"] = clstr_distance
+
+        assert (
+            self.params["clstr_distance"] == "euclidean"
+            or self.params["clstr_distance"] == "manhattan"
+        ), "Clustering distance not recognized. It must be either \
+                euclidean or manhattan."
 
         assert (
             self.params["clstr_base_measure"] in self.base_methods_name_lst
@@ -103,32 +98,9 @@ class SLIDING_WINDOW_CLUSTR(BaseDFCMethod):
 
     def dFC_mat2vec(self, C_t):
         return dFC_mat2vec(C_t)
-        # if len(C_t.shape)==2:
-        #     assert C_t.shape[0]==C_t.shape[1],\
-        #         'C is not a square matrix'
-        #     return C_t[np.triu_indices(C_t.shape[1], k=0)]
-
-        # F = list()
-        # for t in range(C_t.shape[0]):
-        #     C = C_t[t, : , :]
-        #     assert C.shape[0]==C.shape[1],\
-        #         'C is not a square matrix'
-        #     F.append(C[np.triu_indices(C_t.shape[1], k=0)])
-
-        # F = np.array(F)
-        # return F
 
     def dFC_vec2mat(self, F, N):
         return dFC_vec2mat(F=F, N=N)
-        # C = list()
-        # iu = np.triu_indices(N, k=0)
-        # for i in range(F.shape[0]):
-        #     K = np.zeros((N, N))
-        #     K[iu] = F[i,:]
-        #     K = K + np.multiply(K.T, 1-np.eye(N))
-        #     C.append(K)
-        # C = np.array(C)
-        # return C
 
     def clusters_lst2idx(self, clusters):
         Z = np.zeros((self.F.shape[0],))
@@ -142,21 +114,18 @@ class SLIDING_WINDOW_CLUSTR(BaseDFCMethod):
         F = self.dFC_mat2vec(FCS_raw)
 
         if self.params["clstr_distance"] == "manhattan":
-            pass
-            # ########### Manhattan Clustering ##############
-            # # Prepare initial centers using K-Means++ method.
-            # initial_centers = kmeans_plusplus_initializer(F, self.n_states).initialize()
-            # # create metric that will be used for clustering
-            # manhattan_metric = distance_metric(type_metric.MANHATTAN)
-            # # Create instance of K-Means algorithm with prepared centers.
-            # kmeans_ = kmeans(F, initial_centers, metric=manhattan_metric)
-            # # Run cluster analysis and obtain results.
-            # kmeans_.process()
-            # Z = self.clusters_lst2idx(kmeans_.get_clusters())
-            # F_cent = np.array(kmeans_.get_centers())
+            ########### Manhattan Clustering ##############
+            kmeans_ = KMeansCustom(
+                n_clusters=n_clusters,
+                n_init=500,
+                init="k-means++",
+                metric="manhattan",
+            ).fit(F)
+            kmeans_.cluster_centers_ = kmeans_.cluster_centers_.astype(np.float32)
+            F_cent = kmeans_.cluster_centers_
         else:
             ########### Euclidean Clustering ##############
-            kmeans_ = KMeans(n_clusters=n_clusters, n_init=500).fit(F)
+            kmeans_ = KMeans(n_clusters=n_clusters, n_init=500, init="k-means++").fit(F)
             kmeans_.cluster_centers_ = kmeans_.cluster_centers_.astype(np.float32)
             F_cent = kmeans_.cluster_centers_
 
@@ -265,11 +234,11 @@ class SLIDING_WINDOW_CLUSTR(BaseDFCMethod):
 
         F = self.dFC_mat2vec(dFC_raw.get_dFC_mat(TRs=dFC_raw.TR_array))
 
+        # The code below is similar for both clustering methods,
+        # but is kept this way for clarity.
         if self.params["clstr_distance"] == "manhattan":
-            pass
-            # ########### Manhattan Clustering ##############
-            # self.kmeans_.predict(F)
-            # Z = self.clusters_lst2idx(self.kmeans_.get_clusters())
+            ########### Manhattan Clustering ##############
+            Z = self.kmeans_.predict(F.astype(np.float32))
         else:
             ########### Euclidean Clustering ##############
             Z = self.kmeans_.predict(F.astype(np.float32))
