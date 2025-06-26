@@ -83,6 +83,10 @@ class SLIDING_WINDOW_CLUSTR(BaseDFCMethod):
         self.params["measure_name"] = "Clustering"
         self.params["is_state_based"] = True
 
+        if self.params["clstr_distance"] is None:
+            # Default clustering distance is euclidean
+            self.params["clstr_distance"] = "euclidean"
+
         assert (
             self.params["clstr_distance"] == "euclidean"
             or self.params["clstr_distance"] == "manhattan"
