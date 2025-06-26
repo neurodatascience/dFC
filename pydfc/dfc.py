@@ -286,17 +286,6 @@ class DFC:
             self.n_time == -1
         ), "why n_time is not -1 ? Are you adding a dFC to an existing dFC ?"
 
-        if FCS_proba is not None and FCS_idx is not None:
-            assert FCS_proba.shape[0] == len(
-                FCS_idx
-            ), "FCS_proba shape does not match FCSs shape (n_time)."
-            assert (
-                FCS_proba.shape[1] == FCSs.shape[0]
-            ), "FCS_proba shape does not match FCSs shape (n_states)."
-            assert np.allclose(
-                FCS_proba.sum(axis=1), 1
-            ), "FCS_proba probabilities must sum to 1 for each time point."
-
         if TR_array is None:
             # self.n_time is -1 at first. if it is not -1, it means that a dFC is already set and
             # we are adding a new dFC to it.
@@ -309,10 +298,20 @@ class DFC:
 
         assert np.sum(np.abs(np.sort(TR_array) - TR_array)) == 0.0, "TRs not sorted !"
 
-        assert len(TR_array) == FCS_proba.shape[0], (
-            "TR_array length does not match FCS_proba shape (n_time). "
-            f"TR_array length: {len(TR_array)}, FCS_proba shape: {FCS_proba.shape}"
-        )
+        if FCS_proba is not None and FCS_idx is not None:
+            assert FCS_proba.shape[0] == len(
+                FCS_idx
+            ), "FCS_proba shape does not match FCSs shape (n_time)."
+            assert (
+                FCS_proba.shape[1] == FCSs.shape[0]
+            ), "FCS_proba shape does not match FCSs shape (n_states)."
+            assert np.allclose(
+                FCS_proba.sum(axis=1), 1
+            ), "FCS_proba probabilities must sum to 1 for each time point."
+            assert len(TR_array) == FCS_proba.shape[0], (
+                "TR_array length does not match FCS_proba shape (n_time). "
+                f"TR_array length: {len(TR_array)}, FCS_proba shape: {FCS_proba.shape}"
+            )
 
         # the input FCS_idx is ranged from 0 to len(FCS)-1 but we shift it to 1 to len(FCS)
         self.FCSs_ = {}
