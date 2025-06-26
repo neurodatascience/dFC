@@ -10,6 +10,7 @@ import time
 import numpy as np
 from scipy.special import softmax
 from sklearn.cluster import KMeans
+from sklearn.preprocessing import StandardScaler
 
 from ..dfc import DFC
 from ..dfc_utils import KMeansCustom, dFC_mat2vec, dFC_vec2mat
@@ -248,12 +249,17 @@ class SLIDING_WINDOW_CLUSTR(BaseDFCMethod):
             distances = self.kmeans_.transform(
                 F.astype(np.float32)
             )  # shape: (n_samples, n_clusters)
-            # Convert to prbability using softmax on negative distances
-            temperature = 1.0  # you can tune this
-            Z_proba = softmax(
-                -distances / temperature, axis=1
-            )  # shape: (n_samples, n_clusters) = (n_time, n_states)
-
+            # # scale distances
+            # scaled_distances = StandardScaler().fit_transform(distances)
+            # # Convert to prbability using softmax on negative distances
+            # temperature = 1.0  # you can tune this
+            # Z_proba = softmax(
+            #     -distances / temperature, axis=1
+            # )  # shape: (n_samples, n_clusters) = (n_time, n_states)
+            rel = -distances
+            rel = rel - rel.min(axis=1, keepdims=True)  # shift min to 0
+            rel = rel / rel.sum(axis=1, keepdims=True)  # normalize
+            Z_proba = rel
         else:
             ########### Euclidean Clustering ##############
             Z = self.kmeans_.predict(F.astype(np.float32))
@@ -261,11 +267,15 @@ class SLIDING_WINDOW_CLUSTR(BaseDFCMethod):
             distances = self.kmeans_.transform(
                 F.astype(np.float32)
             )  # shape: (n_samples, n_clusters)
-            # Convert to prbability using softmax on negative distances
-            temperature = 1.0  # you can tune this
-            Z_proba = softmax(
-                -distances / temperature, axis=1
-            )  # shape: (n_samples, n_clusters) = (n_time, n_states)
+            # # Convert to prbability using softmax on negative distances
+            # temperature = 1.0  # you can tune this
+            # Z_proba = softmax(
+            #     -distances / temperature, axis=1
+            # )  # shape: (n_samples, n_clusters) = (n_time, n_states)
+            rel = -distances
+            rel = rel - rel.min(axis=1, keepdims=True)  # shift min to 0
+            rel = rel / rel.sum(axis=1, keepdims=True)  # normalize
+            Z_proba = rel
 
         # record time
         self.set_dFC_assess_time(time.time() - tic)
