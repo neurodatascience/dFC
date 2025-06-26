@@ -8,6 +8,7 @@ Created on Jun 29 2023
 import time
 
 import numpy as np
+from scipy.special import softmax
 from sklearn.cluster import KMeans
 
 from ..dfc import DFC
@@ -151,12 +152,21 @@ class CAP(BaseDFCMethod):
         act_vecs = time_series.data.T
 
         Z = self.kmeans_.predict(act_vecs.astype(np.float32))
+        # get distances from the cluster centers for each sample
+        distances = self.kmeans_.transform(
+            act_vecs.astype(np.float32)
+        )  # shape: (n_samples, n_clusters) = (n_time, n_states)
+        # Convert to prbability using softmax on negative distances
+        temperature = 1.0  # you can tune this
+        Z_proba = softmax(-distances / temperature, axis=1)
 
         # record time
         self.set_dFC_assess_time(time.time() - tic)
 
         dFC = DFC(measure=self)
-        dFC.set_dFC(FCSs=self.FCS_, FCS_idx=Z, TS_info=time_series.info_dict)
+        dFC.set_dFC(
+            FCSs=self.FCS_, FCS_idx=Z, FCS_proba=Z_proba, TS_info=time_series.info_dict
+        )
         return dFC
 
 

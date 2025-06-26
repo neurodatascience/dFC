@@ -183,6 +183,10 @@ class HMM_DISC(BaseDFCMethod):
         Obs_seq = FCC.FCS_idx_array.reshape(-1, 1)
 
         Z = self.hmm_model.predict(Obs_seq)
+        # get pribabilities for each state for each time point
+        Z_proba = self.hmm_model.predict_proba(
+            Obs_seq
+        )  # shape: (n_samples, n_components) = (n_time, n_states)
 
         # record time
         self.set_dFC_assess_time(time.time() - tic)
@@ -191,6 +195,7 @@ class HMM_DISC(BaseDFCMethod):
         dFC.set_dFC(
             FCSs=self.FCS_,
             FCS_idx=Z,
+            FCS_proba=Z_proba,
             TS_info=time_series.info_dict,
             TR_array=FCC.TR_array,
         )

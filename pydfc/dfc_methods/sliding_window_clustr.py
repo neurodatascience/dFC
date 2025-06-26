@@ -8,6 +8,7 @@ Created on Jun 29 2023
 import time
 
 import numpy as np
+from scipy.special import softmax
 from sklearn.cluster import KMeans
 
 from ..dfc import DFC
@@ -239,9 +240,28 @@ class SLIDING_WINDOW_CLUSTR(BaseDFCMethod):
         if self.params["clstr_distance"] == "manhattan":
             ########### Manhattan Clustering ##############
             Z = self.kmeans_.predict(F.astype(np.float32))
+            # get distances from the cluster centers for each sample
+            distances = self.kmeans_.transform(
+                F.astype(np.float32)
+            )  # shape: (n_samples, n_clusters)
+            # Convert to prbability using softmax on negative distances
+            temperature = 1.0  # you can tune this
+            Z_proba = softmax(
+                -distances / temperature, axis=1
+            )  # shape: (n_samples, n_clusters) = (n_time, n_states)
+
         else:
             ########### Euclidean Clustering ##############
             Z = self.kmeans_.predict(F.astype(np.float32))
+            # get distances from the cluster centers for each sample
+            distances = self.kmeans_.transform(
+                F.astype(np.float32)
+            )  # shape: (n_samples, n_clusters)
+            # Convert to prbability using softmax on negative distances
+            temperature = 1.0  # you can tune this
+            Z_proba = softmax(
+                -distances / temperature, axis=1
+            )  # shape: (n_samples, n_clusters) = (n_time, n_states)
 
         # record time
         self.set_dFC_assess_time(time.time() - tic)
@@ -250,6 +270,7 @@ class SLIDING_WINDOW_CLUSTR(BaseDFCMethod):
         dFC.set_dFC(
             FCSs=self.FCS_,
             FCS_idx=Z,
+            FCS_proba=Z_proba,
             TS_info=time_series.info_dict,
             TR_array=dFC_raw.TR_array,
         )

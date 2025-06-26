@@ -46,6 +46,9 @@ class DFC:
         self.measure_ = measure
         self.FCSs_ = None  # is a dict
         self.FCS_idx_ = None  # is a dict
+        self.FCS_proba_ = (
+            None  # is a 2D numpy array of probabilities for each FCS at each time point
+        )
         # info of the time series used for dFC estimation
         self.TS_info_ = None
         self.TR_array_ = None
@@ -88,6 +91,14 @@ class DFC:
     @property
     def FCS_idx(self):
         return self.FCS_idx_
+
+    @property
+    def FCS_proba(self):
+        """
+        FCS_proba is a 2D numpy array of probabilities for each FCS at each time point
+        shape = (n_time, n_states)
+        """
+        return self.FCS_proba_
 
     # test this
     @property
@@ -208,6 +219,54 @@ class DFC:
         else:
             return dFC_mat, TRs
 
+    def get_dFC_mat_fuzzy(self, TRs=None, num_samples=None):
+        """
+        ONLY FOR STATE-BASED METHODS
+
+        get dFC matrices corresponding to
+        the specified TRs based on fuzzy states
+
+        TRs should be list/ndarray not necessarily in order ?
+        if num_samples specified, it will downsample
+        TRs to reach that number of samples and will also
+        return picked TRs
+        if num_samples > len(TRs) -> picks all TRs
+        """
+
+        if not self.measure.is_state_based:
+            raise ValueError(
+                "This method is only applicable to state-based methods. "
+                "Please use get_dFC_mat() for state-free methods."
+            )
+
+        if TRs is None:
+            TRs = self.TR_array
+
+        if type(TRs) is np.int32 or type(TRs) is np.int64 or type(TRs) is int:
+            TRs = [TRs]
+
+        if not num_samples is None:
+            if num_samples < len(TRs):
+                TRs = TRs[
+                    np.linspace(0, len(TRs), num_samples, endpoint=False, dtype=int)
+                ]
+
+        dFC_mat = list()
+        for TR in TRs:
+            TR_index = np.where(self.TR_array == TR)[0]
+            FC_mat = np.zeros((self.n_regions, self.n_regions))
+            for i in range(self.FCS_proba.shape[1]):  # iterate over states
+                prob = self.FCS_proba[TR_index, i]
+                FC_mat += prob * self.FCSs[f"FCS{i + 1}"]
+            dFC_mat.append(FC_mat)
+
+        dFC_mat = np.array(dFC_mat)
+
+        if num_samples is None:
+            return dFC_mat
+        else:
+            return dFC_mat, TRs
+
     def SWed_dFC_mat(self, W=None, n_overlap=None, tapered_window=False):
         """
         the time samples will be picked after
@@ -230,10 +289,11 @@ class DFC:
 
         return dFC_mat_new
 
-    def set_dFC(self, FCSs, FCS_idx=None, TS_info=None, TR_array=None):
+    def set_dFC(self, FCSs, FCS_idx=None, FCS_proba=None, TS_info=None, TR_array=None):
         """
-        FCSs: a 3D numpy array of FC matrices with shape (n_time, n_regions, n_regions)
-        FCS_idx: a list of indices that correspond to each FC matrix in FCSs over time
+        FCSs: a 3D numpy array of FC matrices with shape (n_states, n_regions, n_regions), for state-free methods: (n_time, n_regions, n_regions)
+        FCS_idx: a list of indices that correspond to each FC matrix in FCSs over time, used for state-based methods.
+        FCS_proba: a 2D numpy array of probabilities for each FCS at each time point, shape = (n_time, n_states), used for state-based methods.
         """
 
         if len(FCSs.shape) == 2:
@@ -256,6 +316,17 @@ class DFC:
             self.n_time == -1
         ), "why n_time is not -1 ? Are you adding a dFC to an existing dFC ?"
 
+        if FCS_proba is not None and FCS_idx is not None:
+            assert FCS_proba.shape[0] == len(
+                FCS_idx
+            ), "FCS_proba shape does not match FCSs shape (n_time)."
+            assert (
+                FCS_proba.shape[1] == FCSs.shape[0]
+            ), "FCS_proba shape does not match FCSs shape (n_states)."
+            assert np.allclose(
+                FCS_proba.sum(axis=1), 1
+            ), "FCS_proba probabilities must sum to 1 for each time point."
+
         if TR_array is None:
             # self.n_time is -1 at first. if it is not -1, it means that a dFC is already set and
             # we are adding a new dFC to it.
@@ -268,6 +339,11 @@ class DFC:
 
         assert np.sum(np.abs(np.sort(TR_array) - TR_array)) == 0.0, "TRs not sorted !"
 
+        assert len(TR_array) == FCS_proba.shape[0], (
+            "TR_array length does not match FCS_proba shape (n_time). "
+            f"TR_array length: {len(TR_array)}, FCS_proba shape: {FCS_proba.shape}"
+        )
+
         # the input FCS_idx is ranged from 0 to len(FCS)-1 but we shift it to 1 to len(FCS)
         self.FCSs_ = {}
         for i, FCS in enumerate(FCSs):
@@ -276,6 +352,8 @@ class DFC:
         self.FCS_idx_ = {}
         for i, idx in enumerate(FCS_idx):
             self.FCS_idx_[f"TR{TR_array[i]}"] = f"FCS{idx + 1}"  # "FCS" + str(idx + 1)
+
+        self.FCS_proba_ = FCS_proba
 
         self.TS_info_ = TS_info
         self.n_regions_ = FCSs.shape[1]
