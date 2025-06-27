@@ -171,7 +171,7 @@ class DFC:
         return state_act_dict
 
     # test
-    def dFC2dict(self, TRs=None, fuzzy=False):
+    def dFC2dict(self, TRs=None):
         # return dFC samples as a dictionary
         if TRs is None:
             TRs = self.TR_array
@@ -179,14 +179,14 @@ class DFC:
             TRs = np.array(TRs)
         TRs = TRs.astype(int)
 
-        dFC_mat = self.get_dFC_mat(TRs=TRs, fuzzy=fuzzy)
+        dFC_mat = self.get_dFC_mat(TRs=TRs)
 
         dFC_dict = {}
         for k, TR in enumerate(TRs):
             dFC_dict[f"TR{TR}"] = dFC_mat[k, :, :]
         return dFC_dict
 
-    def get_dFC_mat(self, TRs=None, num_samples=None, fuzzy=False):
+    def get_dFC_mat(self, TRs=None, num_samples=None):
         """
         get dFC matrices corresponding to
         the specified TRs
@@ -195,17 +195,7 @@ class DFC:
         TRs to reach that number of samples and will also
         return picked TRs
         if num_samples > len(TRs) -> picks all TRs
-
-        ONLY FOR STATE-BASED METHODS:
-        if fuzzy is True, it will return dFC matrices based on fuzzy states
         """
-        if fuzzy:
-            if not self.measure.is_state_based:
-                raise ValueError(
-                    "This method is only applicable to state-based methods. "
-                    "Please use get_dFC_mat() for state-free methods."
-                )
-
         if TRs is None:
             TRs = self.TR_array
 
@@ -220,14 +210,7 @@ class DFC:
 
         dFC_mat = list()
         for TR in TRs:
-            if fuzzy:
-                TR_index = np.where(self.TR_array == TR)[0]
-                FC_mat = np.zeros((self.n_regions, self.n_regions))
-                for i in range(self.FCS_proba.shape[1]):  # iterate over states
-                    prob = self.FCS_proba[TR_index, i]
-                    FC_mat += prob * self.FCSs[f"FCS{i + 1}"]
-            else:
-                FC_mat = self.FCSs[self.FCS_idx[f"TR{TR}"]]
+            FC_mat = self.FCSs[self.FCS_idx[f"TR{TR}"]]
             dFC_mat.append(FC_mat)
 
         dFC_mat = np.array(dFC_mat)
@@ -332,7 +315,6 @@ class DFC:
     def visualize_dFC(
         self,
         TRs=None,
-        fuzzy=False,
         normalize=False,
         show_networks=False,
         rank_norm=False,
@@ -356,11 +338,11 @@ class DFC:
             node_networks = None
 
         if rank_norm:
-            dFC_dict = rank_norm_dFC_dict(self.dFC2dict(TRs=TRs, fuzzy=fuzzy))
+            dFC_dict = rank_norm_dFC_dict(self.dFC2dict(TRs=TRs))
             cmap = "plasma"
             center_0 = False
         else:
-            dFC_dict = self.dFC2dict(TRs=TRs, fuzzy=fuzzy)
+            dFC_dict = self.dFC2dict(TRs=TRs)
             cmap = "seismic"
             center_0 = True
 

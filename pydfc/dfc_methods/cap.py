@@ -156,13 +156,11 @@ class CAP(BaseDFCMethod):
         distances = self.kmeans_.transform(
             act_vecs.astype(np.float32)
         )  # shape: (n_samples, n_clusters) = (n_time, n_states)
-        # # Convert to prbability using softmax on negative distances
-        # temperature = 1.0  # you can tune this
-        # Z_proba = softmax(-distances / temperature, axis=1)
+        # normalize distances to semi probabilities
         rel = -distances
         rel = rel - rel.min(axis=1, keepdims=True)  # shift min to 0
         rel = rel / rel.sum(axis=1, keepdims=True)  # normalize
-        Z_proba = rel
+        Z_proba = rel  # shape: (n_samples, n_clusters) = (n_time, n_states)
 
         # record time
         self.set_dFC_assess_time(time.time() - tic)
