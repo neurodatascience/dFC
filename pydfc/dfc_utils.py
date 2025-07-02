@@ -509,6 +509,13 @@ class KMeansCustom:
         X = deepcopy(X)
         return self._assign_clusters(X, self.cluster_centers_)
 
+    def transform(self, X):
+        """
+        Transform the data to cluster centers
+        """
+        X = deepcopy(X)
+        return pairwise_distances(X, self.cluster_centers_, metric=self.metric)
+
 
 ####################################################################################################
 
