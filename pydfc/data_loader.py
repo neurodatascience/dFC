@@ -226,12 +226,73 @@ def nifti2array(nifti_file, confound_strategy="none", standardize=False, n_rois=
 
     return time_series, labels, locs
 
+def nifti2arraywmask(nifti_file, mask_file, confound_strategy="none", standardize=False):
+    """
+    this function uses nilearn maskers to extract
+    BOLD signals from nifti files
+    It is designed to work with a provided 3-D volumetric mask.
+
+    returns a numpy array of shape (time, roi)
+    and labels and locs of rois
+
+    confound_strategy:
+        'none': no confounds are used
+        'no_motion': motion parameters are used
+        'no_motion_no_gsr': motion parameters are used
+                            and global signal regression
+                            is applied.
+    """
+    from nilearn.interfaces.fmriprep import load_confounds
+    from nilearn.maskers import NiftiLabelsMasker
+    from nilearn.plotting import find_parcellation_cut_coords
+
+    # extract locations and labels of ROIs
+    locs, labels = find_parcellation_cut_coords(
+        mask_file, background_label=0, return_label_names=True
+    )
+
+    # create the masker for extracting time series
+    masker = NiftiLabelsMasker(
+        labels_img=mask_file,
+        labels=labels,
+        resampling_target="data",
+        standardize=standardize,
+    )
+
+    ### extract the timeseries
+    if confound_strategy == "none":
+        time_series = masker.fit_transform(nifti_file)
+    elif confound_strategy == "no_motion":
+        confounds_simple, sample_mask = load_confounds(
+            nifti_file,
+            strategy=["high_pass", "motion", "wm_csf"],
+            motion="basic",
+            wm_csf="basic",
+        )
+        time_series = masker.fit_transform(
+            nifti_file, confounds=confounds_simple, sample_mask=sample_mask
+        )
+    elif confound_strategy == "no_motion_no_gsr":
+        confounds_simple, sample_mask = load_confounds(
+            nifti_file,
+            strategy=["high_pass", "motion", "wm_csf", "global_signal"],
+            motion="basic",
+            wm_csf="basic",
+            global_signal="basic",
+        )
+        time_series = masker.fit_transform(
+            nifti_file, confounds=confounds_simple, sample_mask=sample_mask
+        )
+
+    return time_series, labels, locs
+
 
 def nifti2timeseries(
     nifti_file,
-    n_rois,
     Fs,
     subj_id,
+    n_rois=None,
+    mask_file=None,
     confound_strategy="none",
     standardize=False,
     TS_name=None,
@@ -242,16 +303,33 @@ def nifti2timeseries(
     it uses nilearn maskers to extract ROI signals from nifti files
     and returns a TIME_SERIES object
 
-    For now it only works with schaefer atlas,
-    but you can set the number of rois to extract
+    It will extract the mean time series from each ROI defined either in mask_file
+    which should be provided as a 3D volumetric parcellation in the same space
+    as the subject/session nifti file (if mask_file is assigned) or will extract
+    the mean time series from ROIs extracted from the Schaefer atlas, if
+    you set the number of rois to extract
     {100, 200, 300, 400, 500, 600, 700, 800, 900, 1000}
     """
-    time_series, labels, locs = nifti2array(
-        nifti_file=nifti_file,
-        confound_strategy=confound_strategy,
-        standardize=standardize,
-        n_rois=n_rois,
-    )
+    if mask_file is None and n_rois is None:
+        print("Either mask_file or n_rois must be defined.")
+
+    if mask_file is not None and n_rois is not None:
+        print("Warning: specified mask_file will be used, ignoring n_rois.")
+    
+    if n_rois is not None:
+        time_series, labels, locs = nifti2array(
+            nifti_file=nifti_file,
+            confound_strategy=confound_strategy,
+            standardize=standardize,
+            n_rois=n_rois,
+        )
+    if mask_file is not None:
+        time_series, labels, locs = nifti2arraywmask(
+            nifti_file=nifti_file,
+            mask_file=mask_file,
+            confound_strategy=confound_strategy,
+            standardize=standardize
+        )
 
     assert type(locs) is np.ndarray, "locs must be a numpy array"
     assert type(labels) is list, "labels must be a list"
