@@ -460,11 +460,13 @@ class KMeansCustom:
         return pairwise_distances([p1], [p2], metric=self.metric)[0][0]
 
     def _assign_clusters(self, X, centroids):
-        clusters = []
-        for x in X:
-            distances = [self._custom_distance(x, c) for c in centroids]
-            clusters.append(np.argmin(distances))
-        return clusters
+        if self.metric == "manhattan":
+            distances = np.abs(X[:, None, :] - centroids[None, :, :]).sum(axis=2)
+        elif self.metric == "euclidean":
+            distances = np.linalg.norm(X[:, None, :] - centroids[None, :, :], axis=2)
+        else:
+            distances = pairwise_distances(X, centroids, metric=self.metric)
+        return np.argmin(distances, axis=1)
 
     def _compute_centroids(self, X, labels):
         centroids = []
@@ -474,7 +476,6 @@ class KMeansCustom:
         return np.array(centroids)
 
     def fit(self, X):
-        X = deepcopy(X)
         min_inertia = None
         best_centroids = None
         best_labels = None
@@ -489,12 +490,18 @@ class KMeansCustom:
                 if np.allclose(centroids, new_centroids, atol=1e-6):
                     break
                 centroids = new_centroids
-            inertia = np.sum(
-                [
-                    self._custom_distance(x, centroids[label]) ** 2
-                    for x, label in zip(X, labels)
-                ]
-            )
+
+            if self.metric == "manhattan":
+                distances = np.abs(X - centroids[labels]).sum(axis=1)
+            elif self.metric == "euclidean":
+                distances = np.linalg.norm(X - centroids[labels], axis=1)
+            else:
+                distances = pairwise_distances(
+                    X, centroids[labels], metric=self.metric
+                ).diagonal()
+
+            inertia = np.sum(distances**2)
+
             if min_inertia is None or inertia < min_inertia:
                 min_inertia = inertia
                 best_centroids = centroids
@@ -506,14 +513,12 @@ class KMeansCustom:
         return self
 
     def predict(self, X):
-        X = deepcopy(X)
         return self._assign_clusters(X, self.cluster_centers_)
 
     def transform(self, X):
         """
         Transform the data to cluster centers
         """
-        X = deepcopy(X)
         return pairwise_distances(X, self.cluster_centers_, metric=self.metric)
 
 
