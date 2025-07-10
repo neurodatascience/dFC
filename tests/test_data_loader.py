@@ -15,7 +15,7 @@ def simulated_bold_and_label(tmp_path):
     bold_img.to_filename(bold_file)
 
     # Simulated label image with 3 ROIs (labels 1, 2, 3)
-    labels = np.zeros((10, 10, 10), dtype=int)
+    labels = np.zeros((10, 10, 10), dtype=np.int32)
     labels[1:4, 1:4, 1:4] = 1
     labels[5:7, 5:7, 5:7] = 2
     labels[7:9, 1:3, 1:3] = 3
