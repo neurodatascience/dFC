@@ -4,30 +4,36 @@ import pytest
 
 from pydfc.data_loader import nifti2timeseries
 
-# @pytest.fixture(scope="session")
-# def rest_file(tmp_path_factory):
-#     URL = "https://s3.amazonaws.com/openneuro.org/ds002785/derivatives/fmriprep/sub-0001/func/sub-0001_task-restingstate_acq-mb3_space-MNI152NLin2009cAsym_desc-preproc_bold.nii.gz?versionId=UfCs4xtwIEPDgmb32qFbtMokl_jxLUKr"
-#     tmpdir = tmp_path_factory.mktemp("data")
-#     file_path = tmpdir / "sub-0001_task-restingstate_acq-mb3_space-MNI152NLin2009cAsym_desc-preproc_bold.nii.gz"
-#     with httpx.stream("GET", URL) as response:
-#         with file_path.open("wb") as f:
-#             for chunk in response.iter_bytes():
-#                 f.write(chunk)
-#
-#     return file_path
-
 
 @pytest.fixture
-def simulated_bold_data(tmp_path):
-    img = nb.Nifti1Image(np.random.rand(10, 10, 10, 100), np.eye(4))
-    img.to_filename(tmp_path / "simulated_bold.nii.gz")
-    return tmp_path / "simulated_bold.nii.gz"
+def simulated_bold_and_label(tmp_path):
+    # Simulated BOLD data
+    bold_data = np.random.rand(10, 10, 10, 100)
+    affine = np.eye(4)
+    bold_img = nb.Nifti1Image(bold_data, affine)
+    bold_file = tmp_path / "bold.nii.gz"
+    bold_img.to_filename(bold_file)
+
+    # Simulated label image with 3 ROIs (labels 1, 2, 3)
+    labels = np.zeros((10, 10, 10), dtype=np.int32)
+    labels[1:4, 1:4, 1:4] = 1
+    labels[5:7, 5:7, 5:7] = 2
+    labels[7:9, 1:3, 1:3] = 3
+    label_img = nb.Nifti1Image(labels, affine)
+    label_file = tmp_path / "labels.nii.gz"
+    label_img.to_filename(label_file)
+
+    return str(bold_file), str(label_file)
 
 
-def test_load(simulated_bold_data):
-    nifti2timeseries(
-        nifti_file=str(simulated_bold_data),
-        n_rois=100,
+def test_load(simulated_bold_and_label):
+    bold_file, label_file = simulated_bold_and_label
+    ts = nifti2timeseries(
+        nifti_file=bold_file,
+        labels_img=label_file,
+        region_names=["1", "2", "3"],
         Fs=1 / 0.75,
         subj_id="sub-0001",
     )
+    assert ts is not None
+    assert ts.n_regions == 3
