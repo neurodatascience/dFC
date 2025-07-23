@@ -122,12 +122,18 @@ class HMM_CONT(BaseDFCMethod):
         tic = time.time()
 
         Z = self.hmm_model.predict(time_series.data.T)
+        # get pribabilities for each state for each time point
+        Z_proba = self.hmm_model.predict_proba(
+            time_series.data.T
+        )  # shape: (n_samples, n_components) = (n_time, n_states)
 
         # record time
         self.set_dFC_assess_time(time.time() - tic)
 
         dFC = DFC(measure=self)
-        dFC.set_dFC(FCSs=self.FCS_, FCS_idx=Z, TS_info=time_series.info_dict)
+        dFC.set_dFC(
+            FCSs=self.FCS_, FCS_idx=Z, FCS_proba=Z_proba, TS_info=time_series.info_dict
+        )
 
         return dFC
 

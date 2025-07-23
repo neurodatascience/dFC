@@ -9,6 +9,7 @@ import time
 
 import numpy as np
 from ksvd import ApproximateKSVD
+from sklearn.linear_model import orthogonal_mp_gram
 
 from ..dfc import DFC
 from ..time_series import TIME_SERIES
@@ -110,6 +111,27 @@ class WINDOWLESS(BaseDFCMethod):
 
         return self
 
+    def transform_proba(self, D, X, n_nonzero_coefs=None):
+        """
+        returns the probability of each state for each time point
+        D: dictionary, shape = (n_states, n_regions)
+        X: time series data, shape = (n_time, n_regions)
+        n_nonzero_coefs: number of non-zero coefficients to use in orthogonal matching pursuit
+        Returns:
+        Z_proba: shape = (n_time, n_states)
+        """
+        gram = D.dot(D.T)  # shape: (n_features, n_features) = (n_states, n_states)
+        Xy = D.dot(X.T)  # shape: (n_features, n_targets) = (n_states, n_time)
+
+        if n_nonzero_coefs is None:
+            n_nonzero_coefs = D.shape[0]
+
+        gamma = orthogonal_mp_gram(gram, Xy, n_nonzero_coefs=n_nonzero_coefs).T
+
+        Z_proba = np.abs(gamma) / np.abs(gamma).sum(axis=1, keepdims=True)
+
+        return Z_proba
+
     def estimate_dFC(self, time_series):
 
         assert (
@@ -125,17 +147,36 @@ class WINDOWLESS(BaseDFCMethod):
         # start timing
         tic = time.time()
 
-        gamma = self.aksvd.transform(time_series.data.T)
+        gamma = self.aksvd.transform(time_series.data.T)  # shape: (n_time, n_states)
 
         Z = list()
         for i in range(time_series.n_time):
             Z.append(np.argwhere(gamma[i, :] != 0)[0, 0])
 
+        # get probability for each state for each time point
+        Z_proba = self.transform_proba(
+            D=self.dictionary,
+            X=time_series.data.T,
+            n_nonzero_coefs=self.params["n_states"],
+        )  # shape: (n_targets, n_features) = (n_time, n_states)
+
+        assert Z_proba.shape[0] == time_series.n_time, (
+            "Z_proba shape does not match time_series.n_time. "
+            f"Z_proba shape: {Z_proba.shape}, time_series.n_time: {time_series.n_time}"
+        )
+
+        assert Z_proba.shape[1] == self.params["n_states"], (
+            "Z_proba shape does not match n_states. "
+            f"Z_proba shape: {Z_proba.shape}, n_states: {self.params['n_states']}"
+        )
+
         # record time
         self.set_dFC_assess_time(time.time() - tic)
 
         dFC = DFC(measure=self)
-        dFC.set_dFC(FCSs=self.FCS_, FCS_idx=Z, TS_info=time_series.info_dict)
+        dFC.set_dFC(
+            FCSs=self.FCS_, FCS_idx=Z, FCS_proba=Z_proba, TS_info=time_series.info_dict
+        )
         return dFC
 
 
