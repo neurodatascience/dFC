@@ -51,7 +51,7 @@ jobs:
             ARCH: ${{ !contains(fromJSON('["none", "min"]'), matrix.dependencies) && matrix.architecture }}
 
         steps:
-        -   uses: actions/checkout@v4
+        -   uses: actions/checkout@v5
             with:
                 submodules: recursive
                 fetch-depth: 0
@@ -81,7 +81,7 @@ jobs:
             id-token: write
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
         steps:
-        -   uses: actions/checkout@v4
+        -   uses: actions/checkout@v5
             with:
                 submodules: recursive
                 fetch-depth: 0
