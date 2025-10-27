@@ -361,11 +361,12 @@ def nifti2array(
 
     return time_series, labels, locs
 
-
 def nifti2timeseries(
     nifti_file,
     Fs,
     subj_id,
+    n_rois=None,
+    mask_file=None,
     confound_strategy="none",
     masker_type="NiftiLabelsMasker",
     n_rois=100,
