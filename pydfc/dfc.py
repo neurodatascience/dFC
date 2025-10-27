@@ -46,6 +46,9 @@ class DFC:
         self.measure_ = measure
         self.FCSs_ = None  # is a dict
         self.FCS_idx_ = None  # is a dict
+        self.FCS_proba_ = (
+            None  # is a 2D numpy array of probabilities for each FCS at each time point
+        )
         # info of the time series used for dFC estimation
         self.TS_info_ = None
         self.TR_array_ = None
@@ -88,6 +91,14 @@ class DFC:
     @property
     def FCS_idx(self):
         return self.FCS_idx_
+
+    @property
+    def FCS_proba(self):
+        """
+        FCS_proba is a 2D numpy array of probabilities for each FCS at each time point
+        shape = (n_time, n_states)
+        """
+        return self.FCS_proba_
 
     # test this
     @property
@@ -167,13 +178,14 @@ class DFC:
         if type(TRs) is list:
             TRs = np.array(TRs)
         TRs = TRs.astype(int)
+
         dFC_mat = self.get_dFC_mat(TRs=TRs)
+
         dFC_dict = {}
         for k, TR in enumerate(TRs):
             dFC_dict[f"TR{TR}"] = dFC_mat[k, :, :]
         return dFC_dict
 
-    # test this
     def get_dFC_mat(self, TRs=None, num_samples=None):
         """
         get dFC matrices corresponding to
@@ -184,7 +196,6 @@ class DFC:
         return picked TRs
         if num_samples > len(TRs) -> picks all TRs
         """
-
         if TRs is None:
             TRs = self.TR_array
 
@@ -199,7 +210,8 @@ class DFC:
 
         dFC_mat = list()
         for TR in TRs:
-            dFC_mat.append(self.FCSs[self.FCS_idx[f"TR{TR}"]])
+            FC_mat = self.FCSs[self.FCS_idx[f"TR{TR}"]]
+            dFC_mat.append(FC_mat)
 
         dFC_mat = np.array(dFC_mat)
 
@@ -230,10 +242,11 @@ class DFC:
 
         return dFC_mat_new
 
-    def set_dFC(self, FCSs, FCS_idx=None, TS_info=None, TR_array=None):
+    def set_dFC(self, FCSs, FCS_idx=None, FCS_proba=None, TS_info=None, TR_array=None):
         """
-        FCSs: a 3D numpy array of FC matrices with shape (n_time, n_regions, n_regions)
-        FCS_idx: a list of indices that correspond to each FC matrix in FCSs over time
+        FCSs: a 3D numpy array of FC matrices with shape (n_states, n_regions, n_regions), for state-free methods: (n_time, n_regions, n_regions)
+        FCS_idx: a list of indices that correspond to each FC matrix in FCSs over time, used for state-based methods.
+        FCS_proba: a 2D numpy array of probabilities for each FCS at each time point, shape = (n_time, n_states), used for state-based methods.
         """
 
         if len(FCSs.shape) == 2:
@@ -268,6 +281,21 @@ class DFC:
 
         assert np.sum(np.abs(np.sort(TR_array) - TR_array)) == 0.0, "TRs not sorted !"
 
+        if FCS_proba is not None and FCS_idx is not None:
+            assert FCS_proba.shape[0] == len(
+                FCS_idx
+            ), "FCS_proba shape does not match FCSs shape (n_time)."
+            assert (
+                FCS_proba.shape[1] == FCSs.shape[0]
+            ), "FCS_proba shape does not match FCSs shape (n_states)."
+            assert np.allclose(
+                FCS_proba.sum(axis=1), 1
+            ), "FCS_proba probabilities must sum to 1 for each time point."
+            assert len(TR_array) == FCS_proba.shape[0], (
+                "TR_array length does not match FCS_proba shape (n_time). "
+                f"TR_array length: {len(TR_array)}, FCS_proba shape: {FCS_proba.shape}"
+            )
+
         # the input FCS_idx is ranged from 0 to len(FCS)-1 but we shift it to 1 to len(FCS)
         self.FCSs_ = {}
         for i, FCS in enumerate(FCSs):
@@ -276,6 +304,8 @@ class DFC:
         self.FCS_idx_ = {}
         for i, idx in enumerate(FCS_idx):
             self.FCS_idx_[f"TR{TR_array[i]}"] = f"FCS{idx + 1}"  # "FCS" + str(idx + 1)
+
+        self.FCS_proba_ = FCS_proba
 
         self.TS_info_ = TS_info
         self.n_regions_ = FCSs.shape[1]

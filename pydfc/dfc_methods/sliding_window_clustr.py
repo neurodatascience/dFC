@@ -8,7 +8,9 @@ Created on Jun 29 2023
 import time
 
 import numpy as np
+from scipy.special import softmax
 from sklearn.cluster import KMeans
+from sklearn.preprocessing import StandardScaler
 
 from ..dfc import DFC
 from ..dfc_utils import KMeansCustom, dFC_mat2vec, dFC_vec2mat
@@ -81,6 +83,10 @@ class SLIDING_WINDOW_CLUSTR(BaseDFCMethod):
 
         self.params["measure_name"] = "Clustering"
         self.params["is_state_based"] = True
+
+        if self.params["clstr_distance"] is None:
+            # Default clustering distance is euclidean
+            self.params["clstr_distance"] = "euclidean"
 
         assert (
             self.params["clstr_distance"] == "euclidean"
@@ -239,9 +245,27 @@ class SLIDING_WINDOW_CLUSTR(BaseDFCMethod):
         if self.params["clstr_distance"] == "manhattan":
             ########### Manhattan Clustering ##############
             Z = self.kmeans_.predict(F.astype(np.float32))
+            # get distances from the cluster centers for each sample
+            distances = self.kmeans_.transform(
+                F.astype(np.float32)
+            )  # shape: (n_samples, n_clusters)
+            # normalize distances to semi probabilities
+            rel = -distances
+            rel = rel - rel.min(axis=1, keepdims=True)  # shift min to 0
+            rel = rel / rel.sum(axis=1, keepdims=True)  # normalize
+            Z_proba = rel  # shape: (n_samples, n_clusters) = (n_time, n_states)
         else:
             ########### Euclidean Clustering ##############
             Z = self.kmeans_.predict(F.astype(np.float32))
+            # get distances from the cluster centers for each sample
+            distances = self.kmeans_.transform(
+                F.astype(np.float32)
+            )  # shape: (n_samples, n_clusters)
+            # normalize distances to semi probabilities
+            rel = -distances
+            rel = rel - rel.min(axis=1, keepdims=True)  # shift min to 0
+            rel = rel / rel.sum(axis=1, keepdims=True)  # normalize
+            Z_proba = rel  # shape: (n_samples, n_clusters) = (n_time, n_states)
 
         # record time
         self.set_dFC_assess_time(time.time() - tic)
@@ -250,6 +274,7 @@ class SLIDING_WINDOW_CLUSTR(BaseDFCMethod):
         dFC.set_dFC(
             FCSs=self.FCS_,
             FCS_idx=Z,
+            FCS_proba=Z_proba,
             TS_info=time_series.info_dict,
             TR_array=dFC_raw.TR_array,
         )

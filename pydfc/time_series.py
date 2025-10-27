@@ -83,6 +83,11 @@ class TIME_SERIES:
         else:
             self.data_dict_[subj_id]["time_array"] = time_array
 
+        # make sure node_labels have same number of regions as self.n_regions_
+        assert (
+            len(node_labels) == self.n_regions_
+        ), "node_labels must have the same length as the number of regions in data."
+
         self.locs_ = locs
         self.node_labels_ = node_labels
 

@@ -17,7 +17,7 @@ dependencies = [
     'ksvd',
     'matplotlib',
     'networkx',
-    'nilearn>=0.10.2,!=0.10.3',
+    'nilearn==0.10.2',
     'pycwt',
     'seaborn',
     'statsmodels'
