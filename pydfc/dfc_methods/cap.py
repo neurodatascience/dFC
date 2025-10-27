@@ -10,6 +10,7 @@ import time
 import numpy as np
 from scipy.special import softmax
 from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_samples
 
 from ..dfc import DFC
 from ..time_series import TIME_SERIES
@@ -38,6 +39,7 @@ class CAP(BaseDFCMethod):
     def __init__(self, **params):
         self.logs_ = ""
         self.FCS_ = []
+        self.silhouette_sc_ = []
         self.mean_act = []
         self.FCS_fit_time_ = None
         self.dFC_assess_time_ = None
@@ -125,6 +127,9 @@ class CAP(BaseDFCMethod):
         )
         self.FCS_ = self.act_vec2FCS(group_act_centroids)
         self.Z = self.kmeans_.predict(time_series.data.T.astype(np.float32))
+
+        # silhouette coefficient
+        self.silhouette_sc_ = silhouette_samples(time_series.data.T.astype(np.float32),self.Z)
 
         # mean activation of states
         self.set_mean_activity(time_series)
