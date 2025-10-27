@@ -472,7 +472,12 @@ class KMeansCustom:
         centroids = []
         for i in range(self.n_clusters):
             points = X[np.array(labels) == i]
-            centroids.append(points.mean(axis=0))
+            if len(points) == 0:
+                # Empty cluster: reinitialize to a random data point
+                random_centroid = X[np.random.choice(len(X))]
+                centroids.append(random_centroid)
+            else:
+                centroids.append(points.mean(axis=0))
         return np.array(centroids)
 
     def fit(self, X):
