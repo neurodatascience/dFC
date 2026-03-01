@@ -179,6 +179,9 @@ def extract_region_signals(
         'simple': nilearn's simple preprocessing with
                             full motion and basic wm_csf
                             and high_pass
+        'simple+gsr': nilearn's simple preprocessing with
+                            full motion and basic wm_csf
+                            and high_pass and global signal regression
 
     For now it only works with NiftiLabelsMasker and NiftiSpheresMasker and not with NiftiMapsMasker
     masker_type: "NiftiLabelsMasker" or "NiftiSpheresMasker"
@@ -240,9 +243,18 @@ def extract_region_signals(
         time_series = masker.fit_transform(
             nifti_file, confounds=confounds_simple, sample_mask=sample_mask
         )
+    elif confound_strategy == "simple+gsr":
+        confounds, sample_mask = load_confounds_strategy(
+            nifti_file,
+            denoise_strategy="simple",
+            global_signal="basic",
+        )
+        time_series = masker.fit_transform(
+            nifti_file, confounds=confounds, sample_mask=sample_mask
+        )
     else:
         raise ValueError(
-            "confound_strategy must be one of 'none', 'no_motion', 'no_motion_no_gsr', or 'simple', "
+            "confound_strategy must be one of 'none', 'no_motion', 'no_motion_no_gsr', 'simple', or 'simple+gsr', "
             f"but got {confound_strategy}"
         )
 
@@ -276,6 +288,9 @@ def nifti2array(
         'simple': nilearn's simple preprocessing with
                             full motion and basic wm_csf
                             and high_pass
+        'simple+gsr': nilearn's simple preprocessing with
+                            full motion and basic wm_csf
+                            and high_pass and global signal regression
 
     For now it only works with NiftiLabelsMasker and NiftiSpheresMasker and not with NiftiMapsMasker
     masker_type: "NiftiLabelsMasker" or "NiftiSpheresMasker"

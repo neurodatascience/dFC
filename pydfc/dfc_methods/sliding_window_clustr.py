@@ -8,12 +8,13 @@ Created on Jun 29 2023
 import time
 
 import numpy as np
+from joblib import Parallel, delayed
 from scipy.special import softmax
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 
 from ..dfc import DFC
-from ..dfc_utils import KMeansCustom, dFC_mat2vec, dFC_vec2mat
+from ..dfc_utils import KMeansCustom, SW_downsample, dFC_mat2vec, dFC_vec2mat
 from ..time_series import TIME_SERIES
 from .base_dfc_method import BaseDFCMethod
 from .sliding_window import SLIDING_WINDOW
@@ -63,9 +64,13 @@ class SLIDING_WINDOW_CLUSTR(BaseDFCMethod):
             "n_overlap",
             "n_states",
             "normalization",
-            "n_jobs",
+            "n_jobs_swc",
             "verbose",
-            "backend",
+            "backend_swc",
+            "n_jobs_sw",
+            "backend_sw",
+            "n_jobs_tf",
+            "backend_tf",
             "num_subj",
             "num_select_nodes",
             "num_time_point",
@@ -115,9 +120,58 @@ class SLIDING_WINDOW_CLUSTR(BaseDFCMethod):
                 Z[sample] = i
         return Z.astype(int)
 
+    def set_mean_activity(self, time_series):
+        """
+        Calculate the mean activity of regions at each state across all subjects.
+        For this method, you have to run this separately after estimating FCSs to save computation time.
+        """
+
+        SUBJECTs = time_series.subj_id_lst
+        TS_data = None
+        Z = None
+        for subject in SUBJECTs:
+            subj_TS = time_series.get_subj_ts(subjs_id=subject)
+            # build base measure inside worker (safer for multiprocessing)
+            if self.params["clstr_base_measure"] == "Time-Freq":
+                base_dFC = TIME_FREQ(**self.params)
+            elif self.params["clstr_base_measure"] == "SlidingWindow":
+                base_dFC = SLIDING_WINDOW(**self.params)
+            else:
+                raise ValueError("Base method not recognized.")
+
+            sw_mat = base_dFC.estimate_dFC(
+                time_series=subj_TS
+            ).get_dFC_mat()  # shape: (n_win, n, n)
+            subj_Z = self.kmeans_.predict(
+                self.dFC_mat2vec(sw_mat).astype(np.float32)
+            )  # shape: (n_win,)
+
+            new_TS_data = SW_downsample(
+                data=subj_TS.data.T,
+                Fs=time_series.Fs,
+                W=self.params["W"],
+                n_overlap=self.params["n_overlap"],
+                tapered_window=self.params["tapered_window"],
+            ).T
+            if TS_data is None:
+                TS_data = new_TS_data
+                Z = subj_Z
+            else:
+                TS_data = np.concatenate((TS_data, new_TS_data), axis=1)
+                Z = np.concatenate((Z, subj_Z), axis=0)
+
+        assert (
+            TS_data.shape[1] == Z.shape[0]
+        ), "Mismatch in time points between TS data and state assignments."
+        mean_act = list()
+        for i in np.unique(Z):
+            ids = np.array([int(state == i) for state in Z])
+            mean_act.append(np.average(TS_data, weights=ids, axis=1))
+        self.mean_act = np.array(mean_act)
+
     def cluster_FC(self, FCS_raw, n_clusters, n_regions):
 
-        F = self.dFC_mat2vec(FCS_raw)
+        F = self.dFC_mat2vec(FCS_raw).astype(np.float32, copy=False)
 
         if self.params["clstr_distance"] == "manhattan":
             ########### Manhattan Clustering ##############
@@ -143,76 +197,89 @@ class SLIDING_WINDOW_CLUSTR(BaseDFCMethod):
         assert (
             type(time_series) is TIME_SERIES
         ), "time_series must be of TIME_SERIES class."
-
         time_series = self.manipulate_time_series4FCS(time_series)
 
-        # start timing
         tic = time.time()
 
-        base_dFC = None
-        if self.params["clstr_base_measure"] == "Time-Freq":
-            base_dFC = TIME_FREQ(**self.params)
-        if self.params["clstr_base_measure"] == "SlidingWindow":
-            base_dFC = SLIDING_WINDOW(**self.params)
-
-        # 1-level clustering
-        # dFC_raw = base_dFC.estimate_dFC( \
-        #         time_series=time_series \
-        #         )
-        # self.FCS_, self.kmeans_ = self.cluster_FC( \
-        # dFC_raw.get_dFC_mat(TRs=self.dFC_raw.TR_array), \
-        # n_regions = dFC_raw.n_regions \
-        # )
-
-        # 2-level clustering
         SUBJECTs = time_series.subj_id_lst
-        FCS_1st_level = None
-        SW_dFC = None
-        for subject in SUBJECTs:
 
-            dFC_raw = base_dFC.estimate_dFC(
-                time_series=time_series.get_subj_ts(subjs_id=subject)
-            )
+        # --- worker ---
+        def _process_one_subject(ts_sub):
 
-            # test
-            if dFC_raw.n_time < self.params["n_subj_clstrs"]:
-                print(
-                    "Number of subject-level clusters cannot be more than SW dFC samples! n_subj_clstrs was changed to "
-                    + str(dFC_raw.n_time)
-                    + ". This change will cause problems in similarity assessment."
-                )
-                self.params["n_subj_clstrs"] = dFC_raw.n_time
+            # build base measure inside worker (safer for multiprocessing)
+            if self.params["clstr_base_measure"] == "Time-Freq":
+                base_dFC = TIME_FREQ(**self.params)
+            elif self.params["clstr_base_measure"] == "SlidingWindow":
+                base_dFC = SLIDING_WINDOW(**self.params)
+            else:
+                raise ValueError("Base method not recognized.")
 
-            FCS, _ = self.cluster_FC(
-                FCS_raw=dFC_raw.get_dFC_mat(TRs=dFC_raw.TR_array),
-                n_clusters=self.params["n_subj_clstrs"],
+            dFC_raw = base_dFC.estimate_dFC(time_series=ts_sub)
+
+            # subject-level clusters: do NOT mutate self.params in parallel
+            n_subj_clstrs = self.params["n_subj_clstrs"]
+            if dFC_raw.n_time < n_subj_clstrs:
+                # keep behavior: cap clusters to available samples
+                n_subj_clstrs = dFC_raw.n_time
+
+            sw_mat = dFC_raw.get_dFC_mat().astype(
+                np.float32, copy=False
+            )  # shape: (n_win, n, n)
+
+            FCS_sub, _ = self.cluster_FC(
+                FCS_raw=sw_mat,
+                n_clusters=n_subj_clstrs,
                 n_regions=dFC_raw.n_regions,
             )
 
-            if SW_dFC is None:
-                SW_dFC = dFC_raw.get_dFC_mat(TRs=dFC_raw.TR_array)
-            else:
-                SW_dFC = np.concatenate(
-                    (SW_dFC, dFC_raw.get_dFC_mat(TRs=dFC_raw.TR_array)), axis=0
-                )
-            if FCS_1st_level is None:
-                FCS_1st_level = FCS
-            else:
-                FCS_1st_level = np.concatenate((FCS_1st_level, FCS), axis=0)
+            # return what we need for level-2 clustering + later labeling
+            return FCS_sub
 
+        # choose parallelism
+        n_jobs = self.params["n_jobs_swc"] if self.params["n_jobs_swc"] is not None else 1
+        backend = (
+            self.params["backend_swc"]
+            if self.params["backend_swc"] is not None
+            else "threading"
+        )
+        # if SW is already parallelized, do not parallelize over subjects
+        if self.params["n_jobs_sw"] is not None:
+            if self.params["n_jobs_sw"] != 1:
+                n_jobs = 1
+
+        if n_jobs == 1:
+            # no parallelism
+            FCS_1st_level_list = []
+            for subj in SUBJECTs:
+                res = _process_one_subject(time_series.get_subj_ts(subjs_id=subj))
+                FCS_1st_level_list.append(res)
+        else:
+            # parallelism
+            FCS_1st_level_list = Parallel(n_jobs=n_jobs, backend=backend)(
+                delayed(_process_one_subject)(time_series.get_subj_ts(subjs_id=subj))
+                for subj in SUBJECTs
+            )
+
+        # unpack + concatenate once (much faster than repeated concatenate)
+        # NOTE: results may come back in any order; but that's OK since we just need all FCSs
+
+        FCS_1st_level = np.concatenate(FCS_1st_level_list, axis=0)
+
+        assert (
+            FCS_1st_level.shape[1] == FCS_1st_level.shape[2]
+        ), "FCS matrices must be square."
+        assert (
+            FCS_1st_level.shape[1] == time_series.n_regions
+        ), "FCS matrices size must match number of regions."
+
+        # 2nd-level clustering (unchanged)
         self.FCS_, self.kmeans_ = self.cluster_FC(
             FCS_raw=FCS_1st_level,
             n_clusters=self.params["n_states"],
-            n_regions=dFC_raw.n_regions,
+            n_regions=time_series.n_regions,
         )
-        self.Z = self.kmeans_.predict(self.dFC_mat2vec(SW_dFC).astype(np.float32))
 
-        # mean activation of states
-        self.set_mean_activity(time_series)
-
-        # record time
         self.set_FCS_fit_time(time.time() - tic)
-
         return self
 
     def estimate_dFC(self, time_series):

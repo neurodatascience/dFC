@@ -8,6 +8,7 @@ Created on Jun 29 2023
 import time
 
 import numpy as np
+from joblib import Parallel, delayed
 from scipy import signal
 from sklearn.covariance import GraphicalLasso, GraphicalLassoCV
 
@@ -55,6 +56,8 @@ class SLIDING_WINDOW(BaseDFCMethod):
             "noise_ratio",
             "num_realization",
             "session",
+            "n_jobs_sw",
+            "backend_sw",
         ]
         self.params = {}
         for params_name in self.params_name_lst:
@@ -141,27 +144,66 @@ class SLIDING_WINDOW(BaseDFCMethod):
             model.fit(time_series.T)
             self.graphical_lasso_alpha_ = model.alpha_
 
-        FCSs = list()
-        TR_array = list()
-        for l in range(0, L - W + 1, step):
+        # choose parallelism
+        n_jobs = self.params["n_jobs_sw"] if self.params["n_jobs_sw"] is not None else 1
+        backend = (
+            self.params["backend_sw"]
+            if self.params["backend_sw"] is not None
+            else "threading"
+        )
 
-            # Create rectangular window
-            window = np.zeros((L))
-            window[l : l + W] = 1
+        if n_jobs == 1:
+            # keep the old and slow behavior for a single job
+            FCSs = list()
+            TR_array = list()
+            for l in range(0, L - W + 1, step):
 
-            # Taper the window
+                # Create rectangular window
+                window = np.zeros((L))
+                window[l : l + W] = 1
+
+                # Taper the window
+                if tapered_window:
+                    std = window_std if window_std is not None else 3 * W / 22
+                    window_taper = signal.windows.gaussian(W, std=std)
+                    window = signal.convolve(window, window_taper, mode="same") / sum(
+                        window_taper
+                    )
+
+                window = np.repeat(
+                    np.expand_dims(window, axis=0), time_series.shape[0], axis=0
+                )
+                FCSs.append(self.FC(np.multiply(time_series, window)[:, l : l + W]))
+                TR_array.append(int((l + (l + W)) / 2))
+        else:
+            # create one window to be used for all windows
+            window_larger = np.zeros((2 * W))
+            window_larger[W // 2 : W // 2 + W] = 1
+
             if tapered_window:
+                # Taper the window
                 std = window_std if window_std is not None else 3 * W / 22
                 window_taper = signal.windows.gaussian(W, std=std)
-                window = signal.convolve(window, window_taper, mode="same") / sum(
-                    window_taper
-                )
+                window_convolved = signal.convolve(
+                    window_larger, window_taper, mode="same"
+                ) / sum(window_taper)
+                window_larger = window_convolved
+            window = window_larger[W // 2 : W // 2 + W]
 
-            window = np.repeat(
-                np.expand_dims(window, axis=0), time_series.shape[0], axis=0
+            def compute_FCS_at_l(l):
+                FCS = self.FC(time_series[:, l : l + W] * window[None, :])
+                TR = int((l + (l + W)) / 2)
+                return FCS, TR
+
+            results = Parallel(n_jobs=n_jobs, backend=backend)(
+                delayed(compute_FCS_at_l)(l) for l in range(0, L - W + 1, step)
             )
-            FCSs.append(self.FC(np.multiply(time_series, window)[:, l : l + W]))
-            TR_array.append(int((l + (l + W)) / 2))
+
+            FCSs, TR_array = zip(*results)
+
+            # make sure results are in the correct order by checking the
+            # order of TRs
+            assert np.all(np.diff(TR_array) >= 0), "TRs are not in the correct order."
 
         return np.array(FCSs), np.array(TR_array)
 

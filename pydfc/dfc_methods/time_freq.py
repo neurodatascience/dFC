@@ -57,7 +57,7 @@ Parameters
         If set to true, normalizes CWT by the standard deviation of
         the signals.
 
-- if n_jobs is None => no parallelization
+- if n_jobs is None or 1 => no parallelization
 
 todo:
 
@@ -86,9 +86,9 @@ class TIME_FREQ(BaseDFCMethod):
             "is_state_based",
             "TF_method",
             "coi_correction",
-            "n_jobs",
+            "n_jobs_tf",
             "verbose",
-            "backend",
+            "backend_tf",
             "normalization",
             "num_select_nodes",
             "num_time_point",
@@ -178,8 +178,18 @@ class TIME_FREQ(BaseDFCMethod):
                 wavelet="morlet",
                 normalize=True,
             )
-            WT_xy_corrected = self.coi_correct(WT_xy, coi, freqs)
-            wt = np.abs(np.mean(WT_xy_corrected, axis=0))
+            if self.params["coi_correction"]:
+                WT_xy_corrected = self.coi_correct(WT_xy, coi, freqs)
+                periods = 1 / freqs
+                mask = coi[None, :] >= periods[:, None]
+                WT_xy_masked = np.where(mask, WT_xy_corrected, np.nan)
+                wt = np.nanmean(WT_xy_masked, axis=0)
+                min_valid_freqs = int(0.20 * WT_xy.shape[0])
+                valid_counts = mask.sum(axis=0)
+                wt = np.where(valid_counts >= min_valid_freqs, wt, np.nan)
+            else:
+                wt = np.mean(WT_xy, axis=0)
+            wt = np.abs(wt)
 
         return wt
 
@@ -212,7 +222,7 @@ class TIME_FREQ(BaseDFCMethod):
         WT = np.zeros((time_series.n_time, time_series.n_regions, time_series.n_regions))
 
         for i in range(time_series.n_regions):
-            if self.params["n_jobs"] is None:
+            if self.params["n_jobs_tf"] is None or self.params["n_jobs_tf"] == 1:
                 Q = list()
                 for j in range(time_series.n_regions):
                     Q.append(
@@ -227,9 +237,9 @@ class TIME_FREQ(BaseDFCMethod):
                     )
             else:
                 Q = Parallel(
-                    n_jobs=self.params["n_jobs"],
+                    n_jobs=self.params["n_jobs_tf"],
                     verbose=self.params["verbose"],
-                    backend=self.params["backend"],
+                    backend=self.params["backend_tf"],
                 )(
                     delayed(self.WT_dFC)(
                         Y1=time_series.data[i, :],
@@ -243,11 +253,21 @@ class TIME_FREQ(BaseDFCMethod):
                 )
             WT[:, i, :] = np.array(Q).T
 
+        TR_array = np.arange(
+            start=0,
+            stop=WT.shape[0],
+            step=1,
+            dtype=int,
+        )
+        # we wanna drop time points with NaN values from WT and TR_array
+        valid_time_points = ~np.isnan(WT).any(axis=(1, 2))
+        WT = WT[valid_time_points, :, :]
+        TR_array = TR_array[valid_time_points]
         # record time
         self.set_dFC_assess_time(time.time() - tic)
 
         dFC = DFC(measure=self)
-        dFC.set_dFC(FCSs=WT, TS_info=time_series.info_dict)
+        dFC.set_dFC(FCSs=WT, TR_array=TR_array, TS_info=time_series.info_dict)
         return dFC
 
 
