@@ -376,9 +376,9 @@ def nifti2array(
 
     return time_series, labels, locs
 
-
 def nifti2timeseries(
     nifti_file,
+    n_rois,
     Fs,
     subj_id,
     confound_strategy="none",
