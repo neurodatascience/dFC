@@ -25,6 +25,15 @@ Simply install ``pydfc`` using the following steps::
     conda activate pydfc_env
     pip install pydfc
 
+Choosing a Method / Getting Started
+------------------------------------
+
+If you are unsure which dFC method to use, or you are new to **pydfc**, see:
+
+- ``docs/CHOOSING_A_METHOD.md`` — a human-readable decision guide with a
+  method-selection flowchart, method summaries, and copy-paste quickstart code
+  for all seven methods.
+
 Examples
 --------
 
@@ -157,11 +166,12 @@ Recommended First Step
 
 If you are new to **pydfc**, we recommend starting with:
 
-1. ``examples/dFC_methods_demo.py``
-2. The Copilot prompt ``/00_prompts_index`` to pick your path quickly
-3. The Copilot prompt ``/02_choose_method`` followed by
+1. ``docs/CHOOSING_A_METHOD.md`` — read the decision guide and pick your path
+2. ``examples/dFC_methods_demo.py`` — full demo script
+3. The Copilot prompt ``/00_prompts_index`` to pick your path quickly
+4. The Copilot prompt ``/02_choose_method`` followed by
    ``/03_state_free_quickstart`` (if available)
-4. Or the copy-paste method using ``docs/SKILL.md``
+5. Or the copy-paste method using ``docs/SKILL.md``
 
 This optional AI-assisted workflow is designed to complement — not replace —
 the documentation and example scripts.
