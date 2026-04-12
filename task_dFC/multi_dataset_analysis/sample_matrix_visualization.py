@@ -6,10 +6,12 @@ import sys
 import numpy as np
 
 from pydfc.ml_utils import (
+    PLSEmbedder,
     dFC_feature_extraction,
-    embed_dFC_features,
     find_available_subjects,
     process_SB_features,
+    select_num_components_binary_groupcv,
+    subject_center,
 )
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -22,7 +24,6 @@ use_raw_features = False  # if True, use raw dFC features instead of embedded fe
 normalize_dFC = False
 FCS_proba_for_SB = True
 train_test_ratio = 0.8
-embedding = "LE"
 
 if use_raw_features:
     raw_or_embedded = "_raw"
@@ -196,36 +197,51 @@ if __name__ == "__main__":
                             X_test_embedded = process_SB_features(
                                 X=X_test, measure_name=measure_name
                             )
-                        # else:
-                        #     # embed dFC features
-                        #     try:
-                        #         X_train_embedded, X_test_embedded = embed_dFC_features(
-                        #             train_subjects=train_subjects,
-                        #             test_subjects=test_subjects,
-                        #             X_train=X_train,
-                        #             X_test=X_test,
-                        #             y_train=y_train,
-                        #             y_test=y_test,
-                        #             subj_label_train=subj_label_train,
-                        #             subj_label_test=subj_label_test,
-                        #             embedding=embedding,
-                        #             n_components="auto",
-                        #             n_neighbors_LE=125,
-                        #             LE_embedding_method="embed+procrustes",
-                        #             measure_is_state_based=measure_is_state_based,
-                        #         )
-                        #         assert (
-                        #             X_train_embedded.shape[0] == y_train.shape[0]
-                        #         ), "Number of samples do not match."
-                        #         assert (
-                        #             X_test_embedded.shape[0] == y_test.shape[0]
-                        #         ), "Number of samples do not match."
-                        #     except Exception as e:
-                        #         print(
-                        #             f"Error in embedding dFC features with {embedding}: {e}"
-                        #         )
-                        #         X_train_embedded = None
-                        #         X_test_embedded = None
+                        # center the data by subject before embedding to remove subject effects
+                        # separately for train and test sets to avoid data leakage
+                        # for both state-based and state-free methods
+                        X_train_embedded = subject_center(
+                            X_train_embedded, subj_label_train, mode="demean"
+                        )
+                        X_test_embedded = subject_center(
+                            X_test_embedded, subj_label_test, mode="demean"
+                        )
+                        if not measure_is_state_based:
+                            # embed dFC features using PLS regression, which is a supervised embedding method that finds the components that best explain the variance in the labels
+                            best_n, _ = select_num_components_binary_groupcv(
+                                X=X_train_embedded,
+                                y=y_train,
+                                groups=subj_label_train,
+                                embedding_method="PLS",
+                                n_list=[
+                                    2,
+                                    3,
+                                    4,
+                                    5,
+                                    10,
+                                    15,
+                                    20,
+                                    25,
+                                    30,
+                                    40,
+                                    50,
+                                ],  # you can adjust this range based on your data
+                                cv=5,  # more stable
+                            )
+                            pls = PLSEmbedder(n_components=best_n, scale=True)
+                            # fit on train set
+                            X_train_embedded = pls.fit_transform(
+                                X_train_embedded, y_train
+                            )
+                            assert (
+                                X_train_embedded.shape[0] == y_train.shape[0]
+                            ), "Number of samples do not match."
+                            # only transform test set
+                            if X_test is not None:
+                                X_test_embedded = pls.transform(X_test_embedded)
+                                assert (
+                                    X_test_embedded.shape[0] == y_test.shape[0]
+                                ), "Number of samples do not match."
 
                         assert (
                             task not in DATA
@@ -233,8 +249,8 @@ if __name__ == "__main__":
                         DATA[task] = {
                             "X_train": X_train,
                             "X_test": X_test,
-                            # "X_train_embedded": X_train_embedded,
-                            # "X_test_embedded": X_test_embedded,
+                            "X_train_embedded": X_train_embedded,
+                            "X_test_embedded": X_test_embedded,
                             "y_train": y_train,
                             "y_test": y_test,
                             "subj_label_train": subj_label_train,
@@ -244,21 +260,21 @@ if __name__ == "__main__":
             # save the data
             # save each task in a separate file and name the file as the task name, measure name, and dataset name
             for task in DATA.keys():
-                # if use_raw_features:
-                #     X_train = DATA[task]["X_train"]
-                #     X_test = DATA[task]["X_test"]
-                # else:
-                #     X_train = DATA[task]["X_train_embedded"]
-                #     X_test = DATA[task]["X_test_embedded"]
-                # y_train = DATA[task]["y_train"]
-                # y_test = DATA[task]["y_test"]
-                # subj_label_train = DATA[task]["subj_label_train"]
-                # subj_label_test = DATA[task]["subj_label_test"]
-                # measure_name = DATA[task]["measure_name"]
+                if use_raw_features:
+                    X_train = DATA[task]["X_train"]
+                    X_test = DATA[task]["X_test"]
+                else:
+                    X_train = DATA[task]["X_train_embedded"]
+                    X_test = DATA[task]["X_test_embedded"]
+                y_train = DATA[task]["y_train"]
+                y_test = DATA[task]["y_test"]
+                subj_label_train = DATA[task]["subj_label_train"]
+                subj_label_test = DATA[task]["subj_label_test"]
+                measure_name = DATA[task]["measure_name"]
 
-                # if X_train is None or X_test is None:
-                #     print(f"Skipping task {task} due to embedding error.")
-                #     continue
+                if X_train is None or X_test is None:
+                    print(f"Skipping task {task} due to embedding error.")
+                    continue
 
                 if not os.path.exists(f"{output_root}/processed_data"):
                     os.makedirs(f"{output_root}/processed_data")
@@ -267,47 +283,47 @@ if __name__ == "__main__":
                     DATA[task],
                 )
 
-                # for group, X, y in zip(
-                #     ["train", "test"], [X_train, X_test], [y_train, y_test]
-                # ):
-                #     # if the folder does not exist, create it
-                #     if not os.path.exists(f"{output_root}/{measure_name}"):
-                #         os.makedirs(f"{output_root}/{measure_name}")
+                for group, X, y in zip(
+                    ["train", "test"], [X_train, X_test], [y_train, y_test]
+                ):
+                    # if the folder does not exist, create it
+                    if not os.path.exists(f"{output_root}/{measure_name}"):
+                        os.makedirs(f"{output_root}/{measure_name}")
 
-                #     # A) Unsorted (your first vis, but rotated so time is horizontal)
-                #     plot_samples_features(
-                #         X,
-                #         y,
-                #         sample_order="original",
-                #         feature_order="original",
-                #         save_path=f"{output_root}/{measure_name}/feature-sample_{simul_or_real}_unsorted_{task}_{group}{raw_or_embedded}.png",
-                #         show=False,
-                #     )
+                    # A) Unsorted (your first vis, but rotated so time is horizontal)
+                    plot_samples_features(
+                        X,
+                        y,
+                        sample_order="original",
+                        feature_order="original",
+                        save_path=f"{output_root}/{measure_name}/feature-sample_{simul_or_real}_unsorted_{task}_{group}{raw_or_embedded}.png",
+                        show=False,
+                    )
 
-                #     # B) Label-sorted (your third vis)
-                #     plot_samples_features(
-                #         X,
-                #         y,
-                #         sample_order="label",
-                #         feature_order="original",
-                #         save_path=f"{output_root}/{measure_name}/feature-sample_{simul_or_real}_sorted-label_{task}_{group}{raw_or_embedded}.png",
-                #         show=False,
-                #     )
+                    # B) Label-sorted (your third vis)
+                    plot_samples_features(
+                        X,
+                        y,
+                        sample_order="label",
+                        feature_order="original",
+                        save_path=f"{output_root}/{measure_name}/feature-sample_{simul_or_real}_sorted-label_{task}_{group}{raw_or_embedded}.png",
+                        show=False,
+                    )
 
-                #     # C) clustering
-                #     plot_samples_features(
-                #         X,
-                #         y,
-                #         sample_order="cluster",
-                #         feature_order="original",
-                #         save_path=f"{output_root}/{measure_name}/feature-sample_{simul_or_real}_clustered-samples_{task}_{group}{raw_or_embedded}.png",
-                #         show=False,
-                #     )
+                    # C) clustering
+                    plot_samples_features(
+                        X,
+                        y,
+                        sample_order="cluster",
+                        feature_order="original",
+                        save_path=f"{output_root}/{measure_name}/feature-sample_{simul_or_real}_clustered-samples_{task}_{group}{raw_or_embedded}.png",
+                        show=False,
+                    )
 
-                #     save_scalar_colorbar(
-                #         cmap="coolwarm",
-                #         vmin=-1.6,
-                #         vmax=1.6,  # use the same V_RANGE you use in plots
-                #         label="z-scored feature value",
-                #         filename=f"{output_root}/zscore_colorbar.png",
-                #     )
+                    save_scalar_colorbar(
+                        cmap="coolwarm",
+                        vmin=-1.6,
+                        vmax=1.6,  # use the same V_RANGE you use in plots
+                        label="z-scored feature value",
+                        filename=f"{output_root}/zscore_colorbar.png",
+                    )
