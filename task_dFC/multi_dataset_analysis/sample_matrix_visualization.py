@@ -191,25 +191,25 @@ if __name__ == "__main__":
                             raise ValueError(f"Unknown measure name: {measure_name}")
 
                         if measure_is_state_based:
-                            X_train_embedded = process_SB_features(
+                            X_train = process_SB_features(
                                 X=X_train, measure_name=measure_name
                             )
-                            X_test_embedded = process_SB_features(
+                            X_test = process_SB_features(
                                 X=X_test, measure_name=measure_name
                             )
                         # center the data by subject before embedding to remove subject effects
                         # separately for train and test sets to avoid data leakage
                         # for both state-based and state-free methods
-                        X_train_embedded = subject_center(
-                            X_train_embedded, subj_label_train, mode="demean"
+                        X_train_centered = subject_center(
+                            X_train, subj_label_train, mode="demean"
                         )
-                        X_test_embedded = subject_center(
-                            X_test_embedded, subj_label_test, mode="demean"
+                        X_test_centered = subject_center(
+                            X_test, subj_label_test, mode="demean"
                         )
                         if not measure_is_state_based:
                             # embed dFC features using PLS regression, which is a supervised embedding method that finds the components that best explain the variance in the labels
                             best_n, _ = select_num_components_binary_groupcv(
-                                X=X_train_embedded,
+                                X=X_train_centered,
                                 y=y_train,
                                 groups=subj_label_train,
                                 embedding_method="PLS",
@@ -231,17 +231,23 @@ if __name__ == "__main__":
                             pls = PLSEmbedder(n_components=best_n, scale=True)
                             # fit on train set
                             X_train_embedded = pls.fit_transform(
-                                X_train_embedded, y_train
+                                X_train_centered, y_train
                             )
                             assert (
                                 X_train_embedded.shape[0] == y_train.shape[0]
                             ), "Number of samples do not match."
                             # only transform test set
                             if X_test is not None:
-                                X_test_embedded = pls.transform(X_test_embedded)
+                                X_test_embedded = pls.transform(X_test_centered)
                                 assert (
                                     X_test_embedded.shape[0] == y_test.shape[0]
                                 ), "Number of samples do not match."
+                            else:
+                                X_test_embedded = None
+                        else:
+                            # for state-based measures, we skip the embedding step and just use the original features
+                            X_train_embedded = X_train
+                            X_test_embedded = X_test
 
                         assert (
                             task not in DATA
