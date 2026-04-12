@@ -8,6 +8,8 @@ import seaborn as sns
 from helper_functions import (
     annotate_medians_single_boxplot,
     build_experiment_display_info,
+    canon_task,
+    get_default_experiment_name_map,
     order_by_median_dict,
     setup_pub_style,
 )
@@ -97,6 +99,18 @@ def build_tsnr_distribution_figure(tsv_path: str) -> Path:
         raise ValueError("No task-wise tSNR values found for plotting.")
 
     tasks_present = sorted(task_to_values.keys())
+    known_tasks = set(get_default_experiment_name_map("real").keys())
+    unknown_tasks = sorted(
+        [task for task in tasks_present if canon_task(task) not in known_tasks]
+    )
+    if unknown_tasks:
+        unknown_str = ", ".join(unknown_tasks)
+        raise ValueError(
+            "Found task(s) not mapped to EXP labels in real-data mapping: "
+            f"{unknown_str}. Remove these tasks from input TSV or add them to "
+            "DEFAULT_EXPERIMENT_NAME_MAP['real'] in helper_functions.py."
+        )
+
     _, task_to_experiment, _, _ = build_experiment_display_info(
         tasks_iterable=tasks_present,
         task_reference_order=tasks_present,
