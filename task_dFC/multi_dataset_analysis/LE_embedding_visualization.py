@@ -5,11 +5,13 @@ import os
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
+from sklearn.decomposition import PCA
 from sklearn.metrics import silhouette_score
 
 from pydfc.ml_utils import (
+    LE_transform,
+    PLSEmbedder,
     dFC_feature_extraction,
-    embed_dFC_features,
     find_available_subjects,
     process_SB_features,
 )
@@ -147,70 +149,80 @@ if __name__ == "__main__":
                             # embed the features
                             # n_components = "auto"
                             n_components = 3
-                            X_embedded, _ = embed_dFC_features(
-                                train_subjects=SUBJECTS,
-                                test_subjects=[],
-                                X_train=X,
-                                X_test=None,
-                                y_train=y,
-                                y_test=None,
-                                subj_label_train=subj_label,
-                                subj_label_test=None,
-                                embedding="PCA",
-                                n_components=n_components,
-                                n_neighbors_LE=125,
-                                LE_embedding_method="embed+procrustes",
-                            )
-                            # X_embedded = TSNE(n_components=n_components, learning_rate='auto', init='random', perplexity=125, metric="correlation").fit_transform(X)
-                            print(silhouette_score(X_embedded, y))
-                            print(X_embedded.shape)
+                            for embedding_method in ["PCA", "PLS", "LE"]:
+                                if embedding_method == "PCA":
+                                    X_embedded = PCA(
+                                        n_components=n_components,
+                                        whiten=False,
+                                        svd_solver="full",
+                                        random_state=0,
+                                    ).fit_transform(X)
+                                elif embedding_method == "PLS":
+                                    X_embedded = (
+                                        PLSEmbedder(
+                                            n_components=n_components, scale=False
+                                        )
+                                        .fit(X, y)
+                                        .transform(X)
+                                    )
+                                elif embedding_method == "LE":
+                                    X_embedded = LE_transform(
+                                        X,
+                                        n_components=n_components,
+                                        n_neighbors=125,
+                                        distance_metric="correlation",
+                                    )
 
-                            # plot
-                            # ---- publication style (light touch) ----
-                            mpl.rcParams.update(
-                                {
-                                    "legend.fontsize": 10,
-                                    "axes.linewidth": 0.9,
-                                    "pdf.fonttype": 42,
-                                    "ps.fonttype": 42,  # keep text as text in PDF/SVG
-                                    "savefig.bbox": "tight",
-                                    "savefig.dpi": 300,
-                                    "figure.dpi": 150,
-                                }
-                            )
-                            fig = plt.figure(figsize=(7, 7))
-                            ax = fig.add_subplot(111, projection="3d")
+                                # X_embedded = TSNE(n_components=n_components, learning_rate='auto', init='random', perplexity=125, metric="correlation").fit_transform(X)
+                                print(silhouette_score(X_embedded, y))
+                                print(X_embedded.shape)
 
-                            colors = ("#B1B1B1", "#2F5BD3")
-
-                            for label in np.unique(y):
-                                ax.scatter(
-                                    X_embedded[y == label, 0],
-                                    X_embedded[y == label, 1],
-                                    X_embedded[y == label, 2],
-                                    label=["rest", "task"][label],
-                                    s=50,
-                                    c=[colors[label]],
-                                    edgecolors="#202020",
-                                    linewidths=0.25,
-                                    depthshade=False,
+                                # plot
+                                # ---- publication style (light touch) ----
+                                mpl.rcParams.update(
+                                    {
+                                        "legend.fontsize": 10,
+                                        "axes.linewidth": 0.9,
+                                        "pdf.fonttype": 42,
+                                        "ps.fonttype": 42,  # keep text as text in PDF/SVG
+                                        "savefig.bbox": "tight",
+                                        "savefig.dpi": 300,
+                                        "figure.dpi": 150,
+                                    }
                                 )
-                            plt.legend()
+                                fig = plt.figure(figsize=(7, 7))
+                                ax = fig.add_subplot(111, projection="3d")
 
-                            # remove tick labels
-                            ax.set_xticklabels([])
-                            ax.set_yticklabels([])
-                            ax.set_zticklabels([])
+                                colors = ("#B1B1B1", "#2F5BD3")
 
-                            plt.savefig(
-                                f"{output_root}/LE_embed_{task}_{measure_name}.png",
-                                dpi=fig_dpi,
-                                bbox_inches=fig_bbox_inches,
-                                pad_inches=fig_pad,
-                                format=save_fig_format,
-                            )
+                                for label in np.unique(y):
+                                    ax.scatter(
+                                        X_embedded[y == label, 0],
+                                        X_embedded[y == label, 1],
+                                        X_embedded[y == label, 2],
+                                        label=["rest", "task"][label],
+                                        s=50,
+                                        c=[colors[label]],
+                                        edgecolors="#202020",
+                                        linewidths=0.25,
+                                        depthshade=False,
+                                    )
+                                plt.legend()
 
-                            plt.close()
+                                # remove tick labels
+                                ax.set_xticklabels([])
+                                ax.set_yticklabels([])
+                                ax.set_zticklabels([])
+
+                                plt.savefig(
+                                    f"{output_root}/{embedding_method}_embed_{task}_{measure_name}.png",
+                                    dpi=fig_dpi,
+                                    bbox_inches=fig_bbox_inches,
+                                    pad_inches=fig_pad,
+                                    format=save_fig_format,
+                                )
+
+                                plt.close()
                         except Exception as e:
                             print(
                                 f"Error processing task {task}, dFC_id {dFC_id}, session {session}, run {run}: {e}"
