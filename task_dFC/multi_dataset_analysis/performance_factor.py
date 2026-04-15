@@ -748,7 +748,11 @@ def build_rdoc_performance_group_table(df, simul_or_real):
 
 
 def plot_rdoc_performance_group_stacked_bar(
-    proportion_table, out_dir, simul_or_real, x_label="RDoC domain"
+    proportion_table,
+    out_dir,
+    simul_or_real,
+    x_label="RDoC domain",
+    count_table=None,
 ):
     width = max(10.0, 1.6 * len(proportion_table.index))
     figure, ax = plt.subplots(figsize=(width, 7.2))
@@ -763,6 +767,9 @@ def plot_rdoc_performance_group_stacked_bar(
 
     for label in PERFORMANCE_GROUP_LABELS:
         values = proportion_pct[label].to_numpy()
+        counts = None
+        if count_table is not None and label in count_table.columns:
+            counts = count_table[label].to_numpy()
         ax.bar(
             proportion_pct.index,
             values,
@@ -772,6 +779,27 @@ def plot_rdoc_performance_group_stacked_bar(
             edgecolor="white",
             linewidth=1.0,
         )
+
+        # Annotate each stacked segment with sample count.
+        if counts is not None:
+            for i, (val, cnt) in enumerate(zip(values, counts)):
+                if cnt <= 0 or val <= 0:
+                    continue
+                y = bottom[i] + 0.5 * val
+                # Skip tiny slivers to avoid clutter.
+                if val < 5.0:
+                    continue
+                ax.text(
+                    i,
+                    y,
+                    f"n={int(cnt)}",
+                    ha="center",
+                    va="center",
+                    fontsize=9,
+                    fontweight="bold",
+                    color="#1F1F1F",
+                )
+
         bottom += values
 
     for label in ax.get_xticklabels():
@@ -807,9 +835,25 @@ def plot_rdoc_performance_group_stacked_bar(
 
 
 def plot_rdoc_performance_group_heatmap(
-    proportion_table, out_dir, simul_or_real, x_label="Performance group"
+    proportion_table,
+    out_dir,
+    simul_or_real,
+    x_label="Performance group",
+    count_table=None,
 ):
-    annot_table = proportion_table.mul(100.0).applymap(lambda value: f"{value:.1f}%")
+    if count_table is not None:
+        count_view = count_table.loc[
+            proportion_table.index, PERFORMANCE_GROUP_LABELS
+        ].astype(int)
+        annot_table = proportion_table.loc[:, PERFORMANCE_GROUP_LABELS].mul(100.0)
+        annot_table = annot_table.apply(
+            lambda col: [
+                f"{pct:.1f}%\n(n={cnt})"
+                for pct, cnt in zip(col.values, count_view[col.name].values)
+            ]
+        )
+    else:
+        annot_table = proportion_table.mul(100.0).applymap(lambda value: f"{value:.1f}%")
 
     figure, ax = plt.subplots(figsize=(8.6, max(5.2, 0.82 * len(proportion_table.index))))
     heatmap = sns.heatmap(
@@ -910,10 +954,10 @@ def plot_rdoc_faceted_distribution(df, out_dir, simul_or_real, x_label="RDoC dom
     n_methods = df["dFC assessment method"].nunique()
     # Generous per-domain width so boxes never feel cramped
     n_domains = len(rdoc_order)
-    # Each domain gets ~3.1 in; minimum figure width 20 in
-    axes_width = max(20.0, 3.1 * n_domains)
-    # Reserve more room for the legend column
-    legend_width = 4.2
+    # Each domain gets ~2.8 in; keep figure compact for manuscript layouts.
+    axes_width = max(17.0, 2.8 * n_domains)
+    # Small right margin only; legend now sits at the top-right of the full figure.
+    legend_width = 1.6
     total_width = axes_width + legend_width
     # Height: keep panels open and readable
     height = max(8.5, 0.42 * n_methods + 6.8)
@@ -981,8 +1025,8 @@ def plot_rdoc_faceted_distribution(df, out_dir, simul_or_real, x_label="RDoC dom
                 title_fontsize=12,
                 fontsize=11,
                 frameon=True,
-                loc="center left",
-                bbox_to_anchor=(axes_width / total_width + 0.01, 0.5),
+                loc="upper right",
+                bbox_to_anchor=(0.995, 0.995),
             )
             if figure.legends:
                 for legend in figure.legends:
@@ -991,8 +1035,8 @@ def plot_rdoc_faceted_distribution(df, out_dir, simul_or_real, x_label="RDoC dom
                         txt.set_fontweight("bold")
 
         sns.despine(ax=ax, top=True, right=True)
-        # Leave right margin for the figure-level legend
-        figure.tight_layout(rect=[0, 0, axes_width / total_width, 1])
+        # Leave a slim top/right margin for the figure-level legend.
+        figure.tight_layout(rect=[0, 0, 0.94, 0.96])
 
         classifier_key = str(classifier).replace(" ", "_").replace("/", "-")
         embedding_key = str(embedding).replace(" ", "_").replace("/", "-")
@@ -1082,9 +1126,13 @@ def main():
         paths["out_dir"],
         args.simul_or_real,
         x_label=domain_x_label,
+        count_table=rdoc_group_count_table,
     )
     rdoc_group_heatmap_path = plot_rdoc_performance_group_heatmap(
-        rdoc_group_prop_table, paths["out_dir"], args.simul_or_real
+        rdoc_group_prop_table,
+        paths["out_dir"],
+        args.simul_or_real,
+        count_table=rdoc_group_count_table,
     )
 
     print(f"Saved dataframe with shape: {df.shape}")
