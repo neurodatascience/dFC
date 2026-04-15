@@ -555,11 +555,16 @@ def build_top_bottom_profile_table(df, quantile=TOP_BOTTOM_QUANTILE):
     return profile_df
 
 
-def plot_top_bottom_profile(profile_df, out_dir, simul_or_real):
+def plot_top_bottom_profile(profile_df, out_dir, simul_or_real, factor_label_map=None):
     valid_df = profile_df.dropna(subset=["cohens_d"]).copy()
     assert (
         not valid_df.empty
     ), "No valid Cohen's d values available for top-vs-bottom profile plot"
+
+    factor_label_map = factor_label_map or {}
+    valid_df["factor_display"] = (
+        valid_df["factor"].map(factor_label_map).fillna(valid_df["factor"].astype(str))
+    )
 
     factor_order = (
         valid_df.groupby("factor", observed=True)["abs_cohens_d"]
@@ -568,28 +573,98 @@ def plot_top_bottom_profile(profile_df, out_dir, simul_or_real):
         .index.tolist()
     )
     valid_df = valid_df.sort_values(["factor", "dFC assessment method"])
-    valid_df["factor"] = pd.Categorical(
-        valid_df["factor"], categories=factor_order, ordered=True
+    factor_display_order = [
+        factor_label_map.get(factor, factor) for factor in factor_order
+    ]
+    valid_df["factor_display"] = pd.Categorical(
+        valid_df["factor_display"], categories=factor_display_order, ordered=True
     )
 
-    height = max(6.0, 0.55 * len(factor_order))
-    figure, ax = plt.subplots(figsize=(12.5, height))
-    sns.scatterplot(
+    method_order = sorted(valid_df["dFC assessment method"].astype(str).unique())
+    vivid_palette = sns.color_palette("tab10", n_colors=len(method_order))
+    method_palette = {m: vivid_palette[i] for i, m in enumerate(method_order)}
+
+    # More generous height keeps rows legible when many factors are shown.
+    height = max(7.0, 0.72 * len(factor_order))
+    width = 16.5
+    figure, ax = plt.subplots(figsize=(width, height))
+
+    # Alternating row bands make it easier to track each factor across methods.
+    for idx, factor in enumerate(factor_order):
+        if idx % 2 == 0:
+            ax.axhspan(idx - 0.5, idx + 0.5, color="#F4F6FA", alpha=0.75, zorder=0)
+
+    sns.stripplot(
         data=valid_df,
         x="cohens_d",
-        y="factor",
+        y="factor_display",
         hue="dFC assessment method",
-        s=85,
+        order=factor_display_order,
+        hue_order=method_order,
+        palette=method_palette,
+        dodge=True,
+        jitter=0.08,
+        size=8.2,
+        linewidth=0.85,
+        edgecolor="white",
+        alpha=0.98,
         ax=ax,
     )
 
-    ax.axvline(0.0, color="#333333", linestyle="--", linewidth=1.1)
+    max_abs = float(np.nanmax(np.abs(valid_df["cohens_d"].values)))
+    x_pad = max(0.15, 0.12 * max_abs)
+    x_lim = max_abs + x_pad
+
+    ax.axvline(0.0, color="#1F1F1F", linestyle="--", linewidth=1.5, zorder=3)
+    ax.set_xlim(-x_lim, x_lim)
     ax.set_xlabel("Effect size (Cohen's d): Top 20% vs Bottom 20% within method")
     ax.set_ylabel("Factor")
-    ax.grid(True, axis="x", which="major", linestyle="-", alpha=0.35)
-    ax.legend(title="dFC assessment method", frameon=True)
+
+    ax.tick_params(axis="x", labelsize=12)
+    ax.tick_params(axis="y", labelsize=12)
+
+    # Keep tick labels readable but not too sparse using a "nice number" step.
+    span = 2.0 * x_lim
+    target_ticks = 11  # aim for ~11 major ticks across full span
+    raw_major_step = span / (target_ticks - 1)
+    if raw_major_step <= 0:
+        major_step = 0.5
+    else:
+        exponent = np.floor(np.log10(raw_major_step))
+        base = 10.0**exponent
+        fraction = raw_major_step / base
+        if fraction <= 1.0:
+            nice_fraction = 1.0
+        elif fraction <= 2.0:
+            nice_fraction = 2.0
+        elif fraction <= 2.5:
+            nice_fraction = 2.5
+        elif fraction <= 5.0:
+            nice_fraction = 5.0
+        else:
+            nice_fraction = 10.0
+        major_step = nice_fraction * base
+
+    minor_step = major_step / 2.0
+    ax.xaxis.set_major_locator(MultipleLocator(major_step))
+    ax.xaxis.set_minor_locator(MultipleLocator(minor_step))
+    ax.grid(True, axis="x", which="major", linestyle="-", linewidth=1.0, alpha=0.35)
+    ax.grid(True, axis="x", which="minor", linestyle="--", linewidth=0.8, alpha=0.2)
+
+    legend = ax.legend(
+        title="dFC assessment method",
+        frameon=True,
+        loc="upper left",
+        bbox_to_anchor=(1.01, 1.0),
+        borderaxespad=0,
+    )
+    if legend is not None:
+        legend.get_title().set_fontsize(12)
+        for txt in legend.get_texts():
+            txt.set_fontsize(11)
+
     sns.despine(ax=ax, top=True, right=True)
-    figure.tight_layout()
+    figure.tight_layout(rect=[0.18, 0, 0.83, 1])
 
     fig_path = f"{out_dir}/performance_top_bottom_profile_{simul_or_real}.png"
     savefig_pub(fig_path)
@@ -655,14 +730,16 @@ def build_rdoc_performance_group_table(df, simul_or_real):
     return summary_long, count_table, proportion_table
 
 
-def plot_rdoc_performance_group_stacked_bar(proportion_table, out_dir, simul_or_real):
-    width = max(9.0, 1.35 * len(proportion_table.index))
-    figure, ax = plt.subplots(figsize=(width, 6.6))
+def plot_rdoc_performance_group_stacked_bar(
+    proportion_table, out_dir, simul_or_real, x_label="RDoC domain"
+):
+    width = max(10.0, 1.6 * len(proportion_table.index))
+    figure, ax = plt.subplots(figsize=(width, 7.2))
 
     palette = {
-        "Low": "#C44E52",
-        "Medium": "#DDCF84",
-        "High": "#4C9F70",
+        "Low": "#D1495B",
+        "Medium": "#F4D35E",
+        "High": "#2A9D8F",
     }
     proportion_pct = proportion_table.mul(100.0)
     bottom = np.zeros(len(proportion_pct.index))
@@ -676,19 +753,33 @@ def plot_rdoc_performance_group_stacked_bar(proportion_table, out_dir, simul_or_
             label=label,
             color=palette[label],
             edgecolor="white",
-            linewidth=0.8,
+            linewidth=1.0,
         )
         bottom += values
 
-    ax.set_xlabel("RDoC domain")
-    ax.set_ylabel("Samples (%)")
+    for label in ax.get_xticklabels():
+        label.set_rotation(25)
+        label.set_horizontalalignment("right")
+        label.set_fontsize(12)
+        label.set_fontweight("bold")
+
+    ax.set_xlabel(x_label, fontweight="bold")
+    ax.set_ylabel("Samples (%)", fontweight="bold")
     ax.set_ylim(0, 100)
-    ax.yaxis.set_major_locator(MultipleLocator(10))
-    ax.yaxis.set_minor_locator(MultipleLocator(5))
-    ax.grid(True, axis="y", which="major", linestyle="-", alpha=0.35)
-    ax.grid(True, axis="y", which="minor", linestyle="--", alpha=0.18)
-    plt.setp(ax.get_xticklabels(), rotation=25, ha="right")
-    ax.legend(title="Performance group", frameon=True)
+    ax.yaxis.set_major_locator(MultipleLocator(20))
+    ax.yaxis.set_minor_locator(MultipleLocator(10))
+    ax.grid(True, axis="y", which="major", linestyle="-", alpha=0.34)
+    ax.grid(True, axis="y", which="minor", linestyle="--", alpha=0.16)
+    ax.tick_params(axis="y", labelsize=12)
+    for label in ax.get_yticklabels():
+        label.set_fontweight("bold")
+    legend = ax.legend(
+        title="Performance group", frameon=True, fontsize=11, title_fontsize=12
+    )
+    if legend is not None:
+        legend.get_title().set_fontweight("bold")
+        for txt in legend.get_texts():
+            txt.set_fontweight("bold")
     sns.despine(ax=ax, top=True, right=True)
     figure.tight_layout()
 
@@ -698,29 +789,32 @@ def plot_rdoc_performance_group_stacked_bar(proportion_table, out_dir, simul_or_
     return fig_path
 
 
-def plot_rdoc_performance_group_heatmap(proportion_table, out_dir, simul_or_real):
+def plot_rdoc_performance_group_heatmap(
+    proportion_table, out_dir, simul_or_real, x_label="Performance group"
+):
     annot_table = proportion_table.mul(100.0).applymap(lambda value: f"{value:.1f}%")
 
-    figure, ax = plt.subplots(figsize=(7.4, max(4.8, 0.7 * len(proportion_table.index))))
+    figure, ax = plt.subplots(figsize=(8.6, max(5.2, 0.82 * len(proportion_table.index))))
     heatmap = sns.heatmap(
         proportion_table.loc[:, PERFORMANCE_GROUP_LABELS],
-        cmap="YlGnBu",
+        cmap="crest",
         vmin=0.0,
         vmax=1.0,
         annot=annot_table.loc[:, PERFORMANCE_GROUP_LABELS],
         fmt="",
-        linewidths=0.7,
+        linewidths=0.9,
         linecolor="white",
-        cbar_kws={"shrink": 0.8, "pad": 0.02},
+        cbar_kws={"shrink": 0.84, "pad": 0.03},
         ax=ax,
     )
     colorbar = heatmap.collections[0].colorbar
-    colorbar.set_label("Proportion", fontweight="bold")
+    colorbar.set_label("Proportion", fontweight="bold", fontsize=12)
 
-    ax.set_xlabel("Performance group")
-    ax.set_ylabel("RDoC domain")
-    plt.setp(ax.get_xticklabels(), rotation=0)
-    plt.setp(ax.get_yticklabels(), rotation=0)
+    ax.set_xlabel(x_label, fontweight="bold")
+    ax.set_ylabel("RDoC domain", fontweight="bold")
+    plt.setp(ax.get_xticklabels(), rotation=0, fontsize=12, fontweight="bold")
+    plt.setp(ax.get_yticklabels(), rotation=0, fontsize=12, fontweight="bold")
+    ax.set_title("RDoC composition by performance group", pad=12, fontweight="bold")
     figure.tight_layout()
 
     fig_path = f"{out_dir}/performance_group_by_rdoc_heatmap_{simul_or_real}.png"
@@ -729,13 +823,16 @@ def plot_rdoc_performance_group_heatmap(proportion_table, out_dir, simul_or_real
     return fig_path
 
 
-def plot_rdoc_overall_distribution(df, out_dir, simul_or_real):
+def plot_rdoc_overall_distribution(df, out_dir, simul_or_real, x_label="RDoC domain"):
     rdoc_order = _get_present_rdoc_order(df, simul_or_real)
     assert rdoc_order, "No RDoC values found for plotting"
 
-    width = max(10, 1.3 * len(rdoc_order))
-    height = 6.5
+    width = max(12.0, 1.55 * len(rdoc_order))
+    height = 7.0
     figure, ax = plt.subplots(figsize=(width, height))
+
+    palette = sns.color_palette("Spectral", n_colors=len(rdoc_order))
+    palette_map = {rdoc: palette[i] for i, rdoc in enumerate(rdoc_order)}
 
     sns.boxplot(
         data=df,
@@ -743,7 +840,9 @@ def plot_rdoc_overall_distribution(df, out_dir, simul_or_real):
         y="classification_balanced_accuracy",
         order=rdoc_order,
         showfliers=False,
-        width=0.55,
+        width=0.58,
+        palette=palette_map,
+        linewidth=1.2,
         ax=ax,
     )
     sns.stripplot(
@@ -751,21 +850,26 @@ def plot_rdoc_overall_distribution(df, out_dir, simul_or_real):
         x="RDoC",
         y="classification_balanced_accuracy",
         order=rdoc_order,
-        color="#303030",
-        alpha=0.55,
-        size=3,
-        jitter=0.22,
+        palette=palette_map,
+        alpha=0.45,
+        size=3.1,
+        jitter=0.2,
         ax=ax,
     )
 
-    ax.set_xlabel("RDoC domain")
-    ax.set_ylabel("Balanced accuracy")
+    ax.set_xlabel(x_label, fontweight="bold")
+    ax.set_ylabel("Balanced accuracy", fontweight="bold")
     ax.set_ylim(0.45, 1.02)
-    plt.setp(ax.get_xticklabels(), rotation=25, ha="right")
+    plt.setp(
+        ax.get_xticklabels(), rotation=25, ha="right", fontsize=12, fontweight="bold"
+    )
     ax.yaxis.set_major_locator(MultipleLocator(0.05))
     ax.yaxis.set_minor_locator(MultipleLocator(0.025))
-    ax.grid(True, axis="y", which="major", linestyle="-", alpha=0.35)
-    ax.grid(True, axis="y", which="minor", linestyle="--", alpha=0.2)
+    ax.tick_params(axis="y", labelsize=12)
+    for label in ax.get_yticklabels():
+        label.set_fontweight("bold")
+    ax.grid(True, axis="y", which="major", linestyle="-", alpha=0.34)
+    ax.grid(True, axis="y", which="minor", linestyle="--", alpha=0.18)
     sns.despine(ax=ax, top=True, right=True)
     figure.tight_layout()
 
@@ -775,7 +879,7 @@ def plot_rdoc_overall_distribution(df, out_dir, simul_or_real):
     return fig_path
 
 
-def plot_rdoc_faceted_distribution(df, out_dir, simul_or_real):
+def plot_rdoc_faceted_distribution(df, out_dir, simul_or_real, x_label="RDoC domain"):
     rdoc_order = _get_present_rdoc_order(df, simul_or_real)
     assert rdoc_order, "No RDoC values found for plotting"
 
@@ -789,13 +893,13 @@ def plot_rdoc_faceted_distribution(df, out_dir, simul_or_real):
     n_methods = df["dFC assessment method"].nunique()
     # Generous per-domain width so boxes never feel cramped
     n_domains = len(rdoc_order)
-    # Each domain gets ~2.8 in; minimum figure width 18 in
-    axes_width = max(18.0, 2.8 * n_domains)
-    # Reserve ~3.5 in on the right for the legend column
-    legend_width = 3.5
+    # Each domain gets ~3.1 in; minimum figure width 20 in
+    axes_width = max(20.0, 3.1 * n_domains)
+    # Reserve more room for the legend column
+    legend_width = 4.2
     total_width = axes_width + legend_width
-    # Height: 8 in gives comfortable y-axis room; scale slightly with methods
-    height = max(8.0, 0.35 * n_methods + 6.5)
+    # Height: keep panels open and readable
+    height = max(8.5, 0.42 * n_methods + 6.8)
 
     fig_paths = []
     for _, combo in combo_df.iterrows():
@@ -810,6 +914,10 @@ def plot_rdoc_faceted_distribution(df, out_dir, simul_or_real):
 
         figure, ax = plt.subplots(figsize=(total_width, height))
 
+        palette = sns.color_palette("tab10", n_colors=n_methods)
+        hue_order = sorted(sub_df["dFC assessment method"].dropna().astype(str).unique())
+        method_palette = {method: palette[i] for i, method in enumerate(hue_order)}
+
         sns.boxplot(
             data=sub_df,
             x="RDoC",
@@ -818,13 +926,15 @@ def plot_rdoc_faceted_distribution(df, out_dir, simul_or_real):
             order=rdoc_order,
             showfliers=False,
             width=0.72,
-            linewidth=1.4,
+            linewidth=1.35,
+            palette=method_palette,
+            hue_order=hue_order,
             ax=ax,
         )
 
         ax.set_ylim(0.45, 1.02)
-        ax.set_xlabel("RDoC domain", labelpad=12, fontsize=14)
-        ax.set_ylabel("Balanced accuracy", labelpad=12, fontsize=14)
+        ax.set_xlabel(x_label, labelpad=12, fontsize=14, fontweight="bold")
+        ax.set_ylabel("Balanced accuracy", labelpad=12, fontsize=14, fontweight="bold")
         ax.set_title(
             f"{classifier}  |  {embedding}",
             fontweight="bold",
@@ -840,6 +950,9 @@ def plot_rdoc_faceted_distribution(df, out_dir, simul_or_real):
             label.set_rotation(30)
             label.set_horizontalalignment("right")
             label.set_fontsize(13)
+            label.set_fontweight("bold")
+        for label in ax.get_yticklabels():
+            label.set_fontweight("bold")
 
         handles, labels = ax.get_legend_handles_labels()
         if handles:
@@ -854,6 +967,11 @@ def plot_rdoc_faceted_distribution(df, out_dir, simul_or_real):
                 loc="center left",
                 bbox_to_anchor=(axes_width / total_width + 0.01, 0.5),
             )
+            if figure.legends:
+                for legend in figure.legends:
+                    legend.get_title().set_fontweight("bold")
+                    for txt in legend.get_texts():
+                        txt.set_fontweight("bold")
 
         sns.despine(ax=ax, top=True, right=True)
         # Leave right margin for the figure-level legend
