@@ -57,6 +57,23 @@ CORR_EXCLUDE_COLUMNS = {
 TOP_BOTTOM_QUANTILE = 0.2
 PERFORMANCE_GROUP_LABELS = ["Low", "Medium", "High"]
 
+DEFAULT_FACTOR_LABEL_MAP = {
+    "task_ratio_avg": "average task ratio",
+    "task_durations_iqr": "task duration IQR",
+    "task_durations_median": "task duration median",
+    "rest_durations_iqr": "rest duration IQR",
+    "rest_durations_median": "rest duration median",
+    "OI_median": "median OI",
+    "CohensD_mean": "mean Cohen's d",
+    "CohensD_max": "max Cohen's d",
+    "transition_freq_avg": "average transition frequency",
+    "median_tsnr_avg_over_subjects": "median tSNR averaged over subjects",
+}
+
+
+def get_domain_axis_label(simul_or_real):
+    return "RDoC domain" if simul_or_real == "real" else "Simulation design category"
+
 
 def parse_args():
     helptext = """
@@ -561,7 +578,7 @@ def plot_top_bottom_profile(profile_df, out_dir, simul_or_real, factor_label_map
         not valid_df.empty
     ), "No valid Cohen's d values available for top-vs-bottom profile plot"
 
-    factor_label_map = factor_label_map or {}
+    factor_label_map = factor_label_map or DEFAULT_FACTOR_LABEL_MAP
     valid_df["factor_display"] = (
         valid_df["factor"].map(factor_label_map).fillna(valid_df["factor"].astype(str))
     )
@@ -1033,14 +1050,25 @@ def main():
     )
     profile_df.to_csv(profile_csv_path, index=False)
     profile_fig_path = plot_top_bottom_profile(
-        profile_df, paths["out_dir"], args.simul_or_real
+        profile_df,
+        paths["out_dir"],
+        args.simul_or_real,
+        factor_label_map=DEFAULT_FACTOR_LABEL_MAP,
     )
 
+    domain_x_label = get_domain_axis_label(args.simul_or_real)
+
     rdoc_overall_path = plot_rdoc_overall_distribution(
-        df, paths["out_dir"], args.simul_or_real
+        df,
+        paths["out_dir"],
+        args.simul_or_real,
+        x_label=domain_x_label,
     )
     rdoc_faceted_paths = plot_rdoc_faceted_distribution(
-        df, paths["out_dir"], args.simul_or_real
+        df,
+        paths["out_dir"],
+        args.simul_or_real,
+        x_label=domain_x_label,
     )
     rdoc_group_long_df, rdoc_group_count_table, rdoc_group_prop_table = (
         build_rdoc_performance_group_table(df, args.simul_or_real)
@@ -1050,7 +1078,10 @@ def main():
     )
     rdoc_group_long_df.to_csv(rdoc_group_csv_path, index=False)
     rdoc_group_bar_path = plot_rdoc_performance_group_stacked_bar(
-        rdoc_group_prop_table, paths["out_dir"], args.simul_or_real
+        rdoc_group_prop_table,
+        paths["out_dir"],
+        args.simul_or_real,
+        x_label=domain_x_label,
     )
     rdoc_group_heatmap_path = plot_rdoc_performance_group_heatmap(
         rdoc_group_prop_table, paths["out_dir"], args.simul_or_real
