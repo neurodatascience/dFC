@@ -201,6 +201,222 @@ class TimeFreqWrapper(PydfcMethodWrapper):
         )
 
 
+class ExperimentalStateFreeWrapper(PydfcMethodWrapper):
+    """Adapter for experimental state-free dFC methods."""
+
+    def __init__(
+        self,
+        module_name: str,
+        class_name: str,
+        display_name: str,
+        half_life: float = 30,
+        W: int = 30,
+        min_periods: int = 10,
+        **kwargs,
+    ):
+        method_class = _load_pydfc_class(f"pydfc.dfc_methods.{module_name}", class_name)
+
+        params = {
+            "half_life": half_life,
+            "W": W,
+            "min_periods": min_periods,
+            "normalization": kwargs.get("normalization", True),
+            "num_select_nodes": kwargs.get("num_select_nodes", None),
+        }
+        optional_params = [
+            "alpha",
+            "alpha_min",
+            "alpha_max",
+            "windows",
+            "max_lag",
+            "change_threshold",
+            "shrinkage",
+            "process_noise",
+            "kernel_width",
+            "n_random_features",
+            "random_seed",
+            "event_quantile",
+            "event_decay",
+            "tail_quantile",
+            "learning_rate",
+            "n_components",
+            "diffusion_rate",
+            "instantaneous_weight",
+        ]
+        for param_name in optional_params:
+            if param_name in kwargs:
+                params[param_name] = kwargs[param_name]
+
+        super().__init__(
+            name=display_name,
+            method_factory=method_class,
+            fit_on_dataset=False,
+            **params,
+        )
+
+
+class ExponentialWindowWrapper(ExperimentalStateFreeWrapper):
+    def __init__(self, **kwargs):
+        super().__init__(
+            module_name="exponential_window",
+            class_name="EXPONENTIAL_WINDOW",
+            display_name="ExponentialWindow_halfLife30",
+            **kwargs,
+        )
+
+
+class AdaptiveExponentialWindowWrapper(ExperimentalStateFreeWrapper):
+    def __init__(self, **kwargs):
+        super().__init__(
+            module_name="adaptive_exponential_window",
+            class_name="ADAPTIVE_EXPONENTIAL_WINDOW",
+            display_name="AdaptiveExponentialWindow",
+            **kwargs,
+        )
+
+
+class MultiscaleWindowWrapper(ExperimentalStateFreeWrapper):
+    def __init__(self, **kwargs):
+        super().__init__(
+            module_name="multiscale_window",
+            class_name="MULTISCALE_WINDOW",
+            display_name="MultiscaleWindow",
+            windows=kwargs.pop("windows", [15, 30, 60]),
+            **kwargs,
+        )
+
+
+class EdgeCoactivationWrapper(ExperimentalStateFreeWrapper):
+    def __init__(self, **kwargs):
+        super().__init__(
+            module_name="edge_coactivation",
+            class_name="EDGE_COACTIVATION",
+            display_name="EdgeCoactivation",
+            **kwargs,
+        )
+
+
+class PhaseLockingWindowWrapper(ExperimentalStateFreeWrapper):
+    def __init__(self, **kwargs):
+        super().__init__(
+            module_name="phase_locking_window",
+            class_name="PHASE_LOCKING_WINDOW",
+            display_name="PhaseLockingWindow",
+            **kwargs,
+        )
+
+
+class DerivativeWeightedWindowWrapper(ExperimentalStateFreeWrapper):
+    def __init__(self, **kwargs):
+        super().__init__(
+            module_name="derivative_weighted_window",
+            class_name="DERIVATIVE_WEIGHTED_WINDOW",
+            display_name="DerivativeWeightedWindow",
+            **kwargs,
+        )
+
+
+class ChangepointResetWindowWrapper(ExperimentalStateFreeWrapper):
+    def __init__(self, **kwargs):
+        super().__init__(
+            module_name="changepoint_reset_window",
+            class_name="CHANGEPOINT_RESET_WINDOW",
+            display_name="ChangepointResetWindow",
+            **kwargs,
+        )
+
+
+class KalmanCovarianceWrapper(ExperimentalStateFreeWrapper):
+    def __init__(self, **kwargs):
+        super().__init__(
+            module_name="kalman_covariance",
+            class_name="KALMAN_COVARIANCE",
+            display_name="KalmanCovariance",
+            **kwargs,
+        )
+
+
+class LaggedMaxCorrelationWrapper(ExperimentalStateFreeWrapper):
+    def __init__(self, **kwargs):
+        super().__init__(
+            module_name="lagged_max_correlation",
+            class_name="LAGGED_MAX_CORRELATION",
+            display_name="LaggedMaxCorrelation",
+            max_lag=kwargs.pop("max_lag", 2),
+            **kwargs,
+        )
+
+
+class PrecisionShrinkageWindowWrapper(ExperimentalStateFreeWrapper):
+    def __init__(self, **kwargs):
+        super().__init__(
+            module_name="precision_shrinkage_window",
+            class_name="PRECISION_SHRINKAGE_WINDOW",
+            display_name="PrecisionShrinkageWindow",
+            **kwargs,
+        )
+
+
+class RecurrenceKernelDependenceWrapper(ExperimentalStateFreeWrapper):
+    def __init__(self, **kwargs):
+        super().__init__(
+            module_name="recurrence_kernel_dependence",
+            class_name="RECURRENCE_KERNEL_DEPENDENCE",
+            display_name="RecurrenceKernelDependence",
+            **kwargs,
+        )
+
+
+class RandomFourierDependenceWrapper(ExperimentalStateFreeWrapper):
+    def __init__(self, **kwargs):
+        super().__init__(
+            module_name="random_fourier_dependence",
+            class_name="RANDOM_FOURIER_DEPENDENCE",
+            display_name="RandomFourierDependence",
+            **kwargs,
+        )
+
+
+class EventSynchronizationWrapper(ExperimentalStateFreeWrapper):
+    def __init__(self, **kwargs):
+        super().__init__(
+            module_name="event_synchronization",
+            class_name="EVENT_SYNCHRONIZATION",
+            display_name="EventSynchronization",
+            **kwargs,
+        )
+
+
+class CopulaTailDependenceWrapper(ExperimentalStateFreeWrapper):
+    def __init__(self, **kwargs):
+        super().__init__(
+            module_name="copula_tail_dependence",
+            class_name="COPULA_TAIL_DEPENDENCE",
+            display_name="CopulaTailDependence",
+            **kwargs,
+        )
+
+
+class OjaSubspaceConnectivityWrapper(ExperimentalStateFreeWrapper):
+    def __init__(self, **kwargs):
+        super().__init__(
+            module_name="oja_subspace_connectivity",
+            class_name="OJA_SUBSPACE_CONNECTIVITY",
+            display_name="OjaSubspaceConnectivity",
+            **kwargs,
+        )
+
+
+class GraphDiffusionCoactivationWrapper(ExperimentalStateFreeWrapper):
+    def __init__(self, **kwargs):
+        super().__init__(
+            module_name="graph_diffusion_coactivation",
+            class_name="GRAPH_DIFFUSION_COACTIVATION",
+            display_name="GraphDiffusionCoactivation",
+            **kwargs,
+        )
+
+
 class CAPWrapper(PydfcMethodWrapper):
     def __init__(self, **kwargs):
         CAP = _load_pydfc_class("pydfc.dfc_methods.cap", "CAP")
@@ -354,6 +570,85 @@ def _method_registry() -> "OrderedDict[str, Dict[str, object]]":
             "TimeFreq_WTC": {
                 "factory": lambda: TimeFreqWrapper(TF_method="WTC"),
                 "aliases": ["tf", "timefreq", "timefreqwrapper", "wtc"],
+            },
+            "ExponentialWindow_halfLife30": {
+                "factory": lambda: ExponentialWindowWrapper(),
+                "aliases": ["ew", "exponentialwindow", "exponentialwindowwrapper"],
+            },
+            "AdaptiveExponentialWindow": {
+                "factory": lambda: AdaptiveExponentialWindowWrapper(),
+                "aliases": ["aew", "adaptiveew", "adaptiveexponentialwindow"],
+            },
+            "MultiscaleWindow": {
+                "factory": lambda: MultiscaleWindowWrapper(),
+                "aliases": ["msw", "multiscale", "multiscalewindow"],
+            },
+            "EdgeCoactivation": {
+                "factory": lambda: EdgeCoactivationWrapper(),
+                "aliases": ["eca", "edgecoactivation", "edgecofluctuation"],
+            },
+            "PhaseLockingWindow": {
+                "factory": lambda: PhaseLockingWindowWrapper(),
+                "aliases": ["plv", "phase", "phaselocking", "phaselockingwindow"],
+            },
+            "DerivativeWeightedWindow": {
+                "factory": lambda: DerivativeWeightedWindowWrapper(),
+                "aliases": ["dww", "derivativeweighted", "derivativeweightedwindow"],
+            },
+            "ChangepointResetWindow": {
+                "factory": lambda: ChangepointResetWindowWrapper(),
+                "aliases": ["crw", "changepoint", "changepointresetwindow"],
+            },
+            "KalmanCovariance": {
+                "factory": lambda: KalmanCovarianceWrapper(),
+                "aliases": ["kalman", "kalman_covariance", "kcv"],
+            },
+            "LaggedMaxCorrelation": {
+                "factory": lambda: LaggedMaxCorrelationWrapper(),
+                "aliases": ["lmc", "laggedmax", "laggedmaxcorrelation"],
+            },
+            "PrecisionShrinkageWindow": {
+                "factory": lambda: PrecisionShrinkageWindowWrapper(),
+                "aliases": ["psw", "partial", "precisionshrinkagewindow"],
+            },
+            "RecurrenceKernelDependence": {
+                "factory": lambda: RecurrenceKernelDependenceWrapper(
+                    min_periods=20, kernel_width=1.5
+                ),
+                "aliases": ["rkd", "recurrence", "recurrencekernel"],
+            },
+            "RandomFourierDependence": {
+                "factory": lambda: RandomFourierDependenceWrapper(
+                    min_periods=20, half_life=25, n_random_features=32
+                ),
+                "aliases": ["rfd", "randomfourier", "nonlinearfeatures"],
+            },
+            "EventSynchronization": {
+                "factory": lambda: EventSynchronizationWrapper(
+                    min_periods=20, event_quantile=0.85, event_decay=0.97
+                ),
+                "aliases": ["event", "eventsync", "event_synchronization"],
+            },
+            "CopulaTailDependence": {
+                "factory": lambda: CopulaTailDependenceWrapper(
+                    min_periods=20, half_life=25, tail_quantile=0.8
+                ),
+                "aliases": ["ctd", "copulatail", "taildependence"],
+            },
+            "OjaSubspaceConnectivity": {
+                "factory": lambda: OjaSubspaceConnectivityWrapper(
+                    min_periods=20, half_life=25, n_components=10, learning_rate=0.03
+                ),
+                "aliases": ["oja", "ojasubspace", "subspaceconnectivity"],
+            },
+            "GraphDiffusionCoactivation": {
+                "factory": lambda: GraphDiffusionCoactivationWrapper(
+                    min_periods=20,
+                    half_life=20,
+                    diffusion_rate=0.2,
+                    instantaneous_weight=0.15,
+                ),
+                "aliases": ["gdc", "graphdiffusion", "diffusioncoactivation"],
             },
             "CAP_nstates5": {
                 "factory": lambda: CAPWrapper(n_states=5),
