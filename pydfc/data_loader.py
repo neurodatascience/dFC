@@ -527,25 +527,18 @@ def multi_nifti2timeseries(
 def load_TS(
     data_root,
     file_name,
-    SESSIONs,
     subj_id2load=None,
     task=None,
+    session=None,
     run=None,
 ):
     """
     load a TIME_SERIES object from a .npy file
-    if SESSIONs is a list, it will load all the sessions,
-        if it is a string, it will load that session
     if subj_id2load is None, it will load all the subjects
     file_name: name of the file to load
-        format example: {subj_id}_{task}_{run}_time-series.npy
+        format example: {subj_id}_{session}_{task}_{run}_time-series.npy
         (keep the {} for the variables)
     """
-    # check if SESSIONs is a list or a string
-    flag = False
-    if type(SESSIONs) is str:
-        SESSIONs = [SESSIONs]
-        flag = True
 
     if subj_id2load is None:
         SUBJECTS = find_subj_list(data_root)
@@ -553,37 +546,50 @@ def load_TS(
         assert "sub-" in subj_id2load, "subj_id2load must start with 'sub-'"
         SUBJECTS = [subj_id2load]
 
-    TS = {}
-    for session in SESSIONs:
-        TS[session] = None
-        for subj in SUBJECTS:
-            subj_fldr = subj
-            # make the file_name
-            TS_file = deepcopy(file_name)
-            if "{subj_id}" in file_name:
-                TS_file = TS_file.replace("{subj_id}", subj)
-            if "{task}" in file_name:
-                assert task is not None, "task must be provided"
-                TS_file = TS_file.replace("{task}", task)
-            if "{run}" in file_name:
-                assert run is not None, "run must be provided"
-                TS_file = TS_file.replace("{run}", run)
+    TS = None
+    for subj in SUBJECTS:
+        subj_fldr = subj
+        # make the file_name
+        TS_file = deepcopy(file_name)
+        if "{subj_id}" in file_name:
+            TS_file = TS_file.replace("{subj_id}", subj)
+        if "{task}" in file_name:
+            assert task is not None, "task must be provided"
+            TS_file = TS_file.replace("{task}", task)
+        if "{session}" in file_name:
+            assert session is not None, "session must be provided"
+            TS_file = TS_file.replace("{session}", session)
+        if "{run}" in file_name:
+            assert run is not None, "run must be provided"
+            TS_file = TS_file.replace("{run}", run)
 
-            try:
+        try:
+            if session is None:
                 time_series = np.load(
                     f"{data_root}/{subj_fldr}/{TS_file}", allow_pickle="True"
                 ).item()
-            except FileNotFoundError:
-                print(f"File {TS_file} not found for {subj}")
-                continue
-
-            if TS[session] is None:
-                TS[session] = time_series
             else:
-                TS[session].concat_ts(time_series)
+                time_series = np.load(
+                    f"{data_root}/{subj_fldr}/{session}/{TS_file}",
+                    allow_pickle="True",
+                ).item()
+        except FileNotFoundError:
+            print(f"File {TS_file} not found for {subj}")
+            continue
 
-    if flag:
-        return TS[SESSIONs[0]]
+        if TS is None:
+            TS = time_series
+        else:
+            try:
+                TS.concat_ts(time_series)
+            except AssertionError as e:
+                # print the error message
+                print(f"Error in concatenating time series for {subj}: {e}")
+                # raise error with a message and stop the program
+                raise Exception(
+                    f"Fs of subj {subj} TS is {time_series.Fs} while the group Fs is {TS.Fs}"
+                )
+
     return TS
 
 
