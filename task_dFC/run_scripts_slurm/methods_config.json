@@ -1,0 +1,40 @@
+{
+    "params_methods" : {
+        "W": 44,
+        "n_overlap": 1.0,
+        "sw_method": "pear_corr",
+        "tapered_window": true,
+        "TF_method": "WTC",
+        "clstr_base_measure": "SlidingWindow",
+        "clstr_distance": "manhattan",
+        "hmm_iter": 20,
+        "dhmm_obs_state_ratio": 0.666,
+        "n_states": 5,
+        "n_subj_clstrs": 10,
+        "verbose": 0,
+        "n_jobs_sw": 8,
+        "backend_sw": "threading",
+        "n_jobs_tf": 2,
+        "backend_tf": "loky",
+        "n_jobs_swc": null,
+        "backend_swc": null,
+        "normalization": true,
+        "num_subj": null,
+        "num_time_point": null
+    },
+    "MEASURES_name_lst" : [
+        "SlidingWindow",
+        "Time-Freq",
+        "CAP",
+        "ContinuousHMM",
+        "Windowless",
+        "Clustering",
+        "DiscreteHMM"
+    ],
+    "alter_hparams" : [],
+    "params_multi_analysis" : {
+        "n_jobs": 8,
+        "verbose": 0,
+        "backend": "loky"
+    }
+}

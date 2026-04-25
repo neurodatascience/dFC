@@ -1,0 +1,35 @@
+{
+    "params_methods" : {
+        "W": 12,
+        "n_overlap": 1.0,
+        "sw_method": "pear_corr",
+        "tapered_window": true,
+        "TF_method": "WTC",
+        "clstr_base_measure": "SlidingWindow",
+        "hmm_iter": 20,
+        "dhmm_obs_state_ratio": 0.666,
+        "n_states": 12,
+        "n_subj_clstrs": 10,
+        "n_jobs": 2,
+        "verbose": 0,
+        "backend": "loky",
+        "normalization": true,
+        "num_subj": null,
+        "num_time_point": null
+    },
+    "MEASURES_name_lst" : [
+        "SlidingWindow",
+        "Time-Freq",
+        "CAP",
+        "ContinuousHMM",
+        "Windowless",
+        "Clustering",
+        "DiscreteHMM"
+    ],
+    "alter_hparams" : [],
+    "params_multi_analysis" : {
+        "n_jobs": 8,
+        "verbose": 0,
+        "backend": "loky"
+    }
+}
