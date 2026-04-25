@@ -136,6 +136,12 @@ def run_dFC_assess(
         os.makedirs(folder)
 
     for dFC_id, dFC in enumerate(dFC_dict["dFC_lst"]):
+
+        # Optional: cast each dFC to float32 to save space
+        dFC.FCSs_ = {
+            key: value.astype(np.float32, copy=False) for key, value in dFC.FCSs_.items()
+        }
+
         np.save(f"{folder}dFC_{file_suffix}_{dFC_id}.npy", dFC)
 
 
