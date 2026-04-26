@@ -109,20 +109,27 @@ if __name__ == "__main__":
                             SUBJECTS = SUBJECTS[0:1]
                             print(f"Number of subjects: {len(SUBJECTS)}")
 
-                            X, _, y, _, subj_label, _, measure_name = (
-                                dFC_feature_extraction(
-                                    task=task,
-                                    train_subjects=SUBJECTS,
-                                    test_subjects=[],
-                                    dFC_id=dFC_id,
-                                    roi_root=roi_root,
-                                    dFC_root=dFC_root,
-                                    run=run,
-                                    session=session,
-                                    dynamic_pred="no",
-                                    normalize_dFC=normalize_dFC,
-                                    FCS_proba_for_SB=True,
-                                )
+                            (
+                                X,
+                                _,
+                                y,
+                                _,
+                                subj_label,
+                                _,
+                                measure_name,
+                                measure_is_state_based,
+                            ) = dFC_feature_extraction(
+                                task=task,
+                                train_subjects=SUBJECTS,
+                                test_subjects=[],
+                                dFC_id=dFC_id,
+                                roi_root=roi_root,
+                                dFC_root=dFC_root,
+                                run=run,
+                                session=session,
+                                dynamic_pred="no",
+                                normalize_dFC=normalize_dFC,
+                                FCS_proba_for_SB=True,
                             )
 
                             assert (
@@ -132,13 +139,7 @@ if __name__ == "__main__":
                                 X.shape[0] == subj_label.shape[0]
                             ), "Number of samples do not match."
 
-                            if measure_name in [
-                                "CAP",
-                                "Clustering",
-                                "ContinuousHMM",
-                                "DiscreteHMM",
-                                "Windowless",
-                            ]:
+                            if measure_is_state_based:
                                 X = process_SB_features(X=X, measure_name=measure_name)
 
                             print(f"Task: {task}")
