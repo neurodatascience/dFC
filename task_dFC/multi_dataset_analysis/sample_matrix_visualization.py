@@ -155,6 +155,7 @@ if __name__ == "__main__":
                             subj_label_train,
                             subj_label_test,
                             measure_name,
+                            measure_is_state_based,
                         ) = dFC_feature_extraction(
                             task=task,
                             train_subjects=train_subjects,
@@ -174,21 +175,6 @@ if __name__ == "__main__":
                                 f"Skipping dataset: {dataset}, task: {task}, run: {run}, session: {session}, dFC_id: {dFC_id} due to no measure_name."
                             )
                             continue
-
-                        measure_is_state_based = None
-                        if measure_name in ["SlidingWindow", "Time-Freq"]:
-                            measure_is_state_based = False
-                        elif measure_name in [
-                            "CAP",
-                            "Clustering",
-                            "ContinuousHMM",
-                            "DiscreteHMM",
-                            "Windowless",
-                        ]:
-                            measure_is_state_based = True
-                        else:
-                            # raise error
-                            raise ValueError(f"Unknown measure name: {measure_name}")
 
                         if measure_is_state_based:
                             X_train = process_SB_features(

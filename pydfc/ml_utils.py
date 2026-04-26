@@ -339,6 +339,7 @@ def dFC_feature_extraction(
     If False, use dFC_vecs (dFC matrix as features).
     """
     dFC_measure_name = None
+    measure_is_state_based = None
     X_train = None
     y_train = None
     subj_label_train = list()
@@ -377,11 +378,16 @@ def dFC_feature_extraction(
             y_train = np.concatenate((y_train, y_subj), axis=0)
 
         dFC_measure_name_new = dFC.measure.measure_name
+        measure_is_state_based_new = dFC.measure.is_state_based
         if dFC_measure_name is None:
             dFC_measure_name = dFC_measure_name_new
+            measure_is_state_based = measure_is_state_based_new
         else:
             assert (
                 dFC_measure_name == dFC_measure_name_new
+            ), "dFC measure is not consistent."
+            assert (
+                measure_is_state_based == measure_is_state_based_new
             ), "dFC measure is not consistent."
 
     X_test = None
@@ -421,11 +427,16 @@ def dFC_feature_extraction(
             y_test = np.concatenate((y_test, y_subj), axis=0)
 
         dFC_measure_name_new = dFC.measure.measure_name
+        measure_is_state_based_new = dFC.measure.is_state_based
         if dFC_measure_name is None:
             dFC_measure_name = dFC_measure_name_new
+            measure_is_state_based = measure_is_state_based_new
         else:
             assert (
                 dFC_measure_name == dFC_measure_name_new
+            ), "dFC measure is not consistent."
+            assert (
+                measure_is_state_based == measure_is_state_based_new
             ), "dFC measure is not consistent."
 
     # print(X_train.shape, X_test.shape, y_train.shape, y_test.shape)
@@ -440,6 +451,7 @@ def dFC_feature_extraction(
         subj_label_train,
         subj_label_test,
         dFC_measure_name,
+        measure_is_state_based,
     )
 
 
@@ -1974,35 +1986,28 @@ def task_presence_classification(
         f"Number of train subjects: {len(train_subjects)} and test subjects: {len(test_subjects)}"
     )
 
-    X_train, X_test, y_train, y_test, subj_label_train, subj_label_test, measure_name = (
-        dFC_feature_extraction(
-            task=task,
-            train_subjects=train_subjects,
-            test_subjects=test_subjects,
-            dFC_id=dFC_id,
-            roi_root=roi_root,
-            dFC_root=dFC_root,
-            run=run,
-            session=session,
-            dynamic_pred=dynamic_pred,
-            normalize_dFC=normalize_dFC,
-            FCS_proba_for_SB=True,  # for state-based dFC features, we use FCS_proba
-        )
+    (
+        X_train,
+        X_test,
+        y_train,
+        y_test,
+        subj_label_train,
+        subj_label_test,
+        measure_name,
+        measure_is_state_based,
+    ) = dFC_feature_extraction(
+        task=task,
+        train_subjects=train_subjects,
+        test_subjects=test_subjects,
+        dFC_id=dFC_id,
+        roi_root=roi_root,
+        dFC_root=dFC_root,
+        run=run,
+        session=session,
+        dynamic_pred=dynamic_pred,
+        normalize_dFC=normalize_dFC,
+        FCS_proba_for_SB=True,  # for state-based dFC features, we use FCS_proba
     )
-    measure_is_state_based = None
-    if measure_name in ["SlidingWindow", "Time-Freq"]:
-        measure_is_state_based = False
-    elif measure_name in [
-        "CAP",
-        "Clustering",
-        "ContinuousHMM",
-        "DiscreteHMM",
-        "Windowless",
-    ]:
-        measure_is_state_based = True
-    else:
-        # raise error
-        raise ValueError(f"Unknown measure name: {measure_name}")
 
     if measure_is_state_based:
         X_train = process_SB_features(X=X_train, measure_name=measure_name)
