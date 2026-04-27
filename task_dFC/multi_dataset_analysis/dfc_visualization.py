@@ -1,6 +1,7 @@
 import argparse
 import json
 import os
+import re
 import sys
 
 from pydfc.dfc_utils import TR_intersection, rank_norm
@@ -13,6 +14,20 @@ from helper_functions import (  # pyright: ignore[reportMissingImports]
 )
 
 normalize_dFC = True
+
+
+def discover_available_dfc_ids(dfc_root):
+    """Return the sorted dFC IDs found anywhere under ``dfc_root``."""
+    dfc_ids = set()
+    for root, _, files in os.walk(dfc_root):
+        for file_name in files:
+            if not file_name.endswith(".npy"):
+                continue
+            match = re.search(r"_(\d+)\.npy$", file_name)
+            if match:
+                dfc_ids.add(int(match.group(1)))
+    return sorted(dfc_ids)
+
 
 #######################################################################################
 
@@ -87,7 +102,12 @@ if __name__ == "__main__":
             RUNS = {task: [None] for task in TASKS}
 
         DATA = {}
-        for dFC_id in range(0, 7):
+        dFC_ids = discover_available_dfc_ids(dFC_root)
+        if len(dFC_ids) == 0:
+            print(f"No dFC files found under {dFC_root}; skipping dataset {dataset}.")
+            continue
+
+        for dFC_id in dFC_ids:
             for session in SESSIONS[:1]:  # Only process the first session
                 for task_id, task in enumerate(TASKS):
                     for run in RUNS[task][:1]:  # Only process the first run
