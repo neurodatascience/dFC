@@ -255,6 +255,19 @@ class ExperimentalStateFreeWrapper(PydfcMethodWrapper):
         )
 
 
+class ExperimentalStateBasedWrapper(PydfcMethodWrapper):
+    """Adapter for experimental state-based dFC methods."""
+
+    def __init__(self, module_name: str, class_name: str, display_name: str, **kwargs):
+        method_class = _load_pydfc_class(f"pydfc.dfc_methods.{module_name}", class_name)
+        super().__init__(
+            name=display_name,
+            method_factory=method_class,
+            fit_on_dataset=True,
+            **kwargs,
+        )
+
+
 class ExponentialWindowWrapper(ExperimentalStateFreeWrapper):
     def __init__(self, **kwargs):
         super().__init__(
@@ -669,6 +682,160 @@ def _method_registry() -> "OrderedDict[str, Dict[str, object]]":
             "SlidingWindowClustr_nstates5": {
                 "factory": lambda: SlidingWindowClustrWrapper(n_states=5),
                 "aliases": ["swc", "slidingwindowclustr", "slidingwindowclustrwrapper"],
+            },
+            "PooledKMeansStates_nstates5": {
+                "factory": lambda: ExperimentalStateBasedWrapper(
+                    module_name="pooled_kmeans_states",
+                    class_name="POOLED_KMEANS_STATES",
+                    display_name="PooledKMeansStates_nstates5",
+                    n_states=5,
+                    n_init=20,
+                    train_sample_limit=5000,
+                    temperature=1.0,
+                    smoothing=1.0,
+                    normalization=True,
+                    num_select_nodes=50,
+                ),
+                "aliases": ["pkms", "pooledkmeans", "prototypeclustering"],
+            },
+            "MiniBatchKMeansStates_nstates5": {
+                "factory": lambda: ExperimentalStateBasedWrapper(
+                    module_name="minibatch_kmeans_states",
+                    class_name="MINIBATCH_KMEANS_STATES",
+                    display_name="MiniBatchKMeansStates_nstates5",
+                    n_states=5,
+                    n_init=20,
+                    batch_size=256,
+                    max_iter=300,
+                    train_sample_limit=5000,
+                    temperature=1.0,
+                    smoothing=1.0,
+                    normalization=True,
+                    num_select_nodes=50,
+                ),
+                "aliases": ["mbkms", "minibatchkmeans", "streamingstates"],
+            },
+            "GaussianMixtureStates_nstates5": {
+                "factory": lambda: ExperimentalStateBasedWrapper(
+                    module_name="gaussian_mixture_states",
+                    class_name="GAUSSIAN_MIXTURE_STATES",
+                    display_name="GaussianMixtureStates_nstates5",
+                    n_states=5,
+                    covariance_type="full",
+                    reg_covar=1e-6,
+                    max_iter=300,
+                    train_sample_limit=5000,
+                    smoothing=1.0,
+                    normalization=True,
+                    num_select_nodes=50,
+                ),
+                "aliases": ["gms", "gaussianmixture", "emissionstates"],
+            },
+            "BayesianGaussianMixtureStates_nstates5": {
+                "factory": lambda: ExperimentalStateBasedWrapper(
+                    module_name="bayesian_gaussian_mixture_states",
+                    class_name="BAYESIAN_GAUSSIAN_MIXTURE_STATES",
+                    display_name="BayesianGaussianMixtureStates_nstates5",
+                    n_states=5,
+                    covariance_type="full",
+                    reg_covar=1e-6,
+                    max_iter=300,
+                    train_sample_limit=5000,
+                    smoothing=1.0,
+                    normalization=True,
+                    num_select_nodes=50,
+                ),
+                "aliases": ["bgms", "bayesiangmm", "dirichletstates"],
+            },
+            "BirchStates_nstates5": {
+                "factory": lambda: ExperimentalStateBasedWrapper(
+                    module_name="birch_states",
+                    class_name="BIRCH_STATES",
+                    display_name="BirchStates_nstates5",
+                    n_states=5,
+                    train_sample_limit=4000,
+                    temperature=1.0,
+                    smoothing=1.0,
+                    normalization=True,
+                    num_select_nodes=50,
+                ),
+                "aliases": ["birchstates", "hierarchicalcompactstates"],
+            },
+            "AgglomerativeStates_nstates5": {
+                "factory": lambda: ExperimentalStateBasedWrapper(
+                    module_name="agglomerative_states",
+                    class_name="AGGLOMERATIVE_STATES",
+                    display_name="AgglomerativeStates_nstates5",
+                    n_states=5,
+                    train_sample_limit=2000,
+                    temperature=1.0,
+                    smoothing=1.0,
+                    normalization=True,
+                    num_select_nodes=50,
+                ),
+                "aliases": ["aggstates", "agglomerativestates", "hierarchystates"],
+            },
+            "SpectralStates_nstates5": {
+                "factory": lambda: ExperimentalStateBasedWrapper(
+                    module_name="spectral_states",
+                    class_name="SPECTRAL_STATES",
+                    display_name="SpectralStates_nstates5",
+                    n_states=5,
+                    n_neighbors=15,
+                    train_sample_limit=2000,
+                    temperature=1.0,
+                    smoothing=1.0,
+                    normalization=True,
+                    num_select_nodes=50,
+                ),
+                "aliases": ["specstates", "spectralstates", "manifoldstates"],
+            },
+            "LaggedKMeansStates_nstates5": {
+                "factory": lambda: ExperimentalStateBasedWrapper(
+                    module_name="lagged_kmeans_states",
+                    class_name="LAGGED_KMEANS_STATES",
+                    display_name="LaggedKMeansStates_nstates5",
+                    n_states=5,
+                    lag=2,
+                    n_init=20,
+                    train_sample_limit=5000,
+                    temperature=1.0,
+                    smoothing=1.0,
+                    normalization=True,
+                    num_select_nodes=50,
+                ),
+                "aliases": ["lagkm", "laggedkmeans", "lagaugmentedstates"],
+            },
+            "MarkovSmoothedKMeansStates_nstates5": {
+                "factory": lambda: ExperimentalStateBasedWrapper(
+                    module_name="markov_smoothed_kmeans_states",
+                    class_name="MARKOV_SMOOTHED_KMEANS_STATES",
+                    display_name="MarkovSmoothedKMeansStates_nstates5",
+                    n_states=5,
+                    n_init=20,
+                    train_sample_limit=5000,
+                    temperature=1.0,
+                    smoothing=1.0,
+                    normalization=True,
+                    num_select_nodes=50,
+                ),
+                "aliases": ["mskms", "markovkmeans", "transitionpriorstates"],
+            },
+            "MarkovSmoothedGMMStates_nstates5": {
+                "factory": lambda: ExperimentalStateBasedWrapper(
+                    module_name="markov_smoothed_gmm_states",
+                    class_name="MARKOV_SMOOTHED_GMM_STATES",
+                    display_name="MarkovSmoothedGMMStates_nstates5",
+                    n_states=5,
+                    covariance_type="full",
+                    reg_covar=1e-6,
+                    max_iter=300,
+                    train_sample_limit=5000,
+                    smoothing=1.0,
+                    normalization=True,
+                    num_select_nodes=50,
+                ),
+                "aliases": ["msgms", "markovgmm", "smoothedemissionstates"],
             },
             "DummyMethod": {
                 "factory": lambda: DummyMethod(),

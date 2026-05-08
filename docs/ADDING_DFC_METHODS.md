@@ -17,6 +17,12 @@ Use one Python file per dFC method:
 pydfc/dfc_methods/my_new_method.py
 ```
 
+Critical rule: method scripts must be self-sufficient.
+
+- Do not make a new method rely on an additional helper script in `pydfc/dfc_methods/` (for example, a shared `*_core.py` that contains required logic).
+- Keep the method's full executable logic in its own method file so that each method remains portable and independently readable.
+- Shared repository infrastructure imports (for example `BaseDFCMethod`, `DFC`, `TIME_SERIES`) are still expected.
+
 Do not put multiple concrete dFC methods in one module unless they are tightly
 coupled variants that must share a public implementation. The established
 package style is one method class per file, for example:
