@@ -43,6 +43,10 @@ class MARKOV_SMOOTHED_GMM_STATES(BaseDFCMethod):
     """Gaussian mixture emissions refined by a Markov transition prior."""
 
     def __init__(self, **params):
+        self._covariance_type = "full"
+        self._reg_covar = 1e-6
+        self._max_iter = 300
+        self._train_sample_limit = 5000
         self.logs_ = ""
         self.TPM = []
         self.FCS_ = []
@@ -52,12 +56,7 @@ class MARKOV_SMOOTHED_GMM_STATES(BaseDFCMethod):
             "measure_name",
             "is_state_based",
             "n_states",
-            "random_state",
-            "covariance_type",
-            "reg_covar",
-            "max_iter",
-            "smoothing",
-            "train_sample_limit",
+            "transition_smoothing",
             "normalization",
             "num_subj",
             "num_select_nodes",
@@ -72,18 +71,8 @@ class MARKOV_SMOOTHED_GMM_STATES(BaseDFCMethod):
         self.params["is_state_based"] = True
         if self.params["n_states"] is None:
             self.params["n_states"] = 5
-        if self.params["random_state"] is None:
-            self.params["random_state"] = 42
-        if self.params["covariance_type"] is None:
-            self.params["covariance_type"] = "full"
-        if self.params["reg_covar"] is None:
-            self.params["reg_covar"] = 1e-6
-        if self.params["max_iter"] is None:
-            self.params["max_iter"] = 300
-        if self.params["smoothing"] is None:
-            self.params["smoothing"] = 1.0
-        if self.params["train_sample_limit"] is None:
-            self.params["train_sample_limit"] = 5000
+        if self.params["transition_smoothing"] is None:
+            self.params["transition_smoothing"] = 1.0
 
     @property
     def measure_name(self):
@@ -96,7 +85,7 @@ class MARKOV_SMOOTHED_GMM_STATES(BaseDFCMethod):
         ]
 
     def _fit_matrix(self, chunks):
-        each = max(1, int(self.params["train_sample_limit"]) // max(len(chunks), 1))
+        each = max(1, int(self._train_sample_limit) // max(len(chunks), 1))
         sampled = []
         for chunk in chunks:
             if chunk.shape[0] <= each:
@@ -120,15 +109,15 @@ class MARKOV_SMOOTHED_GMM_STATES(BaseDFCMethod):
 
         self.gmm_ = GaussianMixture(
             n_components=n_states,
-            covariance_type=self.params["covariance_type"],
-            reg_covar=self.params["reg_covar"],
-            max_iter=self.params["max_iter"],
-            random_state=self.params["random_state"],
+            covariance_type=self._covariance_type,
+            reg_covar=self._reg_covar,
+            max_iter=self._max_iter,
+            random_state=None,
         ).fit(fit_matrix)
 
         base_labels = [self.gmm_.predict(chunk).astype(int) for chunk in chunks]
-        trans = np.full((n_states, n_states), float(self.params["smoothing"]))
-        start = np.full((n_states,), float(self.params["smoothing"]))
+        trans = np.full((n_states, n_states), float(self.params["transition_smoothing"]))
+        start = np.full((n_states,), float(self.params["transition_smoothing"]))
         for labels in base_labels:
             start[labels[0]] += 1.0
             for a, b in zip(labels[:-1], labels[1:]):

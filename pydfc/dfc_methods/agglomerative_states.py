@@ -34,6 +34,7 @@ class AGGLOMERATIVE_STATES(BaseDFCMethod):
     """Hierarchical state partitions learned by agglomerative clustering."""
 
     def __init__(self, **params):
+        self._train_sample_limit = 3000
         self.logs_ = ""
         self.TPM = []
         self.FCS_ = []
@@ -43,9 +44,7 @@ class AGGLOMERATIVE_STATES(BaseDFCMethod):
             "measure_name",
             "is_state_based",
             "n_states",
-            "temperature",
-            "smoothing",
-            "train_sample_limit",
+            "assignment_temperature",
             "normalization",
             "num_subj",
             "num_select_nodes",
@@ -60,12 +59,8 @@ class AGGLOMERATIVE_STATES(BaseDFCMethod):
         self.params["is_state_based"] = True
         if self.params["n_states"] is None:
             self.params["n_states"] = 5
-        if self.params["temperature"] is None:
-            self.params["temperature"] = 1.0
-        if self.params["smoothing"] is None:
-            self.params["smoothing"] = 1.0
-        if self.params["train_sample_limit"] is None:
-            self.params["train_sample_limit"] = 3000
+        if self.params["assignment_temperature"] is None:
+            self.params["assignment_temperature"] = 1.0
 
     @property
     def measure_name(self):
@@ -78,7 +73,7 @@ class AGGLOMERATIVE_STATES(BaseDFCMethod):
         ]
 
     def _fit_matrix(self, chunks):
-        each = max(1, int(self.params["train_sample_limit"]) // max(len(chunks), 1))
+        each = max(1, int(self._train_sample_limit) // max(len(chunks), 1))
         sampled = []
         for chunk in chunks:
             if chunk.shape[0] <= each:
@@ -113,7 +108,7 @@ class AGGLOMERATIVE_STATES(BaseDFCMethod):
 
         labels_chunks, _ = zip(
             *[
-                _softmax_dist(chunk, self.centers_, self.params["temperature"])
+                _softmax_dist(chunk, self.centers_, self.params["assignment_temperature"])
                 for chunk in chunks
             ]
         )
@@ -133,7 +128,7 @@ class AGGLOMERATIVE_STATES(BaseDFCMethod):
                 else np.eye(chunks[0].shape[1])
             )
 
-        counts = np.full((n_states, n_states), float(self.params["smoothing"]))
+        counts = np.full((n_states, n_states), 1.0, dtype=float)
         for labels in labels_chunks:
             for a, b in zip(labels[:-1], labels[1:]):
                 counts[a, b] += 1.0
@@ -153,7 +148,9 @@ class AGGLOMERATIVE_STATES(BaseDFCMethod):
         time_series = self.manipulate_time_series4dFC(time_series)
         tic = time.time()
         features = time_series.data.T.copy()
-        labels, probs = _softmax_dist(features, self.centers_, self.params["temperature"])
+        labels, probs = _softmax_dist(
+            features, self.centers_, self.params["assignment_temperature"]
+        )
         self.set_dFC_assess_time(time.time() - tic)
         dFC = DFC(measure=self)
         dFC.set_dFC(

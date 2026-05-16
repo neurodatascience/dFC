@@ -49,6 +49,8 @@ class MARKOV_SMOOTHED_KMEANS_STATES(BaseDFCMethod):
     """K-means emissions refined by a Markov transition prior."""
 
     def __init__(self, **params):
+        self._n_init = 20
+        self._train_sample_limit = 5000
         self.logs_ = ""
         self.TPM = []
         self.FCS_ = []
@@ -58,11 +60,8 @@ class MARKOV_SMOOTHED_KMEANS_STATES(BaseDFCMethod):
             "measure_name",
             "is_state_based",
             "n_states",
-            "random_state",
-            "n_init",
-            "temperature",
-            "smoothing",
-            "train_sample_limit",
+            "assignment_temperature",
+            "transition_smoothing",
             "normalization",
             "num_subj",
             "num_select_nodes",
@@ -77,16 +76,10 @@ class MARKOV_SMOOTHED_KMEANS_STATES(BaseDFCMethod):
         self.params["is_state_based"] = True
         if self.params["n_states"] is None:
             self.params["n_states"] = 5
-        if self.params["random_state"] is None:
-            self.params["random_state"] = 42
-        if self.params["n_init"] is None:
-            self.params["n_init"] = 20
-        if self.params["temperature"] is None:
-            self.params["temperature"] = 1.0
-        if self.params["smoothing"] is None:
-            self.params["smoothing"] = 1.0
-        if self.params["train_sample_limit"] is None:
-            self.params["train_sample_limit"] = 5000
+        if self.params["assignment_temperature"] is None:
+            self.params["assignment_temperature"] = 1.0
+        if self.params["transition_smoothing"] is None:
+            self.params["transition_smoothing"] = 1.0
 
     @property
     def measure_name(self):
@@ -99,7 +92,7 @@ class MARKOV_SMOOTHED_KMEANS_STATES(BaseDFCMethod):
         ]
 
     def _fit_matrix(self, chunks):
-        each = max(1, int(self.params["train_sample_limit"]) // max(len(chunks), 1))
+        each = max(1, int(self._train_sample_limit) // max(len(chunks), 1))
         sampled = []
         for chunk in chunks:
             if chunk.shape[0] <= each:
@@ -113,7 +106,7 @@ class MARKOV_SMOOTHED_KMEANS_STATES(BaseDFCMethod):
         distances = np.sum(
             (features[:, None, :] - self.centers_[None, :, :]) ** 2, axis=2
         )
-        logits = -distances / max(float(self.params["temperature"]), 1e-6)
+        logits = -distances / max(float(self.params["assignment_temperature"]), 1e-6)
         return logits, _softmax_logits(logits)
 
     def estimate_FCS(self, time_series):
@@ -130,8 +123,8 @@ class MARKOV_SMOOTHED_KMEANS_STATES(BaseDFCMethod):
 
         self.kmeans_ = KMeans(
             n_clusters=n_states,
-            n_init=self.params["n_init"],
-            random_state=self.params["random_state"],
+            n_init=self._n_init,
+            random_state=None,
         ).fit(fit_matrix)
         self.centers_ = self.kmeans_.cluster_centers_.astype(float)
 
@@ -142,8 +135,8 @@ class MARKOV_SMOOTHED_KMEANS_STATES(BaseDFCMethod):
             ).astype(int)
             for chunk in chunks
         ]
-        trans = np.full((n_states, n_states), float(self.params["smoothing"]))
-        start = np.full((n_states,), float(self.params["smoothing"]))
+        trans = np.full((n_states, n_states), float(self.params["transition_smoothing"]))
+        start = np.full((n_states,), float(self.params["transition_smoothing"]))
         for labels in base_labels:
             start[labels[0]] += 1.0
             for a, b in zip(labels[:-1], labels[1:]):

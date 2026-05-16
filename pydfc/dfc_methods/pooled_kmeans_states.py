@@ -34,6 +34,8 @@ class POOLED_KMEANS_STATES(BaseDFCMethod):
     """Discretizes recurring whole-brain activity prototypes with k-means."""
 
     def __init__(self, **params):
+        self._n_init = 20
+        self._train_sample_limit = 5000
         self.logs_ = ""
         self.TPM = []
         self.FCS_ = []
@@ -43,11 +45,7 @@ class POOLED_KMEANS_STATES(BaseDFCMethod):
             "measure_name",
             "is_state_based",
             "n_states",
-            "random_state",
-            "n_init",
-            "train_sample_limit",
-            "temperature",
-            "smoothing",
+            "assignment_temperature",
             "normalization",
             "num_subj",
             "num_select_nodes",
@@ -62,16 +60,8 @@ class POOLED_KMEANS_STATES(BaseDFCMethod):
         self.params["is_state_based"] = True
         if self.params["n_states"] is None:
             self.params["n_states"] = 5
-        if self.params["random_state"] is None:
-            self.params["random_state"] = 42
-        if self.params["n_init"] is None:
-            self.params["n_init"] = 20
-        if self.params["train_sample_limit"] is None:
-            self.params["train_sample_limit"] = 5000
-        if self.params["temperature"] is None:
-            self.params["temperature"] = 1.0
-        if self.params["smoothing"] is None:
-            self.params["smoothing"] = 1.0
+        if self.params["assignment_temperature"] is None:
+            self.params["assignment_temperature"] = 1.0
 
     @property
     def measure_name(self):
@@ -84,9 +74,9 @@ class POOLED_KMEANS_STATES(BaseDFCMethod):
         ]
 
     def _fit_matrix(self, chunks):
-        if self.params["train_sample_limit"] is None:
+        if self._train_sample_limit is None:
             return np.concatenate(chunks, axis=0)
-        each = max(1, int(self.params["train_sample_limit"]) // max(len(chunks), 1))
+        each = max(1, int(self._train_sample_limit) // max(len(chunks), 1))
         sampled = []
         for chunk in chunks:
             if chunk.shape[0] <= each:
@@ -110,8 +100,8 @@ class POOLED_KMEANS_STATES(BaseDFCMethod):
 
         self.kmeans_ = KMeans(
             n_clusters=n_states,
-            n_init=self.params["n_init"],
-            random_state=self.params["random_state"],
+            n_init=self._n_init,
+            random_state=None,
         ).fit(fit_matrix)
         self.centers_ = self.kmeans_.cluster_centers_.astype(float)
 
@@ -132,7 +122,7 @@ class POOLED_KMEANS_STATES(BaseDFCMethod):
                 else np.eye(chunks[0].shape[1])
             )
 
-        counts = np.full((n_states, n_states), float(self.params["smoothing"]))
+        counts = np.full((n_states, n_states), 1.0, dtype=float)
         for labels in labels_chunks:
             for a, b in zip(labels[:-1], labels[1:]):
                 counts[a, b] += 1.0
@@ -153,7 +143,9 @@ class POOLED_KMEANS_STATES(BaseDFCMethod):
         tic = time.time()
 
         features = time_series.data.T.copy()
-        labels, probs = _softmax_dist(features, self.centers_, self.params["temperature"])
+        labels, probs = _softmax_dist(
+            features, self.centers_, self.params["assignment_temperature"]
+        )
 
         self.set_dFC_assess_time(time.time() - tic)
         dFC = DFC(measure=self)
