@@ -26,7 +26,6 @@ class RANDOM_FOURIER_DEPENDENCE(BaseDFCMethod):
             "half_life",
             "min_periods",
             "n_random_features",
-            "random_seed",
             "normalization",
             "num_select_nodes",
             "num_time_point",
@@ -47,8 +46,6 @@ class RANDOM_FOURIER_DEPENDENCE(BaseDFCMethod):
             self.params["min_periods"] = 10
         if self.params["n_random_features"] is None:
             self.params["n_random_features"] = 32
-        if self.params["random_seed"] is None:
-            self.params["random_seed"] = 42
 
     @property
     def measure_name(self):
@@ -61,7 +58,7 @@ class RANDOM_FOURIER_DEPENDENCE(BaseDFCMethod):
         return 1.0 - np.exp(np.log(0.5) / half_life_samples)
 
     def _feature_map(self, samples):
-        rng = np.random.RandomState(self.params["random_seed"])
+        rng = np.random.default_rng()
         n_features = int(self.params["n_random_features"])
         omega = rng.normal(size=n_features)
         phase = rng.uniform(0, 2 * np.pi, size=n_features)

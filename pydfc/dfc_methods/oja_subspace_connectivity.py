@@ -27,7 +27,6 @@ class OJA_SUBSPACE_CONNECTIVITY(BaseDFCMethod):
             "min_periods",
             "n_components",
             "learning_rate",
-            "random_seed",
             "normalization",
             "num_select_nodes",
             "num_time_point",
@@ -50,8 +49,6 @@ class OJA_SUBSPACE_CONNECTIVITY(BaseDFCMethod):
             self.params["n_components"] = 5
         if self.params["learning_rate"] is None:
             self.params["learning_rate"] = 0.03
-        if self.params["random_seed"] is None:
-            self.params["random_seed"] = 42
 
     @property
     def measure_name(self):
@@ -80,7 +77,7 @@ class OJA_SUBSPACE_CONNECTIVITY(BaseDFCMethod):
         min_periods = int(self.params["min_periods"])
         n_regions = time_series.shape[0]
         n_components = min(int(self.params["n_components"]), n_regions)
-        rng = np.random.RandomState(self.params["random_seed"])
+        rng = np.random.default_rng()
         basis = rng.normal(size=(n_regions, n_components))
         basis, _ = np.linalg.qr(basis)
         mean = np.zeros(n_regions)
