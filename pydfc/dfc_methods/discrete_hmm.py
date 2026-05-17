@@ -41,6 +41,7 @@ from hmmlearn import hmm
 
 
 class HMM_DISC(BaseDFCMethod):
+    MEASURE_NAME = "DiscreteHMM"
 
     def __init__(self, **params):
         self.logs_ = ""
@@ -89,7 +90,7 @@ class HMM_DISC(BaseDFCMethod):
             else:
                 self.params[params_name] = None
 
-        self.params["measure_name"] = "DiscreteHMM"
+        self.params["measure_name"] = self.MEASURE_NAME
         self.params["is_state_based"] = True
 
         assert (

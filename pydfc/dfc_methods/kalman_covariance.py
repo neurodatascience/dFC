@@ -12,6 +12,7 @@ from .base_dfc_method import BaseDFCMethod
 
 
 class KALMAN_COVARIANCE(BaseDFCMethod):
+    MEASURE_NAME = "KalmanCovariance"
     """Recursive covariance tracking with a Kalman-style process floor."""
 
     def __init__(self, **params):
@@ -38,7 +39,7 @@ class KALMAN_COVARIANCE(BaseDFCMethod):
         self.params = {}
         for params_name in self.params_name_lst:
             self.params[params_name] = params.get(params_name, None)
-        self.params["measure_name"] = "KalmanCovariance"
+        self.params["measure_name"] = self.MEASURE_NAME
         self.params["is_state_based"] = False
         if self.params["half_life"] is None:
             self.params["half_life"] = 30

@@ -46,15 +46,14 @@ def _build_measure_registry():
                 except Exception:
                     continue
 
-                # try to instantiate with defaults to read measure_name
-                try:
-                    inst = obj()
-                    name = getattr(inst, "measure_name", None)
-                    if name:
-                        registry[name] = obj
-                except Exception:
-                    # skip classes that cannot be constructed without args
-                    continue
+                # class-level method name is required for stable discovery
+                name = getattr(obj, "MEASURE_NAME", None)
+                if name:
+                    registry[name] = obj
+                else:
+                    warnings.warn(
+                        f"{obj.__module__}.{obj.__name__} has no MEASURE_NAME; skipping."
+                    )
     except Exception:
         warnings.warn("Failed to iterate dfc_methods package for discovery.")
 

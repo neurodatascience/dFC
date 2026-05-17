@@ -22,6 +22,7 @@ def _corr(samples):
 
 
 class GAUSSIAN_MIXTURE_STATES(BaseDFCMethod):
+    MEASURE_NAME = "GaussianMixtureStates"
     """Elliptical state emissions learned with a Gaussian mixture."""
 
     def __init__(self, **params):
@@ -48,7 +49,7 @@ class GAUSSIAN_MIXTURE_STATES(BaseDFCMethod):
             "session",
         ]
         self.params = {name: params.get(name, None) for name in self.params_name_lst}
-        self.params["measure_name"] = "GaussianMixtureStates"
+        self.params["measure_name"] = self.MEASURE_NAME
         self.params["is_state_based"] = True
         if self.params["n_states"] is None:
             self.params["n_states"] = 5

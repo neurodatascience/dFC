@@ -12,6 +12,7 @@ from .base_dfc_method import BaseDFCMethod
 
 
 class ADAPTIVE_EXPONENTIAL_WINDOW(BaseDFCMethod):
+    MEASURE_NAME = "AdaptiveExponentialWindow"
     """Exponentially weighted correlation with data-adaptive forgetting."""
 
     def __init__(self, **params):
@@ -37,7 +38,7 @@ class ADAPTIVE_EXPONENTIAL_WINDOW(BaseDFCMethod):
         self.params = {}
         for params_name in self.params_name_lst:
             self.params[params_name] = params.get(params_name, None)
-        self.params["measure_name"] = "AdaptiveExponentialWindow"
+        self.params["measure_name"] = self.MEASURE_NAME
         self.params["is_state_based"] = False
         if self.params["min_periods"] is None:
             self.params["min_periods"] = 10

@@ -12,6 +12,7 @@ from .base_dfc_method import BaseDFCMethod
 
 
 class DERIVATIVE_WEIGHTED_WINDOW(BaseDFCMethod):
+    MEASURE_NAME = "DerivativeWeightedWindow"
     """Windowed correlation weighted toward high-amplitude temporal changes."""
 
     def __init__(self, **params):
@@ -35,7 +36,7 @@ class DERIVATIVE_WEIGHTED_WINDOW(BaseDFCMethod):
         self.params = {}
         for params_name in self.params_name_lst:
             self.params[params_name] = params.get(params_name, None)
-        self.params["measure_name"] = "DerivativeWeightedWindow"
+        self.params["measure_name"] = self.MEASURE_NAME
         self.params["is_state_based"] = False
         if self.params["W"] is None:
             self.params["W"] = 30

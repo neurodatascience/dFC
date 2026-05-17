@@ -31,6 +31,7 @@ def _softmax_dist(features, centers, temperature):
 
 
 class BIRCH_STATES(BaseDFCMethod):
+    MEASURE_NAME = "BirchStates"
     """Compact hierarchical states learned with BIRCH clustering."""
 
     def __init__(self, **params):
@@ -55,7 +56,7 @@ class BIRCH_STATES(BaseDFCMethod):
             "session",
         ]
         self.params = {name: params.get(name, None) for name in self.params_name_lst}
-        self.params["measure_name"] = "BirchStates"
+        self.params["measure_name"] = self.MEASURE_NAME
         self.params["is_state_based"] = True
         if self.params["n_states"] is None:
             self.params["n_states"] = 5

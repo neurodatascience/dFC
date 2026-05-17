@@ -46,10 +46,14 @@ Do not modify `base_dfc_method.py` just to add a method.
 A method class should define:
 
 - `__init__(self, **params)`
+- class-level `MEASURE_NAME` string constant
 - `measure_name` property
 - `dFC(...)` or method-specific computation helpers
 - `estimate_FCS(...)`
 - `estimate_dFC(...)`
+
+`MEASURE_NAME` is required for automatic registry discovery in
+`multi_analysis_utils.create_measure_obj`.
 
 State-free methods usually return `self` from `estimate_FCS`, because there are
 no group-level functional connectivity states to fit.
@@ -99,7 +103,7 @@ for params_name in self.params_name_lst:
 Always set:
 
 ```python
-self.params["measure_name"] = "MyNewMethod"
+self.params["measure_name"] = self.MEASURE_NAME
 self.params["is_state_based"] = False  # or True for state-based methods
 ```
 
@@ -131,6 +135,8 @@ from .base_dfc_method import BaseDFCMethod
 class MY_NEW_METHOD(BaseDFCMethod):
     """Short description of the method assumption."""
 
+    MEASURE_NAME = "MyNewMethod"
+
     def __init__(self, **params):
         self.logs_ = ""
         self.TPM = []
@@ -153,7 +159,7 @@ class MY_NEW_METHOD(BaseDFCMethod):
         for params_name in self.params_name_lst:
             self.params[params_name] = params.get(params_name, None)
 
-        self.params["measure_name"] = "MyNewMethod"
+        self.params["measure_name"] = self.MEASURE_NAME
         self.params["is_state_based"] = False
 
         if self.params["min_periods"] is None:

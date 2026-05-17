@@ -45,6 +45,7 @@ def _softmax_dist(features, centers, temperature):
 
 
 class LAGGED_KMEANS_STATES(BaseDFCMethod):
+    MEASURE_NAME = "LaggedKMeansStates"
     """State prototypes estimated on lag-augmented activity vectors."""
 
     def __init__(self, **params):
@@ -71,7 +72,7 @@ class LAGGED_KMEANS_STATES(BaseDFCMethod):
             "session",
         ]
         self.params = {name: params.get(name, None) for name in self.params_name_lst}
-        self.params["measure_name"] = "LaggedKMeansStates"
+        self.params["measure_name"] = self.MEASURE_NAME
         self.params["is_state_based"] = True
         if self.params["n_states"] is None:
             self.params["n_states"] = 5

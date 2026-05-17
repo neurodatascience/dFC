@@ -12,6 +12,7 @@ from .base_dfc_method import BaseDFCMethod
 
 
 class RECURRENCE_KERNEL_DEPENDENCE(BaseDFCMethod):
+    MEASURE_NAME = "RecurrenceKernelDependence"
     """State-dependent FC from samples whose whole-brain pattern recurs."""
 
     def __init__(self, **params):
@@ -36,7 +37,7 @@ class RECURRENCE_KERNEL_DEPENDENCE(BaseDFCMethod):
         self.params = {}
         for params_name in self.params_name_lst:
             self.params[params_name] = params.get(params_name, None)
-        self.params["measure_name"] = "RecurrenceKernelDependence"
+        self.params["measure_name"] = self.MEASURE_NAME
         self.params["is_state_based"] = False
         if self.params["min_periods"] is None:
             self.params["min_periods"] = 10

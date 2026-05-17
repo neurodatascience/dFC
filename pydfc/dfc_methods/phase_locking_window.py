@@ -13,6 +13,7 @@ from .base_dfc_method import BaseDFCMethod
 
 
 class PHASE_LOCKING_WINDOW(BaseDFCMethod):
+    MEASURE_NAME = "PhaseLockingWindow"
     """Windowed phase-locking value from Hilbert analytic phases."""
 
     def __init__(self, **params):
@@ -36,7 +37,7 @@ class PHASE_LOCKING_WINDOW(BaseDFCMethod):
         self.params = {}
         for params_name in self.params_name_lst:
             self.params[params_name] = params.get(params_name, None)
-        self.params["measure_name"] = "PhaseLockingWindow"
+        self.params["measure_name"] = self.MEASURE_NAME
         self.params["is_state_based"] = False
         if self.params["W"] is None:
             self.params["W"] = 30

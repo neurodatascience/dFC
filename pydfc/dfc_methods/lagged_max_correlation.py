@@ -12,6 +12,7 @@ from .base_dfc_method import BaseDFCMethod
 
 
 class LAGGED_MAX_CORRELATION(BaseDFCMethod):
+    MEASURE_NAME = "LaggedMaxCorrelation"
     """Windowed FC using the strongest short-lag pairwise correlation."""
 
     def __init__(self, **params):
@@ -36,7 +37,7 @@ class LAGGED_MAX_CORRELATION(BaseDFCMethod):
         self.params = {}
         for params_name in self.params_name_lst:
             self.params[params_name] = params.get(params_name, None)
-        self.params["measure_name"] = "LaggedMaxCorrelation"
+        self.params["measure_name"] = self.MEASURE_NAME
         self.params["is_state_based"] = False
         if self.params["W"] is None:
             self.params["W"] = 30

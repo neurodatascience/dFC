@@ -12,6 +12,7 @@ from .base_dfc_method import BaseDFCMethod
 
 
 class EVENT_SYNCHRONIZATION(BaseDFCMethod):
+    MEASURE_NAME = "EventSynchronization"
     """FC from co-occurring high-amplitude activity events."""
 
     def __init__(self, **params):
@@ -37,7 +38,7 @@ class EVENT_SYNCHRONIZATION(BaseDFCMethod):
         self.params = {}
         for params_name in self.params_name_lst:
             self.params[params_name] = params.get(params_name, None)
-        self.params["measure_name"] = "EventSynchronization"
+        self.params["measure_name"] = self.MEASURE_NAME
         self.params["is_state_based"] = False
         if self.params["min_periods"] is None:
             self.params["min_periods"] = 10

@@ -12,6 +12,7 @@ from .base_dfc_method import BaseDFCMethod
 
 
 class EDGE_COACTIVATION(BaseDFCMethod):
+    MEASURE_NAME = "EdgeCoactivation"
     """Smoothed edge co-activation from instantaneous z-scored products."""
 
     def __init__(self, **params):
@@ -37,7 +38,7 @@ class EDGE_COACTIVATION(BaseDFCMethod):
         self.params = {}
         for params_name in self.params_name_lst:
             self.params[params_name] = params.get(params_name, None)
-        self.params["measure_name"] = "EdgeCoactivation"
+        self.params["measure_name"] = self.MEASURE_NAME
         self.params["is_state_based"] = False
         if self.params["half_life"] is None:
             self.params["half_life"] = 30

@@ -31,6 +31,7 @@ def _softmax_dist(features, centers, temperature):
 
 
 class MINIBATCH_KMEANS_STATES(BaseDFCMethod):
+    MEASURE_NAME = "MiniBatchKMeansStates"
     """Streaming prototype states learned with mini-batch k-means."""
 
     def __init__(self, **params):
@@ -58,7 +59,7 @@ class MINIBATCH_KMEANS_STATES(BaseDFCMethod):
             "session",
         ]
         self.params = {name: params.get(name, None) for name in self.params_name_lst}
-        self.params["measure_name"] = "MiniBatchKMeansStates"
+        self.params["measure_name"] = self.MEASURE_NAME
         self.params["is_state_based"] = True
         if self.params["n_states"] is None:
             self.params["n_states"] = 5

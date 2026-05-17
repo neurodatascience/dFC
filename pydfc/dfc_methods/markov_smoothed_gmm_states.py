@@ -40,6 +40,7 @@ def _viterbi(emission_logp, tpm, startprob):
 
 
 class MARKOV_SMOOTHED_GMM_STATES(BaseDFCMethod):
+    MEASURE_NAME = "MarkovSmoothedGMMStates"
     """Gaussian mixture emissions refined by a Markov transition prior."""
 
     def __init__(self, **params):
@@ -67,7 +68,7 @@ class MARKOV_SMOOTHED_GMM_STATES(BaseDFCMethod):
             "session",
         ]
         self.params = {name: params.get(name, None) for name in self.params_name_lst}
-        self.params["measure_name"] = "MarkovSmoothedGMMStates"
+        self.params["measure_name"] = self.MEASURE_NAME
         self.params["is_state_based"] = True
         if self.params["n_states"] is None:
             self.params["n_states"] = 5
