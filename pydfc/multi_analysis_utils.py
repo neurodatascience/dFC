@@ -5,116 +5,82 @@ Created on Dec 3 2024
 @author: Mohammad Torabi
 """
 
+import importlib
+import inspect
+import pkgutil
+import warnings
 from copy import deepcopy
 
 from joblib import Parallel, delayed
 
+from . import dfc_methods as _dfc_pkg
 from .dfc_methods import *
+
+# cache for discovered measures: map measure_name -> class
+_MEASURE_REGISTRY = None
+
+
+def _build_measure_registry():
+    global _MEASURE_REGISTRY
+    if _MEASURE_REGISTRY is not None:
+        return _MEASURE_REGISTRY
+
+    registry = {}
+    try:
+        for finder in pkgutil.iter_modules(_dfc_pkg.__path__):
+            mod_name = f"{_dfc_pkg.__name__}.{finder.name}"
+            try:
+                module = importlib.import_module(mod_name)
+            except Exception:
+                warnings.warn(f"Could not import module {mod_name}; skipping.")
+                continue
+            for _, obj in inspect.getmembers(module, inspect.isclass):
+                try:
+                    # ensure class originates from dfc_methods package
+                    if not obj.__module__.startswith(_dfc_pkg.__name__):
+                        continue
+                    from .dfc_methods.base_dfc_method import BaseDFCMethod
+
+                    if not issubclass(obj, BaseDFCMethod) or obj is BaseDFCMethod:
+                        continue
+                except Exception:
+                    continue
+
+                # try to instantiate with defaults to read measure_name
+                try:
+                    inst = obj()
+                    name = getattr(inst, "measure_name", None)
+                    if name:
+                        registry[name] = obj
+                except Exception:
+                    # skip classes that cannot be constructed without args
+                    continue
+    except Exception:
+        warnings.warn("Failed to iterate dfc_methods package for discovery.")
+
+    _MEASURE_REGISTRY = registry
+    return _MEASURE_REGISTRY
+
 
 ################################# DATA_LOADER functions ######################################
 
 
 def create_measure_obj(MEASURES_name_lst, **params):
+    """
+    Auto-discover dFC method classes under `pydfc.dfc_methods` and
+    instantiate them with `**params` based on their `measure_name`.
+    """
 
-    MEASURES_lst = list()
+    registry = _build_measure_registry()
+    MEASURES_lst = []
     for MEASURES_name in MEASURES_name_lst:
-        measure = None
-
-        ###### CAP ######
-        if MEASURES_name == "CAP":
-            measure = CAP(**params)
-
-        ###### CONTINUOUS HMM ######
-        if MEASURES_name == "ContinuousHMM":
-            measure = HMM_CONT(**params)
-
-        ###### WINDOW_LESS ######
-        if MEASURES_name == "Windowless":
-            measure = WINDOWLESS(**params)
-
-        ###### SLIDING WINDOW ######
-        if MEASURES_name == "SlidingWindow":
-            measure = SLIDING_WINDOW(**params)
-
-        ###### TIME FREQUENCY ######
-        if MEASURES_name == "Time-Freq":
-            measure = TIME_FREQ(**params)
-
-        ###### SLIDING WINDOW + CLUSTERING ######
-        if MEASURES_name == "Clustering":
-            measure = SLIDING_WINDOW_CLUSTR(**params)
-
-        ###### DISCRETE HMM ######
-        if MEASURES_name == "DiscreteHMM":
-            measure = HMM_DISC(**params)
-
-        ###### EXPONENTIAL WINDOW ######
-        if MEASURES_name == "ExponentialWindow":
-            measure = EXPONENTIAL_WINDOW(**params)
-
-        ###### ADAPTIVE EXPONENTIAL WINDOW ######
-        if MEASURES_name == "AdaptiveExponentialWindow":
-            measure = ADAPTIVE_EXPONENTIAL_WINDOW(**params)
-
-        ###### MULTISCALE WINDOW ######
-        if MEASURES_name == "MultiscaleWindow":
-            measure = MULTISCALE_WINDOW(**params)
-
-        ###### EDGE COACTIVATION ######
-        if MEASURES_name == "EdgeCoactivation":
-            measure = EDGE_COACTIVATION(**params)
-
-        ###### PHASE LOCKING WINDOW ######
-        if MEASURES_name == "PhaseLockingWindow":
-            measure = PHASE_LOCKING_WINDOW(**params)
-
-        ###### DERIVATIVE WEIGHTED WINDOW ######
-        if MEASURES_name == "DerivativeWeightedWindow":
-            measure = DERIVATIVE_WEIGHTED_WINDOW(**params)
-
-        ###### CHANGEPOINT RESET WINDOW ######
-        if MEASURES_name == "ChangepointResetWindow":
-            measure = CHANGEPOINT_RESET_WINDOW(**params)
-
-        ###### KALMAN COVARIANCE ######
-        if MEASURES_name == "KalmanCovariance":
-            measure = KALMAN_COVARIANCE(**params)
-
-        ###### LAGGED MAX CORRELATION ######
-        if MEASURES_name == "LaggedMaxCorrelation":
-            measure = LAGGED_MAX_CORRELATION(**params)
-
-        ###### PRECISION SHRINKAGE WINDOW ######
-        if MEASURES_name == "PrecisionShrinkageWindow":
-            measure = PRECISION_SHRINKAGE_WINDOW(**params)
-
-        ###### RECURRENCE KERNEL DEPENDENCE ######
-        if MEASURES_name == "RecurrenceKernelDependence":
-            measure = RECURRENCE_KERNEL_DEPENDENCE(**params)
-
-        ###### RANDOM FOURIER DEPENDENCE ######
-        if MEASURES_name == "RandomFourierDependence":
-            measure = RANDOM_FOURIER_DEPENDENCE(**params)
-
-        ###### EVENT SYNCHRONIZATION ######
-        if MEASURES_name == "EventSynchronization":
-            measure = EVENT_SYNCHRONIZATION(**params)
-
-        ###### COPULA TAIL DEPENDENCE ######
-        if MEASURES_name == "CopulaTailDependence":
-            measure = COPULA_TAIL_DEPENDENCE(**params)
-
-        ###### OJA SUBSPACE CONNECTIVITY ######
-        if MEASURES_name == "OjaSubspaceConnectivity":
-            measure = OJA_SUBSPACE_CONNECTIVITY(**params)
-
-        ###### GRAPH DIFFUSION COACTIVATION ######
-        if MEASURES_name == "GraphDiffusionCoactivation":
-            measure = GRAPH_DIFFUSION_COACTIVATION(**params)
-
-        if measure is None:
+        cls = registry.get(MEASURES_name)
+        if cls is None:
             raise ValueError(f"Unknown dFC measure name: {MEASURES_name}")
-
+        try:
+            measure = cls(**params)
+        except Exception as e:
+            raise RuntimeError(f"Failed to instantiate measure {MEASURES_name}: {e}")
         MEASURES_lst.append(measure)
 
     return MEASURES_lst
@@ -144,23 +110,7 @@ def measures_initializer(MEASURES_name_lst, params_methods, alter_hparams):
             'ContinuousHMM', \
             'Windowless', \
             'Clustering', \
-            'DiscreteHMM', \
-            'ExponentialWindow', \
-            'AdaptiveExponentialWindow', \
-            'MultiscaleWindow', \
-            'EdgeCoactivation', \
-            'PhaseLockingWindow', \
-            'DerivativeWeightedWindow', \
-            'ChangepointResetWindow', \
-            'KalmanCovariance', \
-            'LaggedMaxCorrelation', \
-            'PrecisionShrinkageWindow', \
-            'RecurrenceKernelDependence', \
-            'RandomFourierDependence', \
-            'EventSynchronization', \
-            'CopulaTailDependence', \
-            'OjaSubspaceConnectivity', \
-            'GraphDiffusionCoactivation' \
+            'DiscreteHMM' \
             )
     """
 
