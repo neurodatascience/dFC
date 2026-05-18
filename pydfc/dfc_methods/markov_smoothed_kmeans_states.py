@@ -45,6 +45,39 @@ def _viterbi(emission_logp, tpm, startprob):
     return z
 
 
+def _forward_backward(emission_logp, tpm, startprob):
+    """Forward-backward algorithm for soft state posteriors.
+
+    Returns posterior probabilities P(state_t | observations) for each time point.
+    """
+    n_time, n_states = emission_logp.shape
+    log_tpm = np.log(np.maximum(tpm, 1e-12))
+    log_start = np.log(np.maximum(startprob, 1e-12))
+
+    # Forward pass: α_t(i) = P(obs[0:t], state_t=i)
+    alpha = np.zeros((n_time, n_states), dtype=float)
+    alpha[0, :] = log_start + emission_logp[0, :]
+    for t in range(1, n_time):
+        alpha[t, :] = emission_logp[t, :] + np.logaddexp.reduce(
+            alpha[t - 1, :, None] + log_tpm, axis=0
+        )
+
+    # Backward pass: β_t(i) = P(obs[t:] | state_t=i)
+    beta = np.zeros((n_time, n_states), dtype=float)
+    beta[-1, :] = 0.0  # log(1)
+    for t in range(n_time - 2, -1, -1):
+        beta[t, :] = np.logaddexp.reduce(
+            log_tpm[:, :] + emission_logp[t + 1, None, :] + beta[t + 1, None, :],
+            axis=1,
+        )
+
+    # Posterior: γ_t(i) = P(state_t=i | observations)
+    gamma = np.exp(
+        alpha + beta - np.logaddexp.reduce(alpha + beta, axis=1, keepdims=True)
+    )
+    return gamma
+
+
 class MARKOV_SMOOTHED_KMEANS_STATES(BaseDFCMethod):
     MEASURE_NAME = "MarkovSmoothedKMeansStates"
     """K-means emissions refined by a Markov transition prior."""
@@ -180,10 +213,10 @@ class MARKOV_SMOOTHED_KMEANS_STATES(BaseDFCMethod):
         time_series = self.manipulate_time_series4dFC(time_series)
         tic = time.time()
         features = time_series.data.T.copy()
-        logits, probs = self._emission(features)
-        labels = _viterbi(logits, self.TPM, self.startprob_)
-        proba = np.zeros_like(probs)
-        proba[np.arange(labels.shape[0]), labels] = 1.0
+        logits, _ = self._emission(features)
+        # Use forward-backward for soft state posteriors (compositional data)
+        proba = _forward_backward(logits, self.TPM, self.startprob_)
+        labels = np.argmax(proba, axis=1).astype(int)
         self.set_dFC_assess_time(time.time() - tic)
         dFC = DFC(measure=self)
         dFC.set_dFC(
