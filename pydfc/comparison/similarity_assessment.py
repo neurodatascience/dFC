@@ -282,6 +282,61 @@ class SimilarityAssessment:
 
         return sim_mat_over_sample
 
+    def assess_similarity_fast(self, dFC_lst):
+        """ """
+        methods_assess = {}
+
+        # sort dFC_lst according to methods names
+        old_list = [dFC.measure.measure_name for dFC in dFC_lst]
+        new_list = deepcopy(old_list)
+        new_list.sort()
+
+        new_order = find_new_order(old_list, new_list)
+        dFC_lst = [dFC_lst[i] for i in new_order]
+
+        common_TRs = TR_intersection(dFC_lst)
+
+        measure_lst = list()
+        TS_info_lst = list()
+        dFC_mat_lst = list()
+        for dFC in dFC_lst:
+            measure_lst.append(dFC.measure)
+            TS_info_lst.append(dFC.TS_info)
+            dFC_mat_lst.append(dFC.get_dFC_mat(TRs=common_TRs))
+
+        methods_assess["measure_lst"] = measure_lst
+        methods_assess["TS_info_lst"] = TS_info_lst
+        methods_assess["common_TRs"] = common_TRs
+
+        ########## dFC samples ##########
+
+        dFC_samples = {}
+        for i, dFC_mat in enumerate(dFC_mat_lst):
+            dFC_samples[str(i)] = dFC_mat
+        methods_assess["dFC_samples"] = dFC_samples
+
+        ########## time record ##########
+
+        time_record_dict = {}
+        for i, dFC in enumerate(dFC_lst):
+            time_record = {}
+            time_record["FCS_fit"] = dFC.measure.FCS_fit_time
+            time_record["dFC_assess"] = dFC.measure.dFC_assess_time
+            time_record_dict[str(i)] = time_record
+        methods_assess["time_record_dict"] = time_record_dict
+
+        ########## subj_dFC_sim ##########
+        # returns correlation/MI/spearman corr/euclidean distance between results of dFC
+        # measures in a subject
+        metric_list = ["spearman"]
+        methods_assess["all"] = {}
+        for metric in metric_list:
+            methods_assess["all"][metric] = self.dFC_mat_lst_similarity(
+                dFC_mat_lst, feature2extract="all", metric=metric
+            )
+        ##############################################
+        return methods_assess
+
     def assess_similarity(self, dFC_lst, downsampling_method="default", **param_dict):
         """
         downsampling_method: 'default' picks FCs at common_TRs
