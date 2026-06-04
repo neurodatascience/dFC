@@ -8,6 +8,10 @@ __pycache__
 
 sample_data/
 
+slurm_out/
+
+*.sh
+
 # build related
 pydfc.egg-info
 build
