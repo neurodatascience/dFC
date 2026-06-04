@@ -282,48 +282,25 @@ Be aware that package-level imports can fail if a method imports optional
 dependencies that are not installed. If a method needs an optional package, keep
 the dependency localized and make the failure message clear.
 
-## Validation Wrapper Registration
+## Validation Registration
 
-To use the method in the validation framework, add a wrapper or registry entry
-in:
+No manual registration is needed. The validation framework auto-discovers every
+class that inherits from `BaseDFCMethod` and has a `MEASURE_NAME` attribute by
+scanning `pydfc.dfc_methods` at runtime. As long as the method is exported from
+`pydfc/dfc_methods/__init__.py`, it will appear automatically in:
 
-```text
-tests/test_validation/dfc_method_wrappers.py
+```bash
+python -W ignore -m tests.test_validation.validate_dfc --list-methods
 ```
 
-For a state-free PydFC method, the generic `PydfcMethodWrapper` pattern is:
+To add a CLI shorthand alias for the `--methods` argument, add one entry to
+`_ALIASES` in `tests/test_validation/dfc_method_wrappers.py`:
 
 ```python
-class MyNewMethodWrapper(PydfcMethodWrapper):
-    def __init__(self, **kwargs):
-        MY_NEW_METHOD = _load_pydfc_class(
-            "pydfc.dfc_methods.my_new_method", "MY_NEW_METHOD"
-        )
-
-        params = {
-            "min_periods": kwargs.get("min_periods", 10),
-            "normalization": kwargs.get("normalization", True),
-            "num_select_nodes": kwargs.get("num_select_nodes", None),
-        }
-        super().__init__(
-            name="MyNewMethod",
-            method_factory=MY_NEW_METHOD,
-            fit_on_dataset=False,
-            **params,
-        )
+"MyNewMethod": ["mynew", "mnm"],
 ```
 
-Then add it to `_method_registry()`:
-
-```python
-"MyNewMethod": {
-    "factory": lambda: MyNewMethodWrapper(),
-    "aliases": ["mynew", "mnm"],
-},
-```
-
-Use `fit_on_dataset=True` only for methods that need group-level fitting through
-`estimate_FCS`.
+This is optional — the full `MEASURE_NAME` always works without an alias.
 
 ## Visualization Registration
 
@@ -346,30 +323,28 @@ Run syntax checks:
 
 ```bash
 python -m py_compile pydfc/dfc_methods/my_new_method.py
-python -m py_compile tests/test_validation/dfc_method_wrappers.py
 ```
 
-List methods and availability:
+List all registered methods and their aliases:
 
 ```bash
-python -m tests.test_validation.validate_dfc --list-methods
+python -W ignore -m tests.test_validation.validate_dfc --list-methods
 ```
 
-Run a focused validation:
+Run API conformance checks on a specific method:
 
 ```bash
-python -m tests.test_validation.validate_dfc \
-  --n-subjects 2 \
-  --n-regions 12 \
-  --n-timepoints 600 \
-  --methods mynew \
-  --verbose 0 \
-  --pass-threshold 0.5
+python -W ignore -m tests.test_validation.validate_dfc --methods mynew --verbose 2
 ```
 
-For serious evaluation, use larger synthetic datasets and stricter thresholds.
-Passing synthetic tests means the method can recover the validation structure; it
-does not prove neurobiological validity.
+Run API conformance checks on all registered methods:
+
+```bash
+python -W ignore -m tests.test_validation.validate_dfc > results.txt 2>&1
+```
+
+Passing all 6 sub-checks means the method satisfies the PydFC contract and its
+output is structurally sound. It does not assess neurobiological validity.
 
 ## Scientific Reporting Checklist
 
