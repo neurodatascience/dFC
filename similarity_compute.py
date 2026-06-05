@@ -24,7 +24,7 @@ root = Path(path_to_datasets)
 
 
 # Create a dictionary to store similarity assessment results
-# of the form: similarity[dataset_id][subject_id][session_id][run_id][task_id] = matrix
+# of the form: similarity[dataset_id][subject_id][session_id][run_id][task_id] = {"matrix": matrix, "methods": method_numbers}
 # where matrix.shape = (1, num_methods, num_methods) and contains the similarity values between methods
 
 similarity = defaultdict(
@@ -128,6 +128,8 @@ for dataset_dir in root.iterdir():
                         np.load(path, allow_pickle=True).item()
                     )
                 
+                # Note: type(output) = dict with 
+                # dict_keys(['measure_lst', 'TS_info_lst', 'common_TRs', 'time_record_dict', 'all'])
                 similarity_assessment = SimilarityAssessment(dFC_lst=dFC_lst)
                 output = similarity_assessment.assess_similarity_fast(dFC_lst=dFC_lst)
                 
