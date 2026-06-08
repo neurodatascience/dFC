@@ -8,6 +8,8 @@
 DATASET_INFO="./dataset_info.json"
 
 # Activate  virtual environment
+module purge
+module load python/3.11.5
 source "/home/mt00/venvs/pydfc/bin/activate"
 
 python "/home/mt00/pydfc/dFC/task_dFC/ML.py" \

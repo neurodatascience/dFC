@@ -10,6 +10,8 @@
 set -euo pipefail
 
 mkdir -p logs
+module purge
+module load python/3.11.5
 source "/home/mt00/venvs/pydfc/bin/activate"
 
 MULTI_DATASET_INFO="/home/mt00/pydfc/dFC/task_dFC/run_scripts_slurm/multi_dataset_info.json"
