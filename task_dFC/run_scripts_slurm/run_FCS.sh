@@ -16,11 +16,10 @@ export OPENBLAS_NUM_THREADS=1
 export NUMEXPR_NUM_THREADS=1
 
 # Activate  virtual environment
-module purge
 module load python/3.11.5
 source "/home/mt00/venvs/pydfc/bin/activate"
 
-python "/home/mt00/pydfc/dFC/task_dFC/FCS_estimate.py" \
+/home/mt00/venvs/pydfc/bin/python "/home/mt00/pydfc/dFC/task_dFC/FCS_estimate.py" \
 --dataset_info $DATASET_INFO \
 --methods_config $METHODS_CONFIG
 

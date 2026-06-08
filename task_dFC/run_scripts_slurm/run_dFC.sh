@@ -16,11 +16,10 @@ SUBJECT_ID=`sed -n "${SLURM_ARRAY_TASK_ID}p" $SUBJECT_LIST`
 echo "Subject ID: $SUBJECT_ID"
 
 # Activate  virtual environment
-module purge
 module load python/3.11.5
 source "/home/mt00/venvs/pydfc/bin/activate"
 
-python "/home/mt00/pydfc/dFC/task_dFC/dFC_assessment.py" \
+/home/mt00/venvs/pydfc/bin/python "/home/mt00/pydfc/dFC/task_dFC/dFC_assessment.py" \
 --dataset_info $DATASET_INFO \
 --methods_config $METHODS_CONFIG \
 --participant_id $SUBJECT_ID
