@@ -19,9 +19,9 @@ export NUMEXPR_NUM_THREADS=1
 module purge
 module load StdEnv/2023
 module load python/3.11.5
-source "/home/mt00/venvs/pydfc/bin/activate"
+source "/home/mt00/venvs/pydfc_env/bin/activate"
 
-/home/mt00/venvs/pydfc/bin/python "/home/mt00/pydfc/dFC/task_dFC/FCS_estimate.py" \
+python "/home/mt00/pydfc/dFC/task_dFC/FCS_estimate.py" \
 --dataset_info $DATASET_INFO \
 --methods_config $METHODS_CONFIG
 

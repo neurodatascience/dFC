@@ -25,7 +25,7 @@ echo "Subject ID: $SUBJECT_ID"
 module purge
 module load StdEnv/2023
 module load python/3.11.5
-source "/home/mt00/venvs/pydfc/bin/activate"
+source "/home/mt00/venvs/pydfc_env/bin/activate"
 
 python "/home/mt00/pydfc/dFC/task_dFC/nifti_to_roi_signal.py" \
     --dataset_info $DATASET_INFO \

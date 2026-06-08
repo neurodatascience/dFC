@@ -13,7 +13,7 @@ mkdir -p logs
 module purge
 module load StdEnv/2023
 module load python/3.11.5
-source "/home/mt00/venvs/pydfc/bin/activate"
+source "/home/mt00/venvs/pydfc_env/bin/activate"
 
 MULTI_DATASET_INFO="/home/mt00/pydfc/dFC/task_dFC/run_scripts_slurm/multi_dataset_info.json"
 
@@ -34,7 +34,7 @@ fi
 
 case "$SCRIPT_NAME" in
   performance_predict.py | performance_factor.py | ml_results.py | dfc_visualization.py | embedding_visualization.py | sample_matrix_visualization.py | task_presence_binarization.py | task_timing_stats.py | cohensd.py)
-    /home/mt00/venvs/pydfc/bin/python "$SCRIPT_PATH" --multi_dataset_info "$MULTI_DATASET_INFO" --simul_or_real "$SIMUL_OR_REAL"
+    python "$SCRIPT_PATH" --multi_dataset_info "$MULTI_DATASET_INFO" --simul_or_real "$SIMUL_OR_REAL"
     ;;
   *)
     echo "Unknown script: $SCRIPT_NAME"
