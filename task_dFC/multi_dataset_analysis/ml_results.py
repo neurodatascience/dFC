@@ -233,20 +233,20 @@ def style_boxplot(ax, box_edge):
 
 def overlay_method_means(ax, df_best, lower, upper):
     means = df_best.groupby("dFC method", observed=True)["score"].mean()
-    xticks = ax.get_xticks()
-    xticklabels = [tick.get_text() for tick in ax.get_xticklabels()]
-    x_positions = {label: xticks[index] for index, label in enumerate(xticklabels)}
+    yticks = ax.get_yticks()
+    yticklabels = [tick.get_text() for tick in ax.get_yticklabels()]
+    y_positions = {label: yticks[index] for index, label in enumerate(yticklabels)}
 
-    halfwidth = 0.1
+    halfwidth = 0.25
     for method, mean_score in means.items():
-        if method not in x_positions or pd.isna(mean_score):
+        if method not in y_positions or pd.isna(mean_score):
             continue
         mean_score = min(upper, max(lower, mean_score))
-        x_position = x_positions[method]
-        ax.hlines(
+        y_pos = y_positions[method]
+        ax.vlines(
             mean_score,
-            x_position - halfwidth,
-            x_position + halfwidth,
+            y_pos - halfwidth,
+            y_pos + halfwidth,
             colors="#050505",
             lw=2.4,
             zorder=3,
@@ -315,10 +315,11 @@ def extract_pointplot_coordinates(ax, method_order, experiment_order, experiment
         y_data = np.asarray(line.get_ydata(), dtype=float)
         coordinates[experiment] = {}
         for method_index, method in enumerate(method_order):
+            x_value = x_data[method_index]
             y_value = y_data[method_index]
-            if np.isnan(y_value):
+            if np.isnan(x_value) or np.isnan(y_value):
                 continue
-            coordinates[experiment][method] = (x_data[method_index], y_value)
+            coordinates[experiment][method] = (x_value, y_value)
     return coordinates
 
 
@@ -408,9 +409,9 @@ def annotate_per_method_quartile(
         SIMULATED_METHOD_MEDIAN_ANNOTATION_THRESHOLD, metric
     )
 
-    xticks = ax.get_xticks()
-    xticklabels = [t.get_text() for t in ax.get_xticklabels()]
-    method_positions = {lab: xticks[i] for i, lab in enumerate(xticklabels)}
+    yticks = ax.get_yticks()
+    yticklabels = [t.get_text() for t in ax.get_yticklabels()]
+    method_positions = {lab: yticks[i] for i, lab in enumerate(yticklabels)}
 
     for method in method_order:
         method_df = df_best[df_best["dFC method"] == method]
@@ -429,7 +430,9 @@ def annotate_per_method_quartile(
                 & (method_df["score"] >= quartile_threshold)
             ]
 
-        method_center = method_positions[method]
+        method_center = method_positions.get(method)
+        if method_center is None:
+            continue
 
         for _, row in qualify_rows.iterrows():
             experiment = row["experiment"]
@@ -440,21 +443,17 @@ def annotate_per_method_quartile(
 
             x_value, y_value = point_coordinates[experiment][method]
 
-            # Position text left or right based on point position
-            if x_value < method_center:
-                ha_align = "right"
-                x_offset = -10
-            else:
-                ha_align = "left"
-                x_offset = 10
+            # Annotate to the right; position text above/below based on dodge offset
+            va_align = "bottom" if y_value > method_center else "top"
+            y_offset = 3 if y_value > method_center else -3
 
             ax.annotate(
                 experiment,
                 xy=(x_value, y_value),
-                xytext=(x_offset, 0),
+                xytext=(8, y_offset),
                 textcoords="offset points",
-                ha=ha_align,
-                va="center",
+                ha="left",
+                va=va_align,
                 fontsize=7,
                 fontweight="bold",
                 color="#1A1A1A",
@@ -473,10 +472,15 @@ def plot_best_pointplot(
     metric,
     simul_or_real,
 ):
-    # Keep the original width scaling so method spacing is unchanged;
-    # reduce only the height to improve aspect ratio.
-    plot_width = max(11, 0.6 * len(method_order))
-    plot_height = 5.6
+    # Sort methods by median score, best at top (ascending → last item at top of y-axis)
+    method_medians = df_best.groupby("dFC method", observed=True)["score"].median()
+    method_order_sorted = (
+        method_medians.reindex(method_order).sort_values(ascending=True).index.tolist()
+    )
+
+    # Fixed width; height scales with number of methods to avoid pixel-limit errors
+    plot_width = 10
+    plot_height = max(8, 0.35 * len(method_order_sorted))
     figure, ax = plt.subplots(figsize=(plot_width, plot_height))
 
     color_threshold = convert_threshold_to_score_scale(COLOR_THRESHOLD, metric)
@@ -491,7 +495,6 @@ def plot_best_pointplot(
         colored_experiments = set(top_experiments)
         label_threshold = -np.inf
     else:
-        # Identify experiments with high performance (>= COLOR_THRESHOLD)
         colored_experiments = get_colored_experiment_mask(df_best, color_threshold)
 
     # Create neutral palette: vibrant for high performers, neutral for others
@@ -502,15 +505,16 @@ def plot_best_pointplot(
     box_face = to_rgba("#DE9995", 0.18)
     box_edge = "#730800"
 
+    # Horizontal boxplot: score on x-axis, methods on y-axis
     sns.boxplot(
         data=df_best,
-        x="dFC method",
-        y="score",
-        order=method_order,
+        x="score",
+        y="dFC method",
+        order=method_order_sorted,
         whis=(5, 95),
         fliersize=0,
         linewidth=1.0,
-        width=0.2,
+        width=0.5,
         color=box_face,
         ax=ax,
         zorder=1,
@@ -520,13 +524,13 @@ def plot_best_pointplot(
     lower, upper = get_pointplot_limits(metric)
     overlay_method_means(ax, df_best, lower, upper)
 
-    # Draw pointplot with neutral palette
+    # Horizontal pointplot: experiments as hue, dodged vertically
     sns.pointplot(
         data=df_best,
-        x="dFC method",
-        y="score",
+        x="score",
+        y="dFC method",
         hue="experiment",
-        order=method_order,
+        order=method_order_sorted,
         hue_order=experiment_order,
         dodge=0.4,
         errorbar=None,
@@ -537,17 +541,15 @@ def plot_best_pointplot(
         zorder=6,
     )
     finalize_marker_edges(ax)
-    resize_colored_markers(ax, experiment_order, colored_experiments, method_order)
+    resize_colored_markers(ax, experiment_order, colored_experiments, method_order_sorted)
 
-    # Extract point coordinates from the pointplot
     point_coordinates = extract_pointplot_coordinates(
         ax,
-        method_order,
+        method_order_sorted,
         experiment_order,
         neutral_palette,
     )
 
-    # Overlay shapes for top 3 experiments using vibrant palette
     overlay_top_experiment_shapes(
         ax,
         df_best,
@@ -556,33 +558,33 @@ def plot_best_pointplot(
         top_experiment_shapes=TOP_EXPERIMENT_SHAPES,
     )
 
-    # Annotate per-method quartile points
     annotate_per_method_quartile(
         ax,
         df_best,
         point_coordinates,
-        method_order,
+        method_order_sorted,
         colored_experiments=colored_experiments,
         metric=metric,
         simul_or_real=simul_or_real,
         score_threshold=label_threshold,
     )
 
-    ax.set_xlabel("dFC method")
-    ax.set_ylabel(metric)
+    ax.set_ylabel("dFC method", fontsize=15, fontweight="bold")
+    ax.set_xlabel(metric, fontsize=15, fontweight="bold")
     if metric == "SI":
-        ax.set_ylim(top=1.02)
+        ax.set_xlim(right=1.02)
     else:
-        ax.set_ylim(0.48, 1.02)
-        ax.yaxis.set_major_formatter(PercentFormatter(xmax=1.0, decimals=0))
-    ax.grid(True, axis="y", color="#FFFFFF", alpha=0.85, linewidth=1.1)
+        ax.set_xlim(0.48, 1.02)
+        ax.xaxis.set_major_formatter(PercentFormatter(xmax=1.0, decimals=0))
+    ax.set_ylim(-0.5, len(method_order_sorted) - 0.5)
+    ax.grid(True, axis="x", color="#FFFFFF", alpha=0.85, linewidth=1.1)
     sns.despine(ax=ax, top=True, right=True)
-    plt.setp(ax.get_xticklabels(), rotation=35, ha="right")
+    plt.setp(ax.get_yticklabels(), fontweight="bold", fontsize=13)
+    plt.setp(ax.get_xticklabels(), fontsize=12)
 
     if ax.legend_:
         ax.legend_.remove()
 
-    boldify_axes(ax, xlabel="dFC method", ylabel=metric)
     figure.tight_layout()
 
     savefig_pub(
@@ -614,22 +616,24 @@ def plot_best_heatmap(
     )
     col_order = [method for method in method_order if method in matrix_best.columns]
 
-    if simul_or_real == "real":
-        width = max(10, 0.65 * len(col_order))
-        height = max(6.0, 0.30 * len(matrix_best.index))
-    else:
-        width = max(11, 11 / 7 * len(col_order))
-        height = max(7.0, 0.35 * len(matrix_best.index))
+    # Transpose: methods on rows, experiments on columns — keeps width bounded
+    matrix_plot = matrix_best.loc[:, col_order].T
+    annot_plot = annot_best.loc[:, col_order].T
+
+    n_methods = len(matrix_plot.index)
+    n_exps = len(matrix_plot.columns)
+    width = max(5.0, 0.55 * n_exps)
+    height = max(8.0, 0.30 * n_methods)
 
     figure, ax = plt.subplots(figsize=(width, height))
     vmin, vmax, center = get_heatmap_limits(metric)
     heatmap = sns.heatmap(
-        matrix_best.loc[:, col_order],
+        matrix_plot,
         vmin=vmin,
         vmax=vmax,
         center=center,
         cmap="coolwarm",
-        annot=annot_best.loc[:, col_order],
+        annot=annot_plot,
         fmt="",
         annot_kws={"fontsize": 9, "fontweight": "bold", "linespacing": 1.15},
         cbar_kws={"shrink": 0.7, "pad": 0.02},
@@ -639,9 +643,9 @@ def plot_best_heatmap(
     colorbar.set_label(metric, fontsize=10, fontweight="bold")
     colorbar.ax.tick_params(labelsize=9)
 
-    boldify_axes(ax, xlabel="dFC method", ylabel="Experiment", rotate_xticks=35)
-    ax.set_xlabel("dFC method")
-    ax.set_ylabel("Experiment")
+    boldify_axes(ax, xlabel="Experiment", ylabel="dFC method", rotate_xticks=35)
+    ax.set_xlabel("Experiment")
+    ax.set_ylabel("dFC method")
     plt.setp(ax.get_xticklabels(), fontweight="bold", rotation=35, ha="right")
     plt.setp(ax.get_yticklabels(), fontweight="bold")
     sns.despine(ax=ax, top=True, right=True)
@@ -699,18 +703,25 @@ def plot_across_heatmap(
         task_to_experiment,
     )
     col_order = [method for method in method_order if method in matrix_across.columns]
-    width = max(9.0, 11 / 7 * len(col_order))
-    height = max(7.0, 7 / 20 * len(matrix_across.index))
+
+    # Transpose: methods on rows, experiments on columns — keeps width bounded
+    matrix_plot = matrix_across.loc[:, col_order].T
+    annot_plot = annot_across.loc[:, col_order].T
+
+    n_methods = len(matrix_plot.index)
+    n_exps = len(matrix_plot.columns)
+    width = max(5.0, 0.55 * n_exps)
+    height = max(8.0, 0.35 * n_methods)
 
     figure, ax = plt.subplots(figsize=(width, height))
     vmin, vmax, center = get_heatmap_limits(metric)
     heatmap = sns.heatmap(
-        matrix_across.loc[:, col_order],
+        matrix_plot,
         vmin=vmin,
         vmax=vmax,
         center=center,
         cmap="coolwarm",
-        annot=annot_across.loc[:, col_order],
+        annot=annot_plot,
         fmt="",
         annot_kws={"fontsize": 9, "fontweight": "bold", "linespacing": 1.15},
         cbar_kws={"shrink": 0.7, "pad": 0.02},
@@ -719,9 +730,9 @@ def plot_across_heatmap(
 
     colorbar = heatmap.collections[0].colorbar
     colorbar.set_label(metric, fontsize=10, fontweight="bold")
-    boldify_axes(ax, xlabel="dFC method", ylabel="Experiment", rotate_xticks=35)
-    ax.set_xlabel("dFC method")
-    ax.set_ylabel("Experiment")
+    boldify_axes(ax, xlabel="Experiment", ylabel="dFC method", rotate_xticks=35)
+    ax.set_xlabel("Experiment")
+    ax.set_ylabel("dFC method")
     plt.setp(ax.get_xticklabels(), fontweight="bold", rotation=35, ha="right")
     plt.setp(ax.get_yticklabels(), fontweight="bold")
     sns.despine(ax=ax, top=True, right=True)
