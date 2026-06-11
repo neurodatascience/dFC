@@ -1,26 +1,31 @@
 #!/bin/bash
 #
-#$ -cwd
+#$ -N fmriprep_job
 #$ -o logs/fmriprep_out.log
 #$ -e logs/fmriprep_err.log
-#$ -l h_rt=24:00:00
-#$ -l h_vmem=32G
-#$ -q origami.q
+#$ -l h_vmem=16g
+#$ -pe smp 8
+#$ -t 1-NSUBJECTS
+#$ -q YOUR_QUEUE
 
-# TODO replace with local paths
-source "/data/origami/dFC/anaconda3/etc/profile.d/conda.sh"
-conda activate nipoppy_env
+# ---- Cluster configuration (set these for your system) ----
+NIPOPPY_VENV_PATH="/path/to/your/nipoppy_venv/bin/activate"
+# -----------------------------------------------------------
+
+module load apptainer
+
+source "$NIPOPPY_VENV_PATH"
 
 SUBJECT_LIST="./subj_list.txt"
-GLOBAL_CONFIG="../proc/global_configs.json"
 
-echo "Number subjects found: `cat $SUBJECT_LIST | wc -l`"
+echo "Number subjects found: $(wc -l < $SUBJECT_LIST)"
 
-SUBJECT_ID=`sed -n "${SGE_TASK_ID}p" $SUBJECT_LIST`
+SUBJECT_ID=$(sed -n "${SGE_TASK_ID}p" $SUBJECT_LIST)
 echo "Subject ID: $SUBJECT_ID"
 
-python "/data/origami/dFC/CODEs/nipoppy/nipoppy/workflow/proc_pipe/fmriprep/run_fmriprep.py" \
---global_config $GLOBAL_CONFIG \
---participant_id $SUBJECT_ID
+nipoppy run \
+"$(dirname "$(pwd)")" \
+--pipeline fmriprep \
+--participant-id $SUBJECT_ID
 
-conda deactivate
+deactivate

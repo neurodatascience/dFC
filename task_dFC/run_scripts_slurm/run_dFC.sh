@@ -15,10 +15,15 @@ echo "Number subjects found: `cat $SUBJECT_LIST | wc -l`"
 SUBJECT_ID=`sed -n "${SLURM_ARRAY_TASK_ID}p" $SUBJECT_LIST`
 echo "Subject ID: $SUBJECT_ID"
 
-# Activate  virtual environment
-source "/home/mt00/venvs/pydfc/bin/activate"
+# ---- Cluster configuration (set these for your system) ----
+VENV_PATH="/path/to/your/venv/bin/activate"
+PYDFC_CODE_DIR="/path/to/pydfc"
+# -----------------------------------------------------------
 
-python "/home/mt00/pydfc/dFC/task_dFC/dFC_assessment.py" \
+# Activate virtual environment
+source "$VENV_PATH"
+
+python "$PYDFC_CODE_DIR/task_dFC/dFC_assessment.py" \
 --dataset_info $DATASET_INFO \
 --methods_config $METHODS_CONFIG \
 --participant_id $SUBJECT_ID

@@ -8,7 +8,11 @@
 
 module load apptainer
 
-source "/home/mt00/venvs/nipoppy_env/bin/activate"
+# ---- Cluster configuration (set these for your system) ----
+NIPOPPY_VENV_PATH="/path/to/your/nipoppy_venv/bin/activate"
+# -----------------------------------------------------------
+
+source "$NIPOPPY_VENV_PATH"
 
 SUBJECT_LIST="./subj_list.txt"
 

@@ -1,7 +1,7 @@
 {
     "task-Axcpt": {
         "task_name": "task-Axcpt",
-        "task_data": "/home/mt00/projects/def-jbpoline/mt00/DATA/task-based/openneuro/ds003465/derivatives/ROI_timeseries/{subj_id}/ses-wave1bas/{subj_id}_ses-wave1bas_task-Axcpt_run-1_task-data.npy",
+        "task_data": "/path/to/your/data/ds003465/derivatives/ROI_timeseries/{subj_id}/ses-wave1bas/{subj_id}_ses-wave1bas_task-Axcpt_run-1_task-data.npy",
         "TAVG_period": 1.0,
         "num_stimulated_regions": 5,
         "global_conn_coupling_coef": 0.0126,
@@ -11,7 +11,7 @@
     },
     "task-Cuedts": {
         "task_name": "task-Cuedts",
-        "task_data": "/home/mt00/projects/def-jbpoline/mt00/DATA/task-based/openneuro/ds003465/derivatives/ROI_timeseries/{subj_id}/ses-wave1bas/{subj_id}_ses-wave1bas_task-Cuedts_run-1_task-data.npy",
+        "task_data": "/path/to/your/data/ds003465/derivatives/ROI_timeseries/{subj_id}/ses-wave1bas/{subj_id}_ses-wave1bas_task-Cuedts_run-1_task-data.npy",
         "TAVG_period": 1.0,
         "num_stimulated_regions": 5,
         "global_conn_coupling_coef": 0.0126,
@@ -21,7 +21,7 @@
     },
     "task-Stern": {
         "task_name": "task-Stern",
-        "task_data": "/home/mt00/projects/def-jbpoline/mt00/DATA/task-based/openneuro/ds003465/derivatives/ROI_timeseries/{subj_id}/ses-wave1bas/{subj_id}_ses-wave1bas_task-Stern_run-1_task-data.npy",
+        "task_data": "/path/to/your/data/ds003465/derivatives/ROI_timeseries/{subj_id}/ses-wave1bas/{subj_id}_ses-wave1bas_task-Stern_run-1_task-data.npy",
         "TAVG_period": 1.0,
         "num_stimulated_regions": 5,
         "global_conn_coupling_coef": 0.0126,
@@ -31,7 +31,7 @@
     },
     "task-Stroop": {
         "task_name": "task-Stroop",
-        "task_data": "/home/mt00/projects/def-jbpoline/mt00/DATA/task-based/openneuro/ds003465/derivatives/ROI_timeseries/{subj_id}/ses-wave1bas/{subj_id}_ses-wave1bas_task-Stroop_run-1_task-data.npy",
+        "task_data": "/path/to/your/data/ds003465/derivatives/ROI_timeseries/{subj_id}/ses-wave1bas/{subj_id}_ses-wave1bas_task-Stroop_run-1_task-data.npy",
         "TAVG_period": 1.0,
         "num_stimulated_regions": 5,
         "global_conn_coupling_coef": 0.0126,

@@ -7,10 +7,15 @@
 
 DATASET_INFO="./dataset_info.json"
 
-# Activate  virtual environment
-source "/home/mt00/venvs/pydfc/bin/activate"
+# ---- Cluster configuration (set these for your system) ----
+VENV_PATH="/path/to/your/venv/bin/activate"
+PYDFC_CODE_DIR="/path/to/pydfc"
+# -----------------------------------------------------------
 
-python "/home/mt00/pydfc/dFC/task_dFC/ML.py" \
+# Activate virtual environment
+source "$VENV_PATH"
+
+python "$PYDFC_CODE_DIR/task_dFC/ML.py" \
 --dataset_info $DATASET_INFO
 
 deactivate

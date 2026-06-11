@@ -1,12 +1,11 @@
 #!/bin/sh
 #
-#SBATCH --job-name=across_dataset_analysis
-#SBATCH --output=logs/%x_out.txt
-#SBATCH --error=logs/%x_err.txt
-#SBATCH --time=05:00:00
-#SBATCH --mem=32G
-# Note: run sbatch from your multi_dataset_analysis/codes directory, or uncomment and set --chdir:
-# #SBATCH --chdir=/path/to/multi_dataset_analysis/codes
+#$ -N across_dataset_analysis
+#$ -o logs/across_dataset_analysis_out.txt
+#$ -e logs/across_dataset_analysis_err.txt
+#$ -l h_rt=05:00:00
+#$ -l h_vmem=32g
+#$ -q YOUR_QUEUE
 
 # ---- Cluster configuration (set these for your system) ----
 VENV_PATH="/path/to/your/venv/bin/activate"
@@ -18,7 +17,7 @@ set -euo pipefail
 mkdir -p logs
 source "$VENV_PATH"
 
-MULTI_DATASET_INFO="$PYDFC_CODE_DIR/task_dFC/run_scripts_slurm/multi_dataset_info.json"
+MULTI_DATASET_INFO="$PYDFC_CODE_DIR/task_dFC/run_scripts_sge/multi_dataset_info.json"
 
 SCRIPT_NAME=${1:-}
 SIMUL_OR_REAL=${2:-real}
@@ -26,7 +25,7 @@ SCRIPT_DIR="$PYDFC_CODE_DIR/task_dFC/multi_dataset_analysis"
 SCRIPT_PATH="$SCRIPT_DIR/$SCRIPT_NAME"
 
 if [ -z "$SCRIPT_NAME" ]; then
-    echo "Usage: sbatch run_analysis.sh <script_name> [real|simulated]"
+    echo "Usage: qsub run_across_dataset_analysis.sh <script_name> [real|simulated]"
     exit 1
 fi
 

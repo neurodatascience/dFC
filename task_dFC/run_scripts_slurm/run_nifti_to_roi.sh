@@ -19,12 +19,17 @@ echo "Number of subjects: $(wc -l < "$SUBJECT_LIST")"
 SUBJECT_ID=$(sed -n "${SLURM_ARRAY_TASK_ID}p" "$SUBJECT_LIST")
 echo "Subject ID: $SUBJECT_ID"
 
+# ---- Cluster configuration (set these for your system) ----
+VENV_PATH="/path/to/your/venv/bin/activate"
+PYDFC_CODE_DIR="/path/to/pydfc"
+# -----------------------------------------------------------
+
 # -----------------------------
 # Environment
 # -----------------------------
-source "/home/mt00/venvs/pydfc/bin/activate"
+source "$VENV_PATH"
 
-python "/home/mt00/pydfc/dFC/task_dFC/nifti_to_roi_signal.py" \
+python "$PYDFC_CODE_DIR/task_dFC/nifti_to_roi_signal.py" \
     --dataset_info $DATASET_INFO \
     --participant_id $SUBJECT_ID \
     --denoising_strategy $DENOISING_STRATEGY
