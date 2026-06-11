@@ -8,7 +8,7 @@ PydFC: task_dFC Module Documentation
 
 The ``task_dFC`` module provides a scalable, open-source Python solution for the **large-scale benchmarking and application of dynamic functional connectivity (dFC) methods**.
 
-Its core purpose is to apply end-to-end analytical workflows to fMRI data to assess the efficacy of various dFC methodologies in **predicting moment-to-moment cognitive states** — specifically, distinguishing between moments of task engagement versus rest at the single repetition time (TR) resolution.
+Its core purpose is to apply end-to-end analytical workflows to fMRI data to assess the efficacy of various dFC methodologies in **predicting ongoing cognitive states** — specifically, distinguishing between moments of task engagement versus rest at the single repetition time (TR) resolution.
 
 Methods Implemented
 -------------------
@@ -129,5 +129,5 @@ Typical submission order::
     sbatch run_FCS.sh
     sbatch --array=1-N run_dFC.sh
     sbatch run_ML.sh
-    sbatch run_report.sh
+    sbatch run_report.sh         # (optional)
     sbatch run_across_dataset_analysis.sh <script_name>

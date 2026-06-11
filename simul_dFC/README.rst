@@ -24,4 +24,4 @@ Set ``VENV_PATH`` and ``PYDFC_CODE_DIR`` in the cluster configuration block at t
 
 The script expects a ``subj_list.txt`` (one subject ID per line), a ``dataset_info.json``, and a ``tasks_info.json`` in the same directory as the run script.
 
-Simulated outputs are consumed directly by the ``task_dFC`` pipeline starting at ``dFC_assessment.py``.
+Simulated outputs are consumed directly by the ``task_dFC`` pipeline starting at ``FCS_estimate.py``.
