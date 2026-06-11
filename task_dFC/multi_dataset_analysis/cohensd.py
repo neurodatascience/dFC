@@ -8,6 +8,7 @@ import nibabel as nib
 import numpy as np
 import pandas as pd
 import seaborn as sns
+from matplotlib.colors import to_rgba
 from nilearn import datasets, plotting
 
 from pydfc import data_loader
@@ -22,6 +23,15 @@ from helper_functions import (  # pyright: ignore[reportMissingImports]
 #######################################################################################
 
 
+_BOX_COLOR = "#4472C4"
+_POINT_COLOR = "#C0392B"
+_POINT_EDGE_COLOR = "#7B241C"
+_BOX_OFFSET = -0.17  # box center relative to x-tick
+_STRIP_OFFSET = 0.17  # point cloud center relative to x-tick
+_BOX_WIDTH = 0.28
+_STRIP_JITTER = 0.09
+
+
 def plot_cohensd_per_experiment(
     df,
     experiment_order,
@@ -30,54 +40,62 @@ def plot_cohensd_per_experiment(
     y_label="|Cohen's d|",
 ):
     """
-    Boxplot + individual points of |Cohen's d| per experiment.
+    Boxplot (left of tick) + individual points (right of tick) per experiment.
 
-    Boxplot drawn first (solid, visible fill). Points drawn on top in a single
-    contrasting color with transparency so the box statistics remain readable.
+    Boxes and points are spatially separated so neither buries the other.
     Simulated data uses symlog y-scale to handle extreme outliers.
     """
     fig_width = max(10, 0.7 * len(experiment_order))
     fig, ax = plt.subplots(figsize=(fig_width, 7))
 
-    # 1. Boxplot first — solid, clearly visible
-    sns.boxplot(
-        data=df,
-        x="experiment",
-        y=y_col,
-        order=experiment_order,
+    n = len(experiment_order)
+    positions = np.arange(n)
+    exp_to_idx = {exp: i for i, exp in enumerate(experiment_order)}
+
+    # --- Boxplot left of center ---
+    box_data = [
+        df[df["experiment"] == exp][y_col].dropna().values for exp in experiment_order
+    ]
+    bp = ax.boxplot(
+        box_data,
+        positions=positions + _BOX_OFFSET,
+        widths=_BOX_WIDTH,
         showfliers=False,
-        width=0.55,
-        linewidth=2.0,
-        color="#2057B6",
-        ax=ax,
+        patch_artist=True,
+        medianprops=dict(color="#1A1A1A", linewidth=2.5),
+        boxprops=dict(linewidth=1.8),
+        whiskerprops=dict(linewidth=1.6),
+        capprops=dict(linewidth=1.6),
     )
-    # Bring fill opacity to 0.45 — visible but not opaque
-    for patch in ax.patches:
-        r, g, b, _ = patch.get_facecolor()
-        patch.set_facecolor((r, g, b, 0.45))
-    # Make the median line stand out
-    for line in ax.lines:
-        if line.get_linestyle() == "-":
-            line.set_linewidth(2.5)
+    for patch in bp["boxes"]:
+        patch.set_facecolor(to_rgba(_BOX_COLOR, 0.5))
+        patch.set_edgecolor(_BOX_COLOR)
+    for line in bp["whiskers"] + bp["caps"]:
+        line.set_color(_BOX_COLOR)
 
-    # 2. Points on top — single contrasting color, semi-transparent
-    sns.stripplot(
-        data=df,
-        x="experiment",
-        y=y_col,
-        order=experiment_order,
-        color="#C0392B",
-        dodge=False,
-        jitter=0.18,
-        size=6,
-        alpha=0.85,
-        linewidth=2.0,
-        edgecolor="#7B241C",
-        ax=ax,
-    )
+    # --- Strip points right of center ---
+    rng = np.random.default_rng(42)
+    for exp in experiment_order:
+        vals = df[df["experiment"] == exp][y_col].dropna().values
+        if len(vals) == 0:
+            continue
+        x_jit = (exp_to_idx[exp] + _STRIP_OFFSET) + rng.uniform(
+            -_STRIP_JITTER, _STRIP_JITTER, len(vals)
+        )
+        ax.scatter(
+            x_jit,
+            vals,
+            color=_POINT_COLOR,
+            alpha=0.55,
+            s=30,
+            linewidths=0.5,
+            edgecolors=_POINT_EDGE_COLOR,
+            zorder=3,
+        )
 
-    if ax.legend_:
-        ax.legend_.remove()
+    ax.set_xticks(positions)
+    ax.set_xticklabels(experiment_order)
+    ax.set_xlim(-0.6, n - 0.4)
 
     ax.set_ylim(bottom=0)
 
