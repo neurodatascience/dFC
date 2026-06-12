@@ -44,6 +44,25 @@ PER_METHOD_LABEL_SCORE_THRESHOLD = 55.0
 SIMULATED_METHOD_MEDIAN_ANNOTATION_THRESHOLD = 80.0
 NEUTRAL_COLOR = "#D49B9B"
 
+NON_AIGM_METHODS = frozenset(
+    [
+        "SlidingWindow",
+        "Time-Freq",
+        "CAP",
+        "ContinuousHMM",
+        "Windowless",
+        "Clustering",
+        "DiscreteHMM",
+    ]
+)
+_AIGM_COLOR = "#0077B6"
+_NON_AIGM_COLOR = "#E63946"
+_METRIC_SHORT = {
+    "Logistic regression balanced accuracy": "LogReg BA",
+    "SVM balanced accuracy": "SVM BA",
+    "SI": "SI",
+}
+
 
 def parse_args():
     helptext = """
@@ -622,7 +641,7 @@ def plot_best_heatmap(
 
     n_methods = len(matrix_plot.index)
     n_exps = len(matrix_plot.columns)
-    width = max(5.0, 0.55 * n_exps)
+    width = max(8.0, 1.2 * n_exps)
     height = max(8.0, 0.30 * n_methods)
 
     figure, ax = plt.subplots(figsize=(width, height))
@@ -710,7 +729,7 @@ def plot_across_heatmap(
 
     n_methods = len(matrix_plot.index)
     n_exps = len(matrix_plot.columns)
-    width = max(5.0, 0.55 * n_exps)
+    width = max(8.0, 1.5 * n_exps)
     height = max(8.0, 0.35 * n_methods)
 
     figure, ax = plt.subplots(figsize=(width, height))
@@ -741,6 +760,97 @@ def plot_across_heatmap(
         f"{output_root}/ML_scores_heatmap_{embedding}_{metric}_{LEVEL}_{simul_or_real}_across.png"
     )
     plt.close(figure)
+
+
+def plot_aigm_comparison(
+    df_best,
+    output_root,
+    embedding,
+    metric,
+    simul_or_real,
+):
+    """
+    Single-figure KDE comparison of AIGM vs non-AIGM score distributions.
+    Filled KDE curves + rug ticks + median lines + Mann-Whitney p-value.
+    """
+    from scipy.stats import mannwhitneyu
+
+    df_best = df_best.copy()
+    df_best["is_aigm"] = ~df_best["dFC method"].isin(NON_AIGM_METHODS)
+
+    aigm = df_best[df_best["is_aigm"]]["score"].dropna().values
+    non_aigm = df_best[~df_best["is_aigm"]]["score"].dropna().values
+    n_aigm = df_best[df_best["is_aigm"]]["dFC method"].nunique()
+    n_non_aigm = df_best[~df_best["is_aigm"]]["dFC method"].nunique()
+
+    fig, ax = plt.subplots(figsize=(7, 5))
+
+    groups = [
+        (aigm, _AIGM_COLOR, f"AIGM  (n={n_aigm} methods)"),
+        (non_aigm, _NON_AIGM_COLOR, f"Non-AIGM  (n={n_non_aigm} methods)"),
+    ]
+    for scores, color, label in groups:
+        if len(scores) < 2:
+            continue
+        sns.kdeplot(
+            scores,
+            ax=ax,
+            color=color,
+            fill=True,
+            alpha=0.35,
+            linewidth=2.2,
+            label=label,
+            bw_adjust=0.9,
+        )
+        ax.axvline(
+            np.nanmedian(scores),
+            color=color,
+            linestyle="--",
+            linewidth=1.8,
+            alpha=0.85,
+        )
+        sns.rugplot(scores, ax=ax, color=color, height=0.06, alpha=0.55)
+
+    if len(aigm) >= 2 and len(non_aigm) >= 2:
+        _, pval = mannwhitneyu(aigm, non_aigm, alternative="two-sided")
+        pstr = "p<0.001" if pval < 0.001 else f"p={pval:.3f}"
+        ax.text(
+            0.97,
+            0.97,
+            pstr,
+            transform=ax.transAxes,
+            ha="right",
+            va="top",
+            fontsize=10,
+            fontweight="bold",
+            bbox=dict(boxstyle="round,pad=0.3", fc="white", ec="#BBBBBB", alpha=0.88),
+        )
+
+    if metric == "SI":
+        ax.set_xlim(-1.02, 1.02)
+        ax.axvline(0, color="#CCCCCC", linewidth=0.9, linestyle=":")
+    else:
+        ax.set_xlim(0.48, 1.02)
+        ax.xaxis.set_major_formatter(PercentFormatter(xmax=1.0, decimals=0))
+        ax.axvline(0.5, color="#CCCCCC", linewidth=0.9, linestyle=":")
+
+    ax.set_title(
+        f"AIGM vs Non-AIGM  ·  {embedding}  ·  {_METRIC_SHORT[metric]}",
+        fontsize=13,
+        fontweight="bold",
+        pad=8,
+    )
+    ax.set_xlabel("Score", fontsize=12, fontweight="bold")
+    ax.set_ylabel("Density", fontsize=12, fontweight="bold")
+    ax.tick_params(labelsize=10)
+    ax.legend(fontsize=10, frameon=True, framealpha=0.9)
+    sns.despine(ax=ax)
+
+    plt.tight_layout()
+    savefig_pub(
+        f"{output_root}/ML_scores_AIGM_vs_nonAIGM_{embedding}_{metric}_{LEVEL}_{simul_or_real}.png"
+    )
+    plt.close(fig)
 
 
 def generate_all_plots(all_ml_scores, tasks_to_include, output_root, simul_or_real):
@@ -789,6 +899,13 @@ def generate_all_plots(all_ml_scores, tasks_to_include, output_root, simul_or_re
             method_order,
             task_order,
             task_to_experiment,
+            output_root,
+            embedding,
+            metric,
+            simul_or_real,
+        )
+        plot_aigm_comparison(
+            df_best,
             output_root,
             embedding,
             metric,
