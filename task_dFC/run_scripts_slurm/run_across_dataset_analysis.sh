@@ -5,7 +5,7 @@
 #SBATCH --error=logs/%x_err.txt
 #SBATCH --time=05:00:00
 #SBATCH --mem=32G
-#SBATCH --chdir=/home/mt00/projects/def-jbpoline/mt00/DATA/task-based/openneuro/multi_dataset_analysis/codes
+#SBATCH --chdir=/home/mt00/projects/def-jbpoline/mt00/DATA/pydfc_validator/multi_dataset_analysis/codes
 
 set -euo pipefail
 trap 'echo "ERROR: Script failed at line $LINENO with exit code $?" >&2' ERR
