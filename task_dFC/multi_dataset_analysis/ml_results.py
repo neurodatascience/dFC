@@ -771,7 +771,7 @@ def plot_aigm_comparison(
 ):
     """
     Horizontal boxplot + scatter comparing AIGM vs non-AIGM method scores.
-    One point per method (median across experiments). Matches plot_best_pointplot style.
+    One point per (method × experiment). Matches plot_best_pointplot style.
     """
     from scipy.stats import mannwhitneyu
 
@@ -780,21 +780,11 @@ def plot_aigm_comparison(
         lambda m: "Non-AIGM" if m in NON_AIGM_METHODS else "AIGM"
     )
 
-    # One value per method — median across experiments
-    method_medians = (
-        df_best.groupby(["dFC method", "group"], observed=True)["score"]
-        .median()
-        .reset_index()
-        .rename(columns={"score": "median_score"})
-    )
-
     group_order = ["AIGM", "Non-AIGM"]
-    n_aigm = (method_medians["group"] == "AIGM").sum()
-    n_non_aigm = (method_medians["group"] == "Non-AIGM").sum()
-    group_labels = [f"AIGM\n(n={n_aigm})", f"Non-AIGM\n(n={n_non_aigm})"]
-    method_medians["group_label"] = method_medians["group"].map(
-        dict(zip(group_order, group_labels))
-    )
+    n_aigm = df_best[df_best["group"] == "AIGM"]["dFC method"].nunique()
+    n_non_aigm = df_best[df_best["group"] == "Non-AIGM"]["dFC method"].nunique()
+    group_labels = [f"AIGM\n(n={n_aigm} methods)", f"Non-AIGM\n(n={n_non_aigm} methods)"]
+    df_best["group_label"] = df_best["group"].map(dict(zip(group_order, group_labels)))
 
     fig, ax = plt.subplots(figsize=(9, 4))
 
@@ -802,8 +792,8 @@ def plot_aigm_comparison(
     box_edge = "#730800"
 
     sns.boxplot(
-        data=method_medians,
-        x="median_score",
+        data=df_best,
+        x="score",
         y="group_label",
         order=group_labels,
         whis=(5, 95),
@@ -816,28 +806,25 @@ def plot_aigm_comparison(
     )
     style_boxplot(ax, box_edge)
 
-    # One scatter point per method, colored by group
+    # One point per (method × experiment), colored by group
     rng = np.random.default_rng(42)
     group_colors = {"AIGM": _AIGM_COLOR, "Non-AIGM": _NON_AIGM_COLOR}
     for i, (group, label) in enumerate(zip(group_order, group_labels)):
-        vals = method_medians[method_medians["group"] == group]["median_score"].values
+        vals = df_best[df_best["group"] == group]["score"].dropna().values
         y_jit = i + rng.uniform(-0.18, 0.18, len(vals))
         ax.scatter(
             vals,
             y_jit,
             color=group_colors[group],
-            alpha=0.75,
-            s=45,
-            linewidths=0.7,
-            edgecolors="white",
+            alpha=0.35,
+            s=18,
+            linewidths=0.0,
             zorder=4,
         )
 
     # Mann-Whitney p-value
-    aigm_vals = method_medians[method_medians["group"] == "AIGM"]["median_score"].values
-    non_aigm_vals = method_medians[method_medians["group"] == "Non-AIGM"][
-        "median_score"
-    ].values
+    aigm_vals = df_best[df_best["group"] == "AIGM"]["score"].dropna().values
+    non_aigm_vals = df_best[df_best["group"] == "Non-AIGM"]["score"].dropna().values
     if len(aigm_vals) >= 2 and len(non_aigm_vals) >= 2:
         _, pval = mannwhitneyu(aigm_vals, non_aigm_vals, alternative="two-sided")
         pstr = "p<0.001" if pval < 0.001 else f"p={pval:.3f}"
