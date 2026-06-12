@@ -612,6 +612,264 @@ def plot_best_pointplot(
     plt.close(figure)
 
 
+def _draw_pointplot_panel(
+    ax,
+    df_panel,
+    method_order_sorted,
+    experiment_order,
+    neutral_palette,
+    colored_experiments,
+    top_experiments,
+    metric,
+    simul_or_real,
+):
+    """Shared helper: draw boxplot + pointplot on a single axis."""
+    box_face = to_rgba("#DE9995", 0.18)
+    box_edge = "#730800"
+
+    sns.boxplot(
+        data=df_panel,
+        x="score",
+        y="dFC method",
+        order=method_order_sorted,
+        whis=(5, 95),
+        fliersize=0,
+        linewidth=1.0,
+        width=0.5,
+        color=box_face,
+        ax=ax,
+        zorder=1,
+    )
+    style_boxplot(ax, box_edge)
+
+    lower, upper = get_pointplot_limits(metric)
+    overlay_method_means(ax, df_panel, lower, upper)
+
+    sns.pointplot(
+        data=df_panel,
+        x="score",
+        y="dFC method",
+        hue="experiment",
+        order=method_order_sorted,
+        hue_order=experiment_order,
+        dodge=0.4,
+        errorbar=None,
+        linestyles="",
+        markers="o",
+        palette=neutral_palette,
+        ax=ax,
+        zorder=6,
+    )
+    finalize_marker_edges(ax)
+    resize_colored_markers(ax, experiment_order, colored_experiments, method_order_sorted)
+
+    point_coordinates = extract_pointplot_coordinates(
+        ax, method_order_sorted, experiment_order, neutral_palette
+    )
+    overlay_top_experiment_shapes(
+        ax,
+        df_panel,
+        point_coordinates,
+        neutral_palette,
+        top_experiment_shapes=TOP_EXPERIMENT_SHAPES,
+    )
+
+    if metric == "SI":
+        ax.set_xlim(right=1.02)
+    else:
+        ax.set_xlim(0.48, 1.02)
+        ax.xaxis.set_major_formatter(PercentFormatter(xmax=1.0, decimals=0))
+    ax.set_ylim(-0.5, len(method_order_sorted) - 0.5)
+    ax.grid(True, axis="x", color="#FFFFFF", alpha=0.85, linewidth=1.1)
+    sns.despine(ax=ax, top=True, right=True)
+    plt.setp(ax.get_yticklabels(), fontweight="bold", fontsize=13)
+    plt.setp(ax.get_xticklabels(), fontsize=12)
+    if ax.legend_:
+        ax.legend_.remove()
+
+
+def plot_lollipop_pointplot(
+    df_best,
+    method_order,
+    experiment_order,
+    experiment_palette,
+    output_root,
+    embedding,
+    metric,
+    simul_or_real,
+):
+    method_medians = df_best.groupby("dFC method", observed=True)["score"].median()
+    method_order_sorted = (
+        method_medians.reindex(method_order).sort_values(ascending=True).index.tolist()
+    )
+
+    plot_width = 10
+    plot_height = max(8, 0.20 * len(method_order_sorted))
+    figure, ax = plt.subplots(figsize=(plot_width, plot_height))
+
+    color_threshold = convert_threshold_to_score_scale(COLOR_THRESHOLD, metric)
+    top_experiments = get_top_experiments_by_mean(df_best, TOP_EXPERIMENT_SHAPES)
+
+    if metric == "SI":
+        colored_experiments = set(top_experiments)
+    else:
+        colored_experiments = get_colored_experiment_mask(df_best, color_threshold)
+
+    neutral_palette = create_neutral_palette(
+        experiment_order, colored_experiments, experiment_palette
+    )
+
+    box_edge = "#730800"
+
+    # Lollipop: 5th–95th percentile range line + median dot per method
+    method_groups = df_best.groupby("dFC method", observed=True)["score"]
+    for i, method in enumerate(method_order_sorted):
+        if method not in method_groups.groups:
+            continue
+        vals = method_groups.get_group(method).dropna().values
+        if len(vals) == 0:
+            continue
+        lo, med, hi = np.nanpercentile(vals, [5, 50, 95])
+        ax.hlines(i, lo, hi, colors=box_edge, lw=1.4, alpha=0.45, zorder=1)
+        ax.scatter(med, i, color=box_edge, s=28, zorder=2, linewidths=0)
+
+    lower, upper = get_pointplot_limits(metric)
+    overlay_method_means(ax, df_best, lower, upper)
+
+    sns.pointplot(
+        data=df_best,
+        x="score",
+        y="dFC method",
+        hue="experiment",
+        order=method_order_sorted,
+        hue_order=experiment_order,
+        dodge=0.35,
+        errorbar=None,
+        linestyles="",
+        markers="o",
+        palette=neutral_palette,
+        ax=ax,
+        zorder=6,
+    )
+    finalize_marker_edges(ax)
+    resize_colored_markers(ax, experiment_order, colored_experiments, method_order_sorted)
+
+    point_coordinates = extract_pointplot_coordinates(
+        ax, method_order_sorted, experiment_order, neutral_palette
+    )
+    overlay_top_experiment_shapes(
+        ax,
+        df_best,
+        point_coordinates,
+        neutral_palette,
+        top_experiment_shapes=TOP_EXPERIMENT_SHAPES,
+    )
+
+    ax.set_ylabel("dFC method", fontsize=15, fontweight="bold")
+    ax.set_xlabel(metric, fontsize=15, fontweight="bold")
+    if metric == "SI":
+        ax.set_xlim(right=1.02)
+    else:
+        ax.set_xlim(0.48, 1.02)
+        ax.xaxis.set_major_formatter(PercentFormatter(xmax=1.0, decimals=0))
+    ax.set_ylim(-0.5, len(method_order_sorted) - 0.5)
+    ax.grid(True, axis="x", color="#FFFFFF", alpha=0.85, linewidth=1.1)
+    sns.despine(ax=ax, top=True, right=True)
+    plt.setp(ax.get_yticklabels(), fontweight="bold", fontsize=11)
+    plt.setp(ax.get_xticklabels(), fontsize=12)
+    if ax.legend_:
+        ax.legend_.remove()
+
+    figure.tight_layout()
+    savefig_pub(
+        f"{output_root}/ML_scores_{embedding}_{metric}_{LEVEL}_{simul_or_real}_best_lollipop.png"
+    )
+    plt.close(figure)
+
+
+def plot_split_pointplot(
+    df_best,
+    method_order,
+    experiment_order,
+    experiment_palette,
+    output_root,
+    embedding,
+    metric,
+    simul_or_real,
+):
+    method_medians = df_best.groupby("dFC method", observed=True)["score"].median()
+
+    aigm_methods = [m for m in method_order if m not in NON_AIGM_METHODS]
+    non_aigm_methods = [m for m in method_order if m in NON_AIGM_METHODS]
+
+    aigm_sorted = (
+        method_medians.reindex(aigm_methods).sort_values(ascending=True).index.tolist()
+    )
+    non_aigm_sorted = (
+        method_medians.reindex(non_aigm_methods)
+        .sort_values(ascending=True)
+        .index.tolist()
+    )
+
+    n_aigm = len(aigm_sorted)
+    n_non_aigm = len(non_aigm_sorted)
+
+    plot_height = max(8, 0.35 * n_aigm)
+    fig, (ax_aigm, ax_non) = plt.subplots(
+        1,
+        2,
+        figsize=(20, plot_height),
+        gridspec_kw={"width_ratios": [n_aigm, max(4, n_non_aigm)], "wspace": 0.12},
+    )
+
+    color_threshold = convert_threshold_to_score_scale(COLOR_THRESHOLD, metric)
+    top_experiments = get_top_experiments_by_mean(df_best, TOP_EXPERIMENT_SHAPES)
+
+    if metric == "SI":
+        colored_experiments = set(top_experiments)
+    else:
+        colored_experiments = get_colored_experiment_mask(df_best, color_threshold)
+
+    neutral_palette = create_neutral_palette(
+        experiment_order, colored_experiments, experiment_palette
+    )
+
+    df_aigm = df_best[~df_best["dFC method"].isin(NON_AIGM_METHODS)]
+    df_non_aigm = df_best[df_best["dFC method"].isin(NON_AIGM_METHODS)]
+
+    for ax, df_panel, order, title in [
+        (ax_aigm, df_aigm, aigm_sorted, "AIGM methods"),
+        (ax_non, df_non_aigm, non_aigm_sorted, "Non-AIGM methods"),
+    ]:
+        _draw_pointplot_panel(
+            ax,
+            df_panel,
+            order,
+            experiment_order,
+            neutral_palette,
+            colored_experiments,
+            top_experiments,
+            metric,
+            simul_or_real,
+        )
+        ax.set_title(title, fontsize=14, fontweight="bold", pad=8)
+        ax.set_xlabel(metric, fontsize=15, fontweight="bold")
+
+    ax_aigm.set_ylabel("dFC method", fontsize=15, fontweight="bold")
+    ax_non.set_ylabel("")
+
+    lower, _ = get_pointplot_limits(metric)
+    x_lo = lower if metric != "SI" else -1.02
+    for ax in (ax_aigm, ax_non):
+        ax.set_xlim(x_lo, 1.02)
+
+    fig.tight_layout()
+    savefig_pub(
+        f"{output_root}/ML_scores_{embedding}_{metric}_{LEVEL}_{simul_or_real}_best_split.png"
+    )
+    plt.close(fig)
+
+
 def plot_best_heatmap(
     df_best,
     method_order,
@@ -915,6 +1173,26 @@ def generate_all_plots(all_ml_scores, tasks_to_include, output_root, simul_or_re
         )
         plot_aigm_comparison(
             df_best,
+            output_root,
+            embedding,
+            metric,
+            simul_or_real,
+        )
+        plot_lollipop_pointplot(
+            df_best,
+            method_order,
+            experiment_order,
+            experiment_palette,
+            output_root,
+            embedding,
+            metric,
+            simul_or_real,
+        )
+        plot_split_pointplot(
+            df_best,
+            method_order,
+            experiment_order,
+            experiment_palette,
             output_root,
             embedding,
             metric,
