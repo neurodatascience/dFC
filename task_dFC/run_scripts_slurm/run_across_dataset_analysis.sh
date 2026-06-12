@@ -8,6 +8,7 @@
 #SBATCH --chdir=/home/mt00/projects/def-jbpoline/mt00/DATA/task-based/openneuro/multi_dataset_analysis/codes
 
 set -euo pipefail
+trap 'echo "ERROR: Script failed at line $LINENO with exit code $?" >&2' ERR
 
 mkdir -p logs
 module purge
