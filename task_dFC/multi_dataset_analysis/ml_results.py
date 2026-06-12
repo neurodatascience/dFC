@@ -770,49 +770,76 @@ def plot_aigm_comparison(
     simul_or_real,
 ):
     """
-    Single-figure KDE comparison of AIGM vs non-AIGM score distributions.
-    Filled KDE curves + rug ticks + median lines + Mann-Whitney p-value.
+    Horizontal boxplot + scatter comparing AIGM vs non-AIGM method scores.
+    One point per method (median across experiments). Matches plot_best_pointplot style.
     """
     from scipy.stats import mannwhitneyu
 
     df_best = df_best.copy()
-    df_best["is_aigm"] = ~df_best["dFC method"].isin(NON_AIGM_METHODS)
+    df_best["group"] = df_best["dFC method"].apply(
+        lambda m: "Non-AIGM" if m in NON_AIGM_METHODS else "AIGM"
+    )
 
-    aigm = df_best[df_best["is_aigm"]]["score"].dropna().values
-    non_aigm = df_best[~df_best["is_aigm"]]["score"].dropna().values
-    n_aigm = df_best[df_best["is_aigm"]]["dFC method"].nunique()
-    n_non_aigm = df_best[~df_best["is_aigm"]]["dFC method"].nunique()
+    # One value per method — median across experiments
+    method_medians = (
+        df_best.groupby(["dFC method", "group"], observed=True)["score"]
+        .median()
+        .reset_index()
+        .rename(columns={"score": "median_score"})
+    )
 
-    fig, ax = plt.subplots(figsize=(7, 5))
+    group_order = ["AIGM", "Non-AIGM"]
+    n_aigm = (method_medians["group"] == "AIGM").sum()
+    n_non_aigm = (method_medians["group"] == "Non-AIGM").sum()
+    group_labels = [f"AIGM\n(n={n_aigm})", f"Non-AIGM\n(n={n_non_aigm})"]
+    method_medians["group_label"] = method_medians["group"].map(
+        dict(zip(group_order, group_labels))
+    )
 
-    groups = [
-        (aigm, _AIGM_COLOR, f"AIGM  (n={n_aigm} methods)"),
-        (non_aigm, _NON_AIGM_COLOR, f"Non-AIGM  (n={n_non_aigm} methods)"),
-    ]
-    for scores, color, label in groups:
-        if len(scores) < 2:
-            continue
-        sns.kdeplot(
-            scores,
-            ax=ax,
-            color=color,
-            fill=True,
-            alpha=0.35,
-            linewidth=2.2,
-            label=label,
-            bw_adjust=0.9,
+    fig, ax = plt.subplots(figsize=(9, 4))
+
+    box_face = to_rgba("#DE9995", 0.18)
+    box_edge = "#730800"
+
+    sns.boxplot(
+        data=method_medians,
+        x="median_score",
+        y="group_label",
+        order=group_labels,
+        whis=(5, 95),
+        fliersize=0,
+        linewidth=1.0,
+        width=0.5,
+        color=box_face,
+        ax=ax,
+        zorder=1,
+    )
+    style_boxplot(ax, box_edge)
+
+    # One scatter point per method, colored by group
+    rng = np.random.default_rng(42)
+    group_colors = {"AIGM": _AIGM_COLOR, "Non-AIGM": _NON_AIGM_COLOR}
+    for i, (group, label) in enumerate(zip(group_order, group_labels)):
+        vals = method_medians[method_medians["group"] == group]["median_score"].values
+        y_jit = i + rng.uniform(-0.18, 0.18, len(vals))
+        ax.scatter(
+            vals,
+            y_jit,
+            color=group_colors[group],
+            alpha=0.75,
+            s=45,
+            linewidths=0.7,
+            edgecolors="white",
+            zorder=4,
         )
-        ax.axvline(
-            np.nanmedian(scores),
-            color=color,
-            linestyle="--",
-            linewidth=1.8,
-            alpha=0.85,
-        )
-        sns.rugplot(scores, ax=ax, color=color, height=0.06, alpha=0.55)
 
-    if len(aigm) >= 2 and len(non_aigm) >= 2:
-        _, pval = mannwhitneyu(aigm, non_aigm, alternative="two-sided")
+    # Mann-Whitney p-value
+    aigm_vals = method_medians[method_medians["group"] == "AIGM"]["median_score"].values
+    non_aigm_vals = method_medians[method_medians["group"] == "Non-AIGM"][
+        "median_score"
+    ].values
+    if len(aigm_vals) >= 2 and len(non_aigm_vals) >= 2:
+        _, pval = mannwhitneyu(aigm_vals, non_aigm_vals, alternative="two-sided")
         pstr = "p<0.001" if pval < 0.001 else f"p={pval:.3f}"
         ax.text(
             0.97,
@@ -821,32 +848,27 @@ def plot_aigm_comparison(
             transform=ax.transAxes,
             ha="right",
             va="top",
-            fontsize=10,
+            fontsize=11,
             fontweight="bold",
-            bbox=dict(boxstyle="round,pad=0.3", fc="white", ec="#BBBBBB", alpha=0.88),
+            bbox=dict(boxstyle="round,pad=0.3", fc="white", ec="#BBBBBB", alpha=0.9),
         )
 
+    lower, upper = get_pointplot_limits(metric)
     if metric == "SI":
-        ax.set_xlim(-1.02, 1.02)
-        ax.axvline(0, color="#CCCCCC", linewidth=0.9, linestyle=":")
+        ax.set_xlim(right=1.02)
     else:
-        ax.set_xlim(0.48, 1.02)
+        ax.set_xlim(lower, 1.02)
         ax.xaxis.set_major_formatter(PercentFormatter(xmax=1.0, decimals=0))
-        ax.axvline(0.5, color="#CCCCCC", linewidth=0.9, linestyle=":")
 
-    ax.set_title(
-        f"AIGM vs Non-AIGM  ·  {embedding}  ·  {_METRIC_SHORT[metric]}",
-        fontsize=13,
-        fontweight="bold",
-        pad=8,
-    )
-    ax.set_xlabel("Score", fontsize=12, fontweight="bold")
-    ax.set_ylabel("Density", fontsize=12, fontweight="bold")
-    ax.tick_params(labelsize=10)
-    ax.legend(fontsize=10, frameon=True, framealpha=0.9)
-    sns.despine(ax=ax)
+    ax.set_xlabel(metric, fontsize=15, fontweight="bold")
+    ax.set_ylabel("", fontsize=15)
+    ax.set_ylim(-0.5, len(group_order) - 0.5)
+    ax.grid(True, axis="x", color="#FFFFFF", alpha=0.85, linewidth=1.1)
+    sns.despine(ax=ax, top=True, right=True)
+    plt.setp(ax.get_yticklabels(), fontweight="bold", fontsize=13)
+    plt.setp(ax.get_xticklabels(), fontsize=12)
 
-    plt.tight_layout()
+    fig.tight_layout()
     savefig_pub(
         f"{output_root}/ML_scores_AIGM_vs_nonAIGM_{embedding}_{metric}_{LEVEL}_{simul_or_real}.png"
     )
