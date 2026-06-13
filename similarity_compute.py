@@ -39,6 +39,9 @@ for dataset_dir in root.iterdir():
 
     if not dataset_dir.is_dir():
         continue
+    
+    if not dataset_dir.name.startswith("ds"):
+        continue
 
     dataset_id = dataset_dir.name
 
