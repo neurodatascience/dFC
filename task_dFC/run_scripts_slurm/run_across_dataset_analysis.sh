@@ -5,14 +5,18 @@
 #SBATCH --error=logs/%x_err.txt
 #SBATCH --time=05:00:00
 #SBATCH --mem=32G
-#SBATCH --chdir=/home/mt00/projects/def-jbpoline/mt00/DATA/task-based/openneuro/multi_dataset_analysis/codes
+#SBATCH --chdir=/home/mt00/projects/def-jbpoline/mt00/DATA/pydfc_validator/multi_dataset_analysis/codes
 
 set -euo pipefail
+trap 'echo "ERROR: Script failed at line $LINENO with exit code $?" >&2' ERR
 
 mkdir -p logs
-source "/home/mt00/venvs/pydfc/bin/activate"
+module purge
+module load StdEnv/2023
+module load python/3.11.5
+source "/home/mt00/venvs/pydfc_env/bin/activate"
 
-MULTI_DATASET_INFO="/home/mt00/pydfc/dFC/task_dFC/run_scripts_slurm/multi_dataset_info.json"
+MULTI_DATASET_INFO="./multi_dataset_info.json"
 
 SCRIPT_NAME=${1:-}
 SIMUL_OR_REAL=${2:-real}
