@@ -493,49 +493,32 @@ def _highlight_nonaigm_labels(ax):
 def _build_experiment_legend(
     ax, experiment_order, neutral_palette, colored_experiments, top_experiments
 ):
-    """Add an experiment legend outside the right edge of the axis."""
+    """Add an experiment legend inside the bottom-right of the axis."""
     top_set = set(top_experiments)
     handles = []
     for exp in experiment_order:
         color = neutral_palette.get(exp, NEUTRAL_COLOR)
-        if exp in colored_experiments:
-            marker = TOP_EXPERIMENT_MARKERS[0] if exp in top_set else "o"
-            ms = 10 if exp in top_set else 7
-            handles.append(
-                mlines.Line2D(
-                    [],
-                    [],
-                    color=color,
-                    marker=marker,
-                    linestyle="",
-                    markersize=ms,
-                    markeredgecolor="#222222",
-                    markeredgewidth=0.8,
-                    label=exp,
-                )
-            )
-    n_neutral = sum(1 for e in experiment_order if e not in colored_experiments)
-    if n_neutral > 0:
+        marker = TOP_EXPERIMENT_MARKERS[0] if exp in top_set else "o"
+        ms = 10 if exp in top_set else 7
         handles.append(
             mlines.Line2D(
                 [],
                 [],
-                color=NEUTRAL_COLOR,
-                marker="o",
+                color=color,
+                marker=marker,
                 linestyle="",
-                markersize=7,
+                markersize=ms,
                 markeredgecolor="#222222",
                 markeredgewidth=0.8,
-                label=f"Other ({n_neutral})",
+                label=exp,
             )
         )
     ax.legend(
         handles=handles,
-        loc="center left",
-        bbox_to_anchor=(1.01, 0.5),
+        loc="lower right",
         fontsize=9,
         frameon=True,
-        framealpha=0.9,
+        framealpha=0.92,
         title="Experiments",
         title_fontsize=10,
     )
