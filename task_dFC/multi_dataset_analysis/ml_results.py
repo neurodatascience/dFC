@@ -697,7 +697,6 @@ def plot_lollipop_pointplot(
         ax.scatter(med, i, color=box_edge, s=28, zorder=2, linewidths=0)
 
     lower, upper = get_pointplot_limits(metric)
-    overlay_method_means(ax, df_best, lower, upper, lw=4.0, halfwidth=0.38)
 
     sns.pointplot(
         data=df_best,
@@ -715,7 +714,13 @@ def plot_lollipop_pointplot(
         zorder=6,
     )
     finalize_marker_edges(ax)
-    resize_colored_markers(ax, experiment_order, colored_experiments, method_order_sorted)
+    # Only starred (top) experiments get large markers; all others stay small
+    resize_colored_markers(
+        ax, experiment_order, set(top_experiments), method_order_sorted
+    )
+
+    # Called after pointplot so yticks are populated
+    overlay_method_means(ax, df_best, lower, upper, lw=4.0, halfwidth=0.38)
 
     point_coordinates = extract_pointplot_coordinates(
         ax, method_order_sorted, experiment_order, experiment_palette
