@@ -665,9 +665,9 @@ def plot_lollipop_pointplot(
     metric,
     simul_or_real,
 ):
-    method_medians = df_best.groupby("dFC method", observed=True)["score"].median()
+    method_means = df_best.groupby("dFC method", observed=True)["score"].mean()
     method_order_sorted = (
-        method_medians.reindex(method_order).sort_values(ascending=True).index.tolist()
+        method_means.reindex(method_order).sort_values(ascending=True).index.tolist()
     )
 
     plot_width = 10
@@ -720,7 +720,7 @@ def plot_lollipop_pointplot(
     )
 
     # Called after pointplot so yticks are populated
-    overlay_method_means(ax, df_best, lower, upper, lw=4.0, halfwidth=0.38)
+    overlay_method_means(ax, df_best, lower, upper, lw=2.8, halfwidth=0.30)
 
     point_coordinates = extract_pointplot_coordinates(
         ax, method_order_sorted, experiment_order, experiment_palette
