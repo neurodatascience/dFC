@@ -1,0 +1,38 @@
+{
+	"output_root": "/path/to/your/data/multi_dataset_analysis/results",
+	"real_data": {
+		"main_root": "/path/to/your/data/openneuro",
+		"DATASETS": [
+			"ds001242", "ds002236", "ds002647",
+			"ds002843", "ds002994",
+			"ds003465", "ds003612", "ds003823",
+			"ds004044", "ds004349", "ds004359",
+			"ds004556", "ds004746", "ds004791",
+			"ds004848", "ds005038"
+		],
+		"TASKS_to_include": [
+			"task-arithmetic", "task-AudSem", "task-Axcpt",
+			"task-Cuedts", "task-emotionRegulation", "task-execution","task-expo",
+			"task-fearlearning", "task-feedback", "task-fribBids", "task-IHG",
+			"task-imagery", "task-itc", "task-localiser", "task-Localizer",
+			"task-matching", "task-motor", "task-paingen", "task-ppalocalizer",
+			"task-recall", "task-risk", "task-ST", "task-Stern",
+			"task-Stroop", "task-VisRhyme", "task-VisSem", "task-VisSpell",
+			"task-vswm"
+    	]
+	},
+	"simulated_data": {
+		"main_root": "/path/to/your/data/simulated",
+		"DATASETS": [
+			"ds000001", "ds000002", "ds000003", "ds000004", "ds000005", "ds000006"
+		],
+		"TASKS_to_include": [
+			"task-Axcpt", "task-Cuedts", "task-Stern", "task-Stroop",
+			"task-lowFreqLongRest", "task-lowFreqShortRest", "task-lowFreqShortTask",
+			"task-imagery", "task-execution",
+			"task-itc", "task-risk",
+			"task-Localizer",
+			"task-ppalocalizer"
+		]
+	}
+}

@@ -1,0 +1,72 @@
+{
+    "task-lowFreqLongRest": {
+        "task_name": "task-lowFreqLongRest",
+        "onset_time": 20.0,
+        "task_duration": 8.0,
+        "task_block_duration": 20.0,
+        "sim_length": 250e3,
+        "BOLD_period": 500,
+        "TAVG_period": 1.0,
+        "num_stimulated_regions": 5,
+        "global_conn_coupling_coef": 0.0126,
+        "D": 0.1,
+        "conn_speed": 1.0,
+        "dt": 0.5
+    },
+    "task-lowFreqShortRest": {
+        "task_name": "task-lowFreqShortRest",
+        "onset_time": 20.0,
+        "task_duration": 12.0,
+        "task_block_duration": 20.0,
+        "sim_length": 250e3,
+        "BOLD_period": 500,
+        "TAVG_period": 1.0,
+        "num_stimulated_regions": 5,
+        "global_conn_coupling_coef": 0.0126,
+        "D": 0.1,
+        "conn_speed": 1.0,
+        "dt": 0.5
+    },
+    "task-lowFreqShortTask": {
+        "task_name": "task-lowFreqShortTask",
+        "onset_time": 20.0,
+        "task_duration": 1.0,
+        "task_block_duration": 20.0,
+        "sim_length": 250e3,
+        "BOLD_period": 500,
+        "TAVG_period": 1.0,
+        "num_stimulated_regions": 5,
+        "global_conn_coupling_coef": 0.0126,
+        "D": 0.1,
+        "conn_speed": 1.0,
+        "dt": 0.5
+    },
+    "task-highFreqLongRest": {
+        "task_name": "task-highFreqLongRest",
+        "onset_time": 20.0,
+        "task_duration": 1.0,
+        "task_block_duration": 5.0,
+        "sim_length": 250e3,
+        "BOLD_period": 500,
+        "TAVG_period": 1.0,
+        "num_stimulated_regions": 5,
+        "global_conn_coupling_coef": 0.0126,
+        "D": 0.1,
+        "conn_speed": 1.0,
+        "dt": 0.5
+    },
+    "task-highFreqShortRest": {
+        "task_name": "task-highFreqShortRest",
+        "onset_time": 20.0,
+        "task_duration": 4.0,
+        "task_block_duration": 5.0,
+        "sim_length": 250e3,
+        "BOLD_period": 500,
+        "TAVG_period": 1.0,
+        "num_stimulated_regions": 5,
+        "global_conn_coupling_coef": 0.0126,
+        "D": 0.1,
+        "conn_speed": 1.0,
+        "dt": 0.5
+    }
+}
