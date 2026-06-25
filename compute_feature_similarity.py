@@ -145,7 +145,7 @@ for dataset_dir in root.iterdir():
         print(f"Finished processing subject {subject_id} in dataset {dataset_id}")
                 
 
-output_dir = root / "similarity_assessments"
+output_dir = Path("/home/kinichen/scratch/data/pydfc_validator/similarity_assessments_complete")
 output_dir.mkdir(parents=True, exist_ok=True)
 output_file = output_dir / "similarity.pkl"
 
