@@ -252,13 +252,12 @@ def style_boxplot(ax, box_edge):
         line.set_zorder(1)
 
 
-def overlay_method_means(ax, df_best, lower, upper):
+def overlay_method_means(ax, df_best, lower, upper, lw=2.4, halfwidth=0.25):
     means = df_best.groupby("dFC method", observed=True)["score"].mean()
     yticks = ax.get_yticks()
     yticklabels = [tick.get_text() for tick in ax.get_yticklabels()]
     y_positions = {label: yticks[index] for index, label in enumerate(yticklabels)}
 
-    halfwidth = 0.25
     for method, mean_score in means.items():
         if method not in y_positions or pd.isna(mean_score):
             continue
@@ -269,7 +268,7 @@ def overlay_method_means(ax, df_best, lower, upper):
             y_pos - halfwidth,
             y_pos + halfwidth,
             colors="#050505",
-            lw=2.4,
+            lw=lw,
             zorder=3,
         )
 
@@ -666,9 +665,9 @@ def plot_lollipop_pointplot(
     metric,
     simul_or_real,
 ):
-    method_medians = df_best.groupby("dFC method", observed=True)["score"].median()
+    method_means = df_best.groupby("dFC method", observed=True)["score"].mean()
     method_order_sorted = (
-        method_medians.reindex(method_order).sort_values(ascending=True).index.tolist()
+        method_means.reindex(method_order).sort_values(ascending=True).index.tolist()
     )
 
     plot_width = 10
@@ -682,10 +681,6 @@ def plot_lollipop_pointplot(
         colored_experiments = set(top_experiments)
     else:
         colored_experiments = get_colored_experiment_mask(df_best, color_threshold)
-
-    neutral_palette = create_neutral_palette(
-        experiment_order, colored_experiments, experiment_palette
-    )
 
     box_edge = "#730800"
 
@@ -702,7 +697,6 @@ def plot_lollipop_pointplot(
         ax.scatter(med, i, color=box_edge, s=28, zorder=2, linewidths=0)
 
     lower, upper = get_pointplot_limits(metric)
-    overlay_method_means(ax, df_best, lower, upper)
 
     sns.pointplot(
         data=df_best,
@@ -715,21 +709,27 @@ def plot_lollipop_pointplot(
         errorbar=None,
         linestyles="",
         markers="o",
-        palette=neutral_palette,
+        palette=experiment_palette,
         ax=ax,
         zorder=6,
     )
     finalize_marker_edges(ax)
-    resize_colored_markers(ax, experiment_order, colored_experiments, method_order_sorted)
+    # Only starred (top) experiments get large markers; all others stay small
+    resize_colored_markers(
+        ax, experiment_order, set(top_experiments), method_order_sorted
+    )
+
+    # Called after pointplot so yticks are populated
+    overlay_method_means(ax, df_best, lower, upper, lw=2.8, halfwidth=0.30)
 
     point_coordinates = extract_pointplot_coordinates(
-        ax, method_order_sorted, experiment_order, neutral_palette
+        ax, method_order_sorted, experiment_order, experiment_palette
     )
     overlay_top_experiment_shapes(
         ax,
         df_best,
         point_coordinates,
-        neutral_palette,
+        experiment_palette,
         top_experiment_shapes=TOP_EXPERIMENT_SHAPES,
     )
 
@@ -747,7 +747,7 @@ def plot_lollipop_pointplot(
     plt.setp(ax.get_xticklabels(), fontsize=12)
     _highlight_nonaigm_labels(ax)
     _build_experiment_legend(
-        ax, experiment_order, neutral_palette, colored_experiments, top_experiments
+        ax, experiment_order, experiment_palette, colored_experiments, top_experiments
     )
 
     figure.tight_layout()
