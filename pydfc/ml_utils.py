@@ -1922,6 +1922,7 @@ def process_SB_features(X, measure_name):
         "MiniBatchKMeansStates",
         "GaussianMixtureStates",
         "BayesianGaussianMixtureStates",
+        "NMFStates",
         "SpectralStates",
         "BirchStates",
         "AgglomerativeStates",
