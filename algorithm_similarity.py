@@ -26,6 +26,7 @@ import json
 import re
 import sys
 from pathlib import Path
+
 import numpy as np
 
 # Only calls whose resolved root module starts with one of these are kept as
@@ -129,7 +130,7 @@ def _make_unique_labels(filepaths):
 
 def _hierarchical_cluster_order(matrix, cluster_method="average"):
     """Return indices that order similar methods next to each other."""
-    from scipy.cluster.hierarchy import linkage, leaves_list
+    from scipy.cluster.hierarchy import leaves_list, linkage
     from scipy.spatial.distance import squareform
 
     if matrix.shape[0] < 2:
@@ -159,7 +160,9 @@ def plot_similarity_heatmap(
         matrix = matrix[np.ix_(order, order)]
         labels = [labels[i] for i in order]
 
-    fig, ax = plt.subplots(figsize=(max(8, 0.45 * len(labels)), max(6, 0.45 * len(labels))))
+    fig, ax = plt.subplots(
+        figsize=(max(8, 0.45 * len(labels)), max(6, 0.45 * len(labels)))
+    )
     image = ax.imshow(matrix, vmin=0.0, vmax=1.0, cmap="viridis", aspect="equal")
     fig.colorbar(image, ax=ax, label="AS")
 
@@ -187,7 +190,9 @@ def save_similarity_outputs(output_dir, labels, source_paths, matrix, table):
     with open(output_dir / "AS_jaccard_source_paths.json", "w", encoding="utf-8") as f:
         json.dump(source_paths, f, indent=2)
 
-    with open(output_dir / "AS_jaccard_pairs.csv", "w", newline="", encoding="utf-8") as f:
+    with open(
+        output_dir / "AS_jaccard_pairs.csv", "w", newline="", encoding="utf-8"
+    ) as f:
         fieldnames = [
             "method_a",
             "method_b",
@@ -206,9 +211,13 @@ def save_similarity_outputs(output_dir, labels, source_paths, matrix, table):
     try:
         fig, _ = plot_similarity_heatmap(matrix, labels, cluster=True)
     except ImportError:
-        print("Skipping heatmap export because matplotlib is not available in this environment.")
+        print(
+            "Skipping heatmap export because matplotlib is not available in this environment."
+        )
     else:
-        fig.savefig(str(output_dir / "AS_jaccard_heatmap.png"), dpi=200, bbox_inches="tight")
+        fig.savefig(
+            str(output_dir / "AS_jaccard_heatmap.png"), dpi=200, bbox_inches="tight"
+        )
         import matplotlib.pyplot as plt
 
         plt.close(fig)
@@ -221,7 +230,9 @@ def load_similarity_outputs(output_dir):
     labels = np.load(output_dir / "AS_jaccard_names.npy", allow_pickle=True).tolist()
     with open(output_dir / "AS_jaccard_source_paths.json", "r", encoding="utf-8") as f:
         source_paths = json.load(f)
-    with open(output_dir / "AS_jaccard_pairs.csv", "r", newline="", encoding="utf-8") as f:
+    with open(
+        output_dir / "AS_jaccard_pairs.csv", "r", newline="", encoding="utf-8"
+    ) as f:
         table = list(csv.DictReader(f))
     return labels, source_paths, matrix, table
 
@@ -264,7 +275,9 @@ def main(filepaths):
 
         print(f"{method_a:35s} vs {method_b:35s}  AS = {sim:.3f}   shared = {shared}")
 
-    save_similarity_outputs("algorithm_similarity_results", names, source_paths, alg_sim, pairwise_rows)
+    save_similarity_outputs(
+        "algorithm_similarity_results", names, source_paths, alg_sim, pairwise_rows
+    )
     print("Saved outputs to algorithm_similarity_results/")
 
 
