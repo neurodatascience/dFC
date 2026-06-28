@@ -259,6 +259,42 @@ time_series = self.manipulate_time_series4FCS(time_series)
 
 and include any FCS-only parameters such as `num_subj` if the method uses them.
 
+## ML Pipeline Registration (State-Based Methods Only)
+
+If the new method is state-based (`is_state_based = True`), you **must** also
+register it in `pydfc/ml_utils.py` inside `process_SB_features`. This function
+applies the correct feature transformation before classification. Omitting this
+step causes the function to return `None`, which crashes the ML pipeline with a
+`TypeError` at `subject_center`.
+
+Determine which branch your method belongs to:
+
+- **Softmax → ILR** (`if` branch, methods like `CAP`, `Clustering`): use this
+  when `FCS_proba` stores raw distances or dissimilarity scores that must first
+  be converted to a probability simplex via softmax.
+- **ILR only** (`elif` branch, methods like `GaussianMixtureStates`,
+  `ContinuousHMM`, `NMFStates`): use this when `FCS_proba` already contains
+  proper probabilities (non-negative, rows summing to 1).
+
+Add the method name to the correct branch:
+
+```python
+# pydfc/ml_utils.py — process_SB_features
+elif measure_name in [
+    "ContinuousHMM",
+    ...
+    "NMFStates",        # ← add your method here if FCS_proba rows sum to 1
+    ...
+]:
+    X_transformed = ilr_transform(X)
+```
+
+A quick check: inspect `estimate_dFC` in the method file and look at how
+`FCS_proba` is set. If it is produced by a row-wise normalization
+(`/ row_sums`) or a soft-assignment model (GMM, HMM posterior), it belongs in
+the ILR-only branch. If it stores distances or un-normalized scores, it belongs
+in the softmax + ILR branch.
+
 ## Package Export
 
 After adding a method file, update:
@@ -376,3 +412,7 @@ against established methods rather than interpreted in isolation.
   subclass.
 - Importing optional dependencies at package level in a way that breaks unrelated
   methods.
+- For state-based methods: forgetting to add the method name to `process_SB_features`
+  in `pydfc/ml_utils.py`. The function silently returns `None` if the method is
+  missing from both branches, crashing the ML pipeline. See the
+  "ML Pipeline Registration" section above.
