@@ -3,9 +3,12 @@
 # $ salloc --account=def-<supervisor_name> --mem=128G --cpus-per-task=8 --time=4:00:00
 # or submit a batch job
 
+import csv
+
 # %%
 import os
 import pickle
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -13,9 +16,10 @@ import seaborn as sns
 from scipy.cluster.hierarchy import leaves_list, linkage
 from scipy.spatial.distance import squareform
 
-DEFAULT_OUTPUT_DIR = "HT_LLM/similarity/feature_similarity_results"
-os.makedirs(f"{DEFAULT_OUTPUT_DIR}/pdf", exist_ok=True)
-os.makedirs(f"{DEFAULT_OUTPUT_DIR}/png", exist_ok=True)
+DEFAULT_OUTPUT_DIR = Path("HT_LLM/similarity/feature_similarity_results")
+
+os.makedirs(DEFAULT_OUTPUT_DIR / "pdf", exist_ok=True)
+os.makedirs(DEFAULT_OUTPUT_DIR / "png", exist_ok=True)
 
 
 NON_AIGM_SET = {
@@ -62,6 +66,11 @@ print("Example matrix shape:", matrix_ex.shape)
 # %%
 ######### Helper functions to collect and aggregate similarity matrices based on filters
 # for various levels (dataset, subject, session, run, task) #########
+
+
+def make_pair_key(method_a, method_b):
+    """Stable key for joining method-pair outputs across scripts for AS vs FS scatterplot."""
+    return "+".join(sorted([method_a, method_b]))
 
 
 def collect_similarity_matrices(
@@ -150,23 +159,101 @@ def aggregate_similarity_matrices(matrices, aggregation="mean"):
     return aggregated, len(matrices)
 
 
+def save_feature_similarity_outputs(
+    matrix,
+    method_names,
+    aggregation_size,
+    output_name,
+    aggregation="mean",
+    similarity_key="all",
+    metric="spearman",
+):
+    """
+    Save feature similarity outputs in both matrix and tidy pairwise formats.
+
+    The pairwise CSV is designed to be merged with algorithm similarity outputs
+    using pair_key in the AS vs FS scatterplot.
+    """
+
+    matrix = np.squeeze(matrix)
+    method_names = list(method_names)
+
+    # Note: Saved matrix is in the original ethods order, not the reordered version for plotting
+    np.save(DEFAULT_OUTPUT_DIR / f"{output_name}_matrix.npy", matrix)
+    np.save(
+        DEFAULT_OUTPUT_DIR / f"{output_name}_method_names.npy",
+        np.array(method_names, dtype=object),
+    )
+    pairwise_path = DEFAULT_OUTPUT_DIR / f"{output_name}_pairs.csv"
+
+    rows = []
+
+    for i in range(len(method_names)):
+        for j in range(i + 1, len(method_names)):
+            method_a = method_names[i]
+            method_b = method_names[j]
+
+            rows.append(
+                {
+                    "pair_key": make_pair_key(method_a, method_b),
+                    "method_a": method_a,
+                    "method_b": method_b,
+                    "feature_similarity": matrix[i, j],
+                    "aggregation": aggregation,
+                    "aggregation_size": aggregation_size,
+                    "similarity_key": similarity_key,
+                    "metric": metric,
+                    "output_name": output_name,
+                }
+            )
+
+    with open(pairwise_path, "w", newline="", encoding="utf-8") as f:
+        fieldnames = [
+            "pair_key",
+            "method_a",
+            "method_b",
+            "feature_similarity",
+            "aggregation",
+            "aggregation_size",
+            "similarity_key",
+            "metric",
+            "output_name",
+        ]
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
+
+
 def plot_similarity_heatmap(
     matrix,
     aggregation_size=None,
     method_names=methods,
+    ordered_method_names=None,
     title="Similarity Heatmap",
     annot=False,
     figsize=(10, 8),
     cluster=False,
     cluster_method="average",
 ):
-
     method_names = list(method_names)
+    matrix = np.squeeze(matrix)
+
+    # Use given ordering of methods, i.e., do not do hierarchical clustering
+    if ordered_method_names is not None:
+        if cluster:
+            raise ValueError(
+                "When using a given methods order, it doesn't make sense to also do clustering."
+            )
+        ordered_method_names = list(ordered_method_names)
+        order = [method_names.index(name) for name in ordered_method_names]
+
+        # Reorder matrix and labels
+        matrix = matrix[np.ix_(order, order)]
+        method_names = [method_names[i] for i in order]
 
     # Highlight non-AIGM names in a different color
     highlight_color = NON_AIGM_COLOR
     highlight_method_names = NON_AIGM_SET
-    matrix = np.squeeze(matrix)
 
     # Optional hierarchical clustering to reorder methods based on similarity to each other
     if cluster:
@@ -300,6 +387,16 @@ methods_order = plot_similarity_heatmap(
     cluster=True,
 )
 
+save_feature_similarity_outputs(
+    matrix=aggregated,
+    method_names=methods,  # not reordered since aggregated did not go through hierarchical clustering in plotting function
+    aggregation_size=aggregation_size,
+    output_name="FS",
+    aggregation="mean",
+    similarity_key="all",
+    metric="spearman",
+)
+
 
 # %%
 ### Standard deviation over EVERYTHING ###
@@ -314,7 +411,8 @@ plot_similarity_heatmap(
     aggregated,
     aggregation_size,
     title="Standard deviation of dFC feature similarity between methods",
-    method_names=methods_order,
+    method_names=methods,
+    ordered_method_names=methods_order,
 )
 
 

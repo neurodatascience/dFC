@@ -156,10 +156,12 @@ def weighted_jaccard_similarity(counts_a, counts_b):
 
     overlap = sum(min(counts_a[op], counts_b[op]) for op in operations)
     union = sum(max(counts_a[op], counts_b[op]) for op in operations)
-    similarity = overlap / union
 
     if not operations:  # neither script captured any operations from tracked libraries
         similarity = 0.0
+
+    else:
+        similarity = overlap / union
 
     return overlap, union, similarity
 
@@ -207,6 +209,11 @@ def _make_unique_labels(filepaths):
         counts[base] = counts.get(base, 0) + 1
         labels.append(base if counts[base] == 1 else f"{base}_{counts[base]}")
     return labels
+
+
+def make_pair_key(method_a, method_b):
+    """Stable key for joining method-pair outputs across scripts for AS vs FS scatterplot."""
+    return "+".join(sorted([method_a, method_b]))
 
 
 def _hierarchical_cluster_order(matrix, cluster_method="average"):
@@ -300,11 +307,12 @@ def save_similarity_outputs(output_dir, labels, matrix, table):
         output_dir / f"AS_{METRIC_NAME}_pairs.csv", "w", newline="", encoding="utf-8"
     ) as f:
         fieldnames = [
+            "pair_key",
             "method_a",
             "method_b",
             "source_a",
             "source_b",
-            "similarity",
+            "algorithm_similarity",
             "weighted_overlap",
             "weighted_union",
             "n_shared_distinct",
@@ -393,11 +401,12 @@ def main(filepaths):
         }
         pairwise_rows.append(
             {
+                "pair_key": make_pair_key(method_a, method_b),
                 "method_a": method_a,
                 "method_b": method_b,
                 "source_a": source_paths[i],
                 "source_b": source_paths[j],
-                "similarity": similarity,
+                "algorithm_similarity": similarity,
                 "weighted_overlap": weighted_overlap,
                 "weighted_union": weighted_union,
                 "n_shared_distinct": len(shared),
