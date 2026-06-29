@@ -1,14 +1,12 @@
-import pandas as pd
 import matplotlib.pyplot as plt
+import pandas as pd
 import seaborn as sns
 
 algorithm_pairs = pd.read_csv(
     "HT_LLM/similarity/algorithm_similarity_results/AS_BOO_weighted_jaccard_pairs.csv"
 )
 
-feature_pairs = pd.read_csv(
-    "HT_LLM/similarity/feature_similarity_results/FS_pairs.csv"
-)
+feature_pairs = pd.read_csv("HT_LLM/similarity/feature_similarity_results/FS_pairs.csv")
 
 scatter_df = feature_pairs.merge(
     algorithm_pairs[["pair_key", "algorithm_similarity"]],
@@ -23,7 +21,6 @@ ax = sns.scatterplot(
     x="algorithm_similarity",
     y="feature_similarity",
     alpha=0.7,
-    
 )
 
 
@@ -31,13 +28,13 @@ ax = sns.scatterplot(
 counter = 0
 for idx, row in scatter_df.iterrows():
     # Only label points satisfying this condition
-    if row['algorithm_similarity'] > 0.5:
+    if row["algorithm_similarity"] > 0.5:
         ax.text(
-            row['algorithm_similarity'] + 0.01,             # Add a slight x-offset manually
-            row['feature_similarity'] + 0.01,             # Add a slight y-offset manually
-            row['pair_key'],                   # The labelled text is the method pair's name
-            color='red',                    # Highlight color
-            weight='bold'
+            row["algorithm_similarity"] + 0.01,  # Add a slight x-offset manually
+            row["feature_similarity"] + 0.01,  # Add a slight y-offset manually
+            row["pair_key"],  # The labelled text is the method pair's name
+            color="red",  # Highlight color
+            weight="bold",
         )
     counter += 1
 

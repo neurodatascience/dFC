@@ -3,11 +3,11 @@
 # $ salloc --account=def-<supervisor_name> --mem=128G --cpus-per-task=8 --time=4:00:00
 # or submit a batch job
 
+import csv
+
 # %%
 import os
 import pickle
-
-import csv
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -66,6 +66,7 @@ print("Example matrix shape:", matrix_ex.shape)
 # %%
 ######### Helper functions to collect and aggregate similarity matrices based on filters
 # for various levels (dataset, subject, session, run, task) #########
+
 
 def make_pair_key(method_a, method_b):
     """Stable key for joining method-pair outputs across scripts for AS vs FS scatterplot."""
@@ -179,7 +180,10 @@ def save_feature_similarity_outputs(
 
     # Note: Saved matrix is in the original ethods order, not the reordered version for plotting
     np.save(DEFAULT_OUTPUT_DIR / f"{output_name}_matrix.npy", matrix)
-    np.save(DEFAULT_OUTPUT_DIR / f"{output_name}_method_names.npy", np.array(method_names, dtype=object))
+    np.save(
+        DEFAULT_OUTPUT_DIR / f"{output_name}_method_names.npy",
+        np.array(method_names, dtype=object),
+    )
     pairwise_path = DEFAULT_OUTPUT_DIR / f"{output_name}_pairs.csv"
 
     rows = []
@@ -233,14 +237,16 @@ def plot_similarity_heatmap(
 ):
     method_names = list(method_names)
     matrix = np.squeeze(matrix)
-    
+
     # Use given ordering of methods, i.e., do not do hierarchical clustering
     if ordered_method_names is not None:
         if cluster:
-            raise ValueError("When using a given methods order, it doesn't make sense to also do clustering.")
+            raise ValueError(
+                "When using a given methods order, it doesn't make sense to also do clustering."
+            )
         ordered_method_names = list(ordered_method_names)
         order = [method_names.index(name) for name in ordered_method_names]
-        
+
         # Reorder matrix and labels
         matrix = matrix[np.ix_(order, order)]
         method_names = [method_names[i] for i in order]
@@ -383,7 +389,7 @@ methods_order = plot_similarity_heatmap(
 
 save_feature_similarity_outputs(
     matrix=aggregated,
-    method_names=methods,   # not reordered since aggregated did not go through hierarchical clustering in plotting function
+    method_names=methods,  # not reordered since aggregated did not go through hierarchical clustering in plotting function
     aggregation_size=aggregation_size,
     output_name="FS",
     aggregation="mean",
@@ -406,7 +412,7 @@ plot_similarity_heatmap(
     aggregation_size,
     title="Standard deviation of dFC feature similarity between methods",
     method_names=methods,
-    ordered_method_names=methods_order
+    ordered_method_names=methods_order,
 )
 
 

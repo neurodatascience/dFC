@@ -159,7 +159,7 @@ def weighted_jaccard_similarity(counts_a, counts_b):
 
     if not operations:  # neither script captured any operations from tracked libraries
         similarity = 0.0
-        
+
     else:
         similarity = overlap / union
 
@@ -209,6 +209,7 @@ def _make_unique_labels(filepaths):
         counts[base] = counts.get(base, 0) + 1
         labels.append(base if counts[base] == 1 else f"{base}_{counts[base]}")
     return labels
+
 
 def make_pair_key(method_a, method_b):
     """Stable key for joining method-pair outputs across scripts for AS vs FS scatterplot."""
