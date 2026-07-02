@@ -16,11 +16,28 @@ import seaborn as sns
 from scipy.cluster.hierarchy import leaves_list, linkage
 from scipy.spatial.distance import squareform
 
-DEFAULT_OUTPUT_DIR = Path("HT_LLM/similarity/feature_similarity_results")
+# %%
+# Filter methods in heatmaps by performance threshold
+threshold = 0.6  # must exist; else, run filter_methods_by_performance.py with the desired threshold first
 
-os.makedirs(DEFAULT_OUTPUT_DIR / "pdf", exist_ok=True)
-os.makedirs(DEFAULT_OUTPUT_DIR / "png", exist_ok=True)
+eligible_methods_path = os.path.join(
+    "sample_data", f"threshold_{int(threshold*100)}", "filtered_methods.npy"
+)
+eligible_methods = set(
+    np.load(eligible_methods_path, allow_pickle=True).astype(str).tolist()
+)
 
+print(f"Loaded {len(eligible_methods)} eligible methods")
+print("Examples:", sorted(eligible_methods)[:10])
+
+# %%
+DEFAULT_OUTPUT_DIR = Path(
+    f"HT_LLM/similarity/feature_similarity_results/threshold_{int(threshold*100)}"
+)
+OUTPUT_DIR_PDF = DEFAULT_OUTPUT_DIR / "pdf"
+OUTPUT_DIR_PNG = DEFAULT_OUTPUT_DIR / "png"
+OUTPUT_DIR_PDF.mkdir(parents=True, exist_ok=True)
+OUTPUT_DIR_PNG.mkdir(parents=True, exist_ok=True)
 
 NON_AIGM_SET = {
     "CAP",
@@ -57,6 +74,7 @@ measures = sim_ex["matrix"]["measure_lst"]
 methods = [
     method.MEASURE_NAME for method in measures
 ]  # extract method names from the pydfc dfc_methods objects
+methods = sorted(methods)  # sort alphabetically for consistent ordering
 print("Example methods:", methods[:5])
 
 matrix_ex = sim_ex["matrix"]["all"]["spearman"]  # similarity matrix for all methods
@@ -65,12 +83,13 @@ print("Example matrix shape:", matrix_ex.shape)
 
 # %%
 ######### Helper functions to collect and aggregate similarity matrices based on filters
-# for various levels (dataset, subject, session, run, task) #########
+# for various levels (dataset, subject, session, run, task),
+# plot heatmaps, and save method pairs for scatterplot #########
 
 
 def make_pair_key(method_a, method_b):
     """Stable key for joining method-pair outputs across scripts for AS vs FS scatterplot."""
-    return "+".join(sorted([method_a, method_b]))
+    return " x ".join(sorted([method_a, method_b]))
 
 
 def collect_similarity_matrices(
@@ -178,7 +197,7 @@ def save_feature_similarity_outputs(
     matrix = np.squeeze(matrix)
     method_names = list(method_names)
 
-    # Note: Saved matrix is in the original ethods order, not the reordered version for plotting
+    # Note: Saved matrix is in the original methods order, not the reordered version for plotting
     np.save(DEFAULT_OUTPUT_DIR / f"{output_name}_matrix.npy", matrix)
     np.save(
         DEFAULT_OUTPUT_DIR / f"{output_name}_method_names.npy",
@@ -234,6 +253,8 @@ def plot_similarity_heatmap(
     figsize=(10, 8),
     cluster=False,
     cluster_method="average",
+    vmin=None,
+    vmax=None,
 ):
     method_names = list(method_names)
     matrix = np.squeeze(matrix)
@@ -254,6 +275,7 @@ def plot_similarity_heatmap(
     # Highlight non-AIGM names in a different color
     highlight_color = NON_AIGM_COLOR
     highlight_method_names = NON_AIGM_SET
+    matrix = np.squeeze(matrix)
 
     # Optional hierarchical clustering to reorder methods based on similarity to each other
     if cluster:
@@ -290,8 +312,8 @@ def plot_similarity_heatmap(
         xticklabels=method_names,
         yticklabels=method_names,
         cmap="viridis",
-        vmin=-0.2,
-        vmax=1.0,
+        vmin=vmin,
+        vmax=vmax,
     )
 
     if aggregation_size is not None:
@@ -320,8 +342,8 @@ def plot_similarity_heatmap(
 
     plt.tight_layout()
 
-    plt.savefig(f"{DEFAULT_OUTPUT_DIR}/pdf/{title}.pdf", bbox_inches="tight")
-    plt.savefig(f"{DEFAULT_OUTPUT_DIR}/png/{title}.png", dpi=600, bbox_inches="tight")
+    plt.savefig(f"{OUTPUT_DIR_PDF}/{title}.pdf", bbox_inches="tight")
+    plt.savefig(f"{OUTPUT_DIR_PNG}/{title}.png", dpi=600, bbox_inches="tight")
     plt.close()
 
     return plotted_methods_order
@@ -380,16 +402,24 @@ matrices = collect_similarity_matrices(similarity)
 
 aggregated, aggregation_size = aggregate_similarity_matrices(matrices, aggregation="mean")
 
-methods_order = plot_similarity_heatmap(
-    aggregated,
-    aggregation_size,
+# Filter methods based on performance threshold
+keep_idx = [i for i, method in enumerate(methods) if method in eligible_methods]
+filtered_matrix = aggregated[np.ix_(keep_idx, keep_idx)]
+filtered_methods = [methods[i] for i in keep_idx]
+
+filtered_methods_order = plot_similarity_heatmap(
+    matrix=filtered_matrix,
+    aggregation_size=aggregation_size,
+    method_names=filtered_methods,
     title="Mean dFC feature similarity between methods",
     cluster=True,
+    vmin=-0.2,
+    vmax=1.0,
 )
 
 save_feature_similarity_outputs(
-    matrix=aggregated,
-    method_names=methods,  # not reordered since aggregated did not go through hierarchical clustering in plotting function
+    matrix=filtered_matrix,
+    method_names=filtered_methods,  # not reordered since aggregated did not go through hierarchical clustering in plotting function
     aggregation_size=aggregation_size,
     output_name="FS",
     aggregation="mean",
@@ -407,12 +437,16 @@ matrices = collect_similarity_matrices(similarity)
 
 aggregated, aggregation_size = aggregate_similarity_matrices(matrices, aggregation="std")
 
+# Filter methods based on performance threshold
+keep_idx = [i for i, method in enumerate(methods) if method in eligible_methods]
+filtered_std_matrix = aggregated[np.ix_(keep_idx, keep_idx)]
+
 plot_similarity_heatmap(
-    aggregated,
+    filtered_std_matrix,
     aggregation_size,
+    method_names=filtered_methods,
+    ordered_method_names=filtered_methods_order,
     title="Standard deviation of dFC feature similarity between methods",
-    method_names=methods,
-    ordered_method_names=methods_order,
 )
 
 
@@ -432,11 +466,21 @@ def plot_task_similarity_heatmap_grid(
     ncols=3,
     tick_fontsize=3,
     title_fontsize=12,
+    vmin=None,
+    vmax=None,
 ):
     """Plot one heatmap per task using a shared method ordering and colorbar."""
 
     ordered_method_names = list(ordered_method_names)
     original_method_names = list(original_method_names)
+
+    # Filter methods based on performance threshold
+    keep_idx = [
+        i for i, method in enumerate(original_method_names) if method in eligible_methods
+    ]
+    original_method_names = [original_method_names[i] for i in keep_idx]
+
+    # Reorder based on same methods order from average heatmap
     order = [original_method_names.index(name) for name in ordered_method_names]
 
     if len(task_ids) > nrows * ncols:
@@ -464,7 +508,12 @@ def plot_task_similarity_heatmap_grid(
         )
 
         matrix = np.squeeze(aggregated)
-        matrix = matrix[np.ix_(order, order)]
+        matrix = matrix[
+            np.ix_(keep_idx, keep_idx)
+        ]  # Filter methods based on performance threshold first
+        matrix = matrix[
+            np.ix_(order, order)
+        ]  # Reorder based on same methods order from average heatmap
 
         sns.heatmap(
             matrix,
@@ -472,8 +521,8 @@ def plot_task_similarity_heatmap_grid(
             xticklabels=ordered_method_names,
             yticklabels=ordered_method_names,
             cmap="viridis",
-            vmin=-0.2,
-            vmax=1.0,
+            vmin=vmin,
+            vmax=vmax,
             cbar=ax_idx == 0,
             cbar_ax=cbar_ax if ax_idx == 0 else None,
             square=True,
@@ -512,8 +561,8 @@ def plot_task_similarity_heatmap_grid(
         hspace=0.35,
     )
 
-    fig.savefig(f"{DEFAULT_OUTPUT_DIR}/pdf/{title}.pdf", bbox_inches="tight")
-    fig.savefig(f"{DEFAULT_OUTPUT_DIR}/png/{title}.png", dpi=600, bbox_inches="tight")
+    fig.savefig(f"{OUTPUT_DIR_PDF}/{title}.pdf", bbox_inches="tight")
+    fig.savefig(f"{OUTPUT_DIR_PNG}/{title}.png", dpi=600, bbox_inches="tight")
     plt.close()
 
 
@@ -531,7 +580,11 @@ task_ids = sorted(
 )
 
 plot_task_similarity_heatmap_grid(
-    similarity=similarity, task_ids=task_ids, ordered_method_names=methods_order
+    similarity=similarity,
+    task_ids=task_ids,
+    ordered_method_names=filtered_methods_order,
+    vmin=-0.2,
+    vmax=1.0,
 )
 
 
