@@ -15,7 +15,7 @@ performances = np.load("sample_data/ALL_ML_SCORES_real.npy", allow_pickle=True).
 # print(performances.keys())
 
 metric = "SVM balanced accuracy"  # change to another performance key if needed
-output_root = Path("sample_data") / f"threshold_{int(threshold*100)}"
+output_root = Path("sample_data") / f"threshold_{int(threshold * 100)}"
 output_root.mkdir(parents=True, exist_ok=True)
 output_path = output_root / "filtered_methods.npy"
 

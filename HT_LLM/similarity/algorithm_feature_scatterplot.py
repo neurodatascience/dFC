@@ -12,16 +12,16 @@ threshold = 0.6  # minimum performance threshold for a method to be included
 print(f"Method Filtering Threshold: {threshold}")
 OUTPUT_DIR = (
     Path("HT_LLM/similarity/scatterplot_algorithm_feature_results")
-    / f"threshold_{int(threshold*100)}"
+    / f"threshold_{int(threshold * 100)}"
 )
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 algorithm_pairs = pd.read_csv(
-    f"HT_LLM/similarity/algorithm_similarity_results/threshold_{int(threshold*100)}/AS_BOO_weighted_jaccard_pairs.csv"
+    f"HT_LLM/similarity/algorithm_similarity_results/threshold_{int(threshold * 100)}/AS_BOO_weighted_jaccard_pairs.csv"
 )
 
 feature_pairs = pd.read_csv(
-    f"HT_LLM/similarity/feature_similarity_results/threshold_{int(threshold*100)}/FS_pairs.csv"
+    f"HT_LLM/similarity/feature_similarity_results/threshold_{int(threshold * 100)}/FS_pairs.csv"
 )
 
 scatter_df = feature_pairs.merge(
@@ -35,7 +35,7 @@ scatter_df = feature_pairs.merge(
 # so performance difference is only coloured for those methods automatically.
 performance_diff_table_path = (
     Path("sample_data")
-    / f"threshold_{int(threshold*100)}"
+    / f"threshold_{int(threshold * 100)}"
     / "filtered_performance_differences.csv"
 )
 

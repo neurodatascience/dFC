@@ -70,7 +70,7 @@ EXCLUDED_METHOD_FILES = {"__init__.py", "base_dfc_method.py"}
 threshold = 0.6  # must exist; else, run filter_methods_by_performance.py with the desired threshold first
 
 eligible_methods_path = os.path.join(
-    "sample_data", f"threshold_{int(threshold*100)}", "filtered_methods.npy"
+    "sample_data", f"threshold_{int(threshold * 100)}", "filtered_methods.npy"
 )
 eligible_methods = set(
     np.load(eligible_methods_path, allow_pickle=True).astype(str).tolist()
@@ -80,7 +80,7 @@ print("Examples:", sorted(eligible_methods)[:10])
 
 DEFAULT_OUTPUT_DIR = (
     Path("HT_LLM/similarity/algorithm_similarity_results")
-    / f"threshold_{int(threshold*100)}"
+    / f"threshold_{int(threshold * 100)}"
 )
 DEFAULT_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 

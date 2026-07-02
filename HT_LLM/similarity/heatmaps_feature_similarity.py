@@ -21,7 +21,7 @@ from scipy.spatial.distance import squareform
 threshold = 0.6  # must exist; else, run filter_methods_by_performance.py with the desired threshold first
 
 eligible_methods_path = os.path.join(
-    "sample_data", f"threshold_{int(threshold*100)}", "filtered_methods.npy"
+    "sample_data", f"threshold_{int(threshold * 100)}", "filtered_methods.npy"
 )
 eligible_methods = set(
     np.load(eligible_methods_path, allow_pickle=True).astype(str).tolist()
@@ -32,7 +32,7 @@ print("Examples:", sorted(eligible_methods)[:10])
 
 # %%
 DEFAULT_OUTPUT_DIR = Path(
-    f"HT_LLM/similarity/feature_similarity_results/threshold_{int(threshold*100)}"
+    f"HT_LLM/similarity/feature_similarity_results/threshold_{int(threshold * 100)}"
 )
 OUTPUT_DIR_PDF = DEFAULT_OUTPUT_DIR / "pdf"
 OUTPUT_DIR_PNG = DEFAULT_OUTPUT_DIR / "png"
