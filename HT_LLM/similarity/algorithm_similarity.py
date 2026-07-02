@@ -26,6 +26,7 @@ import ast
 import csv
 import itertools
 import json
+import os
 import re
 import sys
 from collections import Counter
@@ -61,9 +62,27 @@ NON_AIGM_SET = {
 }
 NON_AIGM_COLOR = "darkorange"
 
-DEFAULT_OUTPUT_DIR = "HT_LLM/similarity/algorithm_similarity_results"
 METRIC_NAME = "BOO_weighted_jaccard"
 EXCLUDED_METHOD_FILES = {"__init__.py", "base_dfc_method.py"}
+
+
+# Filter methods in heatmap by performance threshold
+threshold = 0.6  # must exist; else, run filter_methods_by_performance.py with the desired threshold first
+
+eligible_methods_path = os.path.join(
+    "sample_data", f"threshold_{int(threshold * 100)}", "filtered_methods.npy"
+)
+eligible_methods = set(
+    np.load(eligible_methods_path, allow_pickle=True).astype(str).tolist()
+)
+print(f"Loaded {len(eligible_methods)} eligible methods")
+print("Examples:", sorted(eligible_methods)[:10])
+
+DEFAULT_OUTPUT_DIR = (
+    Path("HT_LLM/similarity/algorithm_similarity_results")
+    / f"threshold_{int(threshold * 100)}"
+)
+DEFAULT_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def _build_import_map(tree):
@@ -213,7 +232,7 @@ def _make_unique_labels(filepaths):
 
 def make_pair_key(method_a, method_b):
     """Stable key for joining method-pair outputs across scripts for AS vs FS scatterplot."""
-    return "+".join(sorted([method_a, method_b]))
+    return " x ".join(sorted([method_a, method_b]))
 
 
 def _hierarchical_cluster_order(matrix, cluster_method="average"):
@@ -239,6 +258,8 @@ def plot_similarity_heatmap(
     figsize=(10, 8),
     cluster=True,
     cluster_method="average",
+    vmin=None,
+    vmax=None,
 ):
     """Return a heatmap figure for a saved AS matrix.
 
@@ -263,8 +284,8 @@ def plot_similarity_heatmap(
         xticklabels=labels,
         yticklabels=labels,
         cmap="viridis",
-        vmin=0.0,
-        vmax=1.0,
+        vmin=vmin,
+        vmax=vmax,
         ax=ax,
     )
 
@@ -377,16 +398,22 @@ def main(filepaths):
         operation_bags[label] = extract_operation_counts(path, verbose=True)
 
     print("\nPairwise Algorithm Similarity (weighted Jaccard over operation counts):")
-    names = list(operation_bags.keys())
+    labels = list(operation_bags.keys())
+
+    # Filter methods based on performance threshold
+    keep_idx = [i for i, method in enumerate(labels) if method in eligible_methods]
+    filtered_methods = [labels[i] for i in keep_idx]
 
     # Initialize with zeros so the main diagonal stays 0.0 for simple visualization.
-    alg_sim = np.zeros((len(names), len(names)), dtype=float)
+    alg_sim = np.zeros((len(filtered_methods), len(filtered_methods)), dtype=float)
 
     pairwise_rows = []
 
-    for i, j in itertools.combinations(range(len(names)), 2):  # only off diagonal pairs
-        method_a = names[i]
-        method_b = names[j]
+    for i, j in itertools.combinations(
+        range(len(filtered_methods)), 2
+    ):  # only off diagonal pairs
+        method_a = filtered_methods[i]
+        method_b = filtered_methods[j]
         counts_a = operation_bags[method_a]
         counts_b = operation_bags[method_b]
         weighted_overlap, weighted_union, similarity = weighted_jaccard_similarity(
@@ -404,8 +431,6 @@ def main(filepaths):
                 "pair_key": make_pair_key(method_a, method_b),
                 "method_a": method_a,
                 "method_b": method_b,
-                "source_a": source_paths[i],
-                "source_b": source_paths[j],
                 "algorithm_similarity": similarity,
                 "weighted_overlap": weighted_overlap,
                 "weighted_union": weighted_union,
@@ -426,7 +451,7 @@ def main(filepaths):
 
     save_similarity_outputs(
         DEFAULT_OUTPUT_DIR,
-        names,
+        filtered_methods,
         alg_sim,
         pairwise_rows,
     )
