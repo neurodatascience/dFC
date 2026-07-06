@@ -9,29 +9,56 @@ from pathlib import Path
 
 import numpy as np
 
-threshold = 0.6  # minimum performance threshold for a method to be included
+threshold = 0.0  # minimum performance threshold in at least one task=experiment
+# and one run for a method to be included
 
-performances = np.load("sample_data/ALL_ML_SCORES_real.npy", allow_pickle=True).item()
-# print(performances.keys())
-
-metric = "SVM balanced accuracy"  # change to another performance key if needed
 output_root = Path("sample_data") / f"threshold_{int(threshold * 100)}"
 output_root.mkdir(parents=True, exist_ok=True)
 output_path = output_root / "filtered_methods.npy"
 
-tasks = np.asarray(performances["task"])
-methods = np.asarray(performances["dFC method"])
-scores = np.asarray(performances[metric], dtype=float)
+performances = np.load("sample_data/ALL_ML_SCORES_real.npy", allow_pickle=True).item()
+# print(performances.keys())
+
+metric = "SVM balanced accuracy"
+embedding = "PLS"
+group = "test"
+
+tasks = performances["task"]
+methods = performances["dFC method"]
+runs = performances["run"]
+
+all_embeddings = performances["embedding"]
+all_groups = performances["group"]
+all_metric_scores = performances[metric]
+
+# Filter for scores that have a specific embedding and group using zip,
+# and keep the corresponding task, dFC method, and run labels for each score
+filtered_rows = [
+    (task, method, run, score)
+    for emb, grp, task, method, run, score in zip(
+        all_embeddings, all_groups, tasks, methods, runs, all_metric_scores
+    )
+    if emb == embedding and grp == group
+]
+# print(filtered_rows)
 
 # If several runs exist for the same (task, dFC method), keep the best run's score.
 best_score_by_task_method = {}
-for task, method, score in zip(tasks, methods, scores):
+for tuple_row in filtered_rows:
+    task, method, run, score = tuple_row
     if np.isnan(score):
         continue
 
     key = (str(task), str(method))  # unique key for each (task, dFC method) combination
     if key not in best_score_by_task_method or score > best_score_by_task_method[key]:
         best_score_by_task_method[key] = float(score)
+
+# Check
+test_scores = np.asarray(list(best_score_by_task_method.values()), dtype=float)
+print(
+    f"Test scores - Min: {np.min(test_scores)}, Max: {np.max(test_scores)}, Mean: {np.mean(test_scores)}"
+)
+
 
 # Keep methods that have at least one task with best-run score >= threshold.
 eligible_methods = {
