@@ -1,16 +1,23 @@
 #!/bin/sh
 #
-#$ -cwd
+#$ -N ml_job
 #$ -o logs/ML_out.txt
 #$ -e logs/ML_err.txt
-#$ -l h_vmem=64G
-#$ -q origami.q
+#$ -pe smp 8
+#$ -l h_vmem=16g
+#$ -q YOUR_QUEUE
+
+# ---- Cluster configuration (set these for your system) ----
+VENV_PATH="/path/to/your/venv/bin/activate"
+PYDFC_CODE_DIR="/path/to/pydfc"
+# -----------------------------------------------------------
 
 DATASET_INFO="./dataset_info.json"
 
-source /data/origami/dFC/anaconda3/etc/profile.d/conda.sh
-conda activate pydfc
-python "/data/origami/dFC/CODEs/pydfc/dFC/task_dFC/ML.py" \
+# Activate virtual environment
+source "$VENV_PATH"
+
+python "$PYDFC_CODE_DIR/task_dFC/ML.py" \
 --dataset_info $DATASET_INFO
 
-conda deactivate
+deactivate

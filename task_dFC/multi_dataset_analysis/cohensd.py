@@ -8,6 +8,7 @@ import nibabel as nib
 import numpy as np
 import pandas as pd
 import seaborn as sns
+from matplotlib.colors import to_rgba
 from nilearn import datasets, plotting
 
 from pydfc import data_loader
@@ -18,6 +19,97 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from helper_functions import (  # pyright: ignore[reportMissingImports]
     build_experiment_display_info,
 )
+
+#######################################################################################
+
+
+_BOX_COLOR = "#4472C4"
+_POINT_COLOR = "#C0392B"
+_POINT_EDGE_COLOR = "#7B241C"
+_BOX_OFFSET = -0.17  # box center relative to x-tick
+_STRIP_OFFSET = 0.17  # point cloud center relative to x-tick
+_BOX_WIDTH = 0.28
+_STRIP_JITTER = 0.09
+
+
+def plot_cohensd_per_experiment(
+    df,
+    experiment_order,
+    save_path,
+    y_col="abs_d",
+    y_label="|Cohen's d|",
+):
+    """
+    Boxplot (left of tick) + individual points (right of tick) per experiment.
+
+    Boxes and points are spatially separated so neither buries the other.
+    Simulated data uses symlog y-scale to handle extreme outliers.
+    """
+    fig_width = max(10, 0.7 * len(experiment_order))
+    fig, ax = plt.subplots(figsize=(fig_width, 7))
+
+    n = len(experiment_order)
+    positions = np.arange(n)
+    exp_to_idx = {exp: i for i, exp in enumerate(experiment_order)}
+
+    # --- Boxplot left of center ---
+    box_data = [
+        df[df["experiment"] == exp][y_col].dropna().values for exp in experiment_order
+    ]
+    bp = ax.boxplot(
+        box_data,
+        positions=positions + _BOX_OFFSET,
+        widths=_BOX_WIDTH,
+        showfliers=False,
+        patch_artist=True,
+        medianprops=dict(color="#1A1A1A", linewidth=2.5),
+        boxprops=dict(linewidth=1.8),
+        whiskerprops=dict(linewidth=1.6),
+        capprops=dict(linewidth=1.6),
+    )
+    for patch in bp["boxes"]:
+        patch.set_facecolor(to_rgba(_BOX_COLOR, 0.5))
+        patch.set_edgecolor(_BOX_COLOR)
+    for line in bp["whiskers"] + bp["caps"]:
+        line.set_color(_BOX_COLOR)
+
+    # --- Strip points right of center ---
+    rng = np.random.default_rng(42)
+    for exp in experiment_order:
+        vals = df[df["experiment"] == exp][y_col].dropna().values
+        if len(vals) == 0:
+            continue
+        x_jit = (exp_to_idx[exp] + _STRIP_OFFSET) + rng.uniform(
+            -_STRIP_JITTER, _STRIP_JITTER, len(vals)
+        )
+        ax.scatter(
+            x_jit,
+            vals,
+            color=_POINT_COLOR,
+            alpha=0.55,
+            s=30,
+            linewidths=0.5,
+            edgecolors=_POINT_EDGE_COLOR,
+            zorder=3,
+        )
+
+    ax.set_xticks(positions)
+    ax.set_xticklabels(experiment_order)
+    ax.set_xlim(-0.6, n - 0.4)
+
+    ax.set_ylim(bottom=0)
+
+    ax.set_xlabel("Experiment", fontsize=13, fontweight="bold")
+    ax.set_ylabel(y_label, fontsize=13, fontweight="bold")
+    plt.setp(ax.get_xticklabels(), rotation=45, ha="right", fontsize=11)
+    plt.setp(ax.get_yticklabels(), fontsize=11)
+    sns.despine(ax=ax)
+    plt.tight_layout()
+
+    os.makedirs(os.path.dirname(os.path.abspath(save_path)), exist_ok=True)
+    plt.savefig(save_path, dpi=150, bbox_inches="tight", pad_inches=0.2, format="png")
+    plt.close()
+
 
 #######################################################################################
 
@@ -346,45 +438,13 @@ if __name__ == "__main__":
     fig_width = max(14, 0.6 * len(task_order))
 
     # -------- Figure 1: Boxplot of |Cohen's d| per task with individual samples --------
-    plt.figure(figsize=(fig_width, 7))
-
-    # Boxplot (hide outliers to avoid double-plotting with the samples)
-    ax = sns.boxplot(
-        data=DF,
-        x="experiment",
-        y="abs_d",
-        order=experiment_order,
-        showfliers=False,
-        width=0.6,
+    plot_cohensd_per_experiment(
+        df=DF,
+        experiment_order=experiment_order,
+        save_path=f"{output_root}/CohensD_abs_boxplot_with_samples_per_task.png",
+        y_col="abs_d",
+        y_label="|Cohen's d|",
     )
-
-    # Overlay individual samples (one point per ROI sample)
-    sns.stripplot(
-        data=DF,
-        x="experiment",
-        y="abs_d",
-        order=experiment_order,
-        dodge=False,
-        jitter=0.25,
-        size=2,
-        alpha=0.45,
-        ax=ax,
-    )
-
-    ax.set_xlabel("Experiment")
-    ax.set_ylabel("|Cohen's d|")
-    ax.set_ylim(bottom=0)
-    ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha="right")
-    plt.tight_layout()
-
-    plt.savefig(
-        f"{output_root}/CohensD_abs_boxplot_with_samples_per_task.png",
-        dpi=150,
-        bbox_inches="tight",
-        pad_inches=0.2,
-        format="png",
-    )
-    plt.close()
 
     # -------- Figure 2: Max |Cohen's d| across ROIs per task --------
     plt.figure(figsize=(fig_width, 6))
