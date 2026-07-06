@@ -67,7 +67,7 @@ EXCLUDED_METHOD_FILES = {"__init__.py", "base_dfc_method.py"}
 
 
 # Filter methods in heatmap by performance threshold
-threshold = 0.6  # must exist; else, run filter_methods_by_performance.py with the desired threshold first
+threshold = 0.0  # must exist; else, run filter_methods_by_performance.py with the desired threshold first
 
 eligible_methods_path = os.path.join(
     "sample_data", f"threshold_{int(threshold * 100)}", "filtered_methods.npy"
