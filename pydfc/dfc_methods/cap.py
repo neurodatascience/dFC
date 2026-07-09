@@ -34,6 +34,7 @@ todo:
 
 
 class CAP(BaseDFCMethod):
+    MEASURE_NAME = "CAP"
 
     def __init__(self, **params):
         self.logs_ = ""
@@ -63,7 +64,7 @@ class CAP(BaseDFCMethod):
             else:
                 self.params[params_name] = None
 
-        self.params["measure_name"] = "CAP"
+        self.params["measure_name"] = self.MEASURE_NAME
         self.params["is_state_based"] = True
 
     @property

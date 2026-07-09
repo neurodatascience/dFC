@@ -69,6 +69,7 @@ import pycwt as wavelet
 
 
 class TIME_FREQ(BaseDFCMethod):
+    MEASURE_NAME = "Time-Freq"
 
     def __init__(self, coi_correction=True, **params):
 
@@ -104,7 +105,7 @@ class TIME_FREQ(BaseDFCMethod):
             else:
                 self.params[params_name] = None
 
-        self.params["measure_name"] = "Time-Freq"
+        self.params["measure_name"] = self.MEASURE_NAME
         self.params["is_state_based"] = False
         self.params["coi_correction"] = coi_correction
 

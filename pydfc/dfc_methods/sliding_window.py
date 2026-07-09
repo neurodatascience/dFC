@@ -32,6 +32,7 @@ todo:
 
 
 class SLIDING_WINDOW(BaseDFCMethod):
+    MEASURE_NAME = "SlidingWindow"
 
     def __init__(self, **params):
         self.logs_ = ""
@@ -66,7 +67,7 @@ class SLIDING_WINDOW(BaseDFCMethod):
             else:
                 self.params[params_name] = None
 
-        self.params["measure_name"] = "SlidingWindow"
+        self.params["measure_name"] = self.MEASURE_NAME
         self.params["is_state_based"] = False
 
         assert (

@@ -1,11 +1,12 @@
-#!/bin/sh
+#!/bin/bash
 #
-#SBATCH --job-name=fit_fcs_job   # Optional: Name of your job
-#SBATCH --output=logs/fcs_out.txt  # Standard output log
-#SBATCH --error=logs/fcs_err.txt   # Standard error log
-#SBATCH --time=7-00:00:00                # Walltime for each task (7 days)
-#SBATCH --cpus-per-task=8  # Number of CPU cores per task
-#SBATCH --mem=64G                     # Memory request per node
+#SBATCH --job-name=fit_fcs_job
+#SBATCH --output=logs/fcs_out_%A_%a.txt
+#SBATCH --error=logs/fcs_err_%A_%a.txt
+#SBATCH --time=7-00:00:00
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=64G
+#SBATCH --requeue
 
 DATASET_INFO="./dataset_info.json"
 METHODS_CONFIG="./methods_config.json"
