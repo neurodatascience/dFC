@@ -17,8 +17,8 @@ export OPENBLAS_NUM_THREADS=1
 export NUMEXPR_NUM_THREADS=1
 
 # ---- Cluster configuration (set these for your system) ----
-VENV_PATH="/path/to/your/venv/bin/activate"
-PYDFC_CODE_DIR="/path/to/pydfc"
+VENV_PATH="/home/achillev/projects/def-jbpoline/achillev/pydfc_env/bin/activate"
+PYDFC_CODE_DIR="/home/achillev/scratch/Git_repo"
 # -----------------------------------------------------------
 
 # Activate virtual environment
