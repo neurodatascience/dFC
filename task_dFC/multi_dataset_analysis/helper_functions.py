@@ -637,11 +637,8 @@ def figure_dfc_matrices_window_png(
     cbar_label_size=11,
     rotate_method_labels=90,
     method_label_pad=18,  # << controls distance between method names and images
-    method_label_max_chars=14,
     wspace=None,  # << override column spacing if needed (None = auto)
 ):
-    import textwrap
-
     import matplotlib as mpl
     import matplotlib.pyplot as plt
     import numpy as np
@@ -661,14 +658,6 @@ def figure_dfc_matrices_window_png(
 
     methods = list(dfc_dict.keys())
     R = next(iter(dfc_dict.values())).shape[1]
-
-    def _display_method_label(label):
-        label = str(label).replace("_", " ").replace("-", " ")
-        if method_label_max_chars is None or len(label) <= method_label_max_chars:
-            return label
-        if " " not in label:
-            return label[: max(1, method_label_max_chars - 3)].rstrip() + "..."
-        return textwrap.shorten(label, width=method_label_max_chars, placeholder="...")
 
     idxs = _window_indices(
         trs,
@@ -743,7 +732,7 @@ def figure_dfc_matrices_window_png(
 
             if c == 0:
                 ax.set_ylabel(
-                    _display_method_label(m),
+                    m,
                     rotation=rotate_method_labels,
                     labelpad=method_label_pad,  # << tighten/loosen here
                     va="center",

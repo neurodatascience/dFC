@@ -165,21 +165,3 @@ If you are new to **pydfc**, we recommend starting with:
 
 This optional AI-assisted workflow is designed to complement — not replace —
 the documentation and example scripts.
-
-Generating New dFC Methods with AI
------------------------------------
-
-You can ask an AI coding assistant (Claude, Copilot, Codex, etc.) to implement
-brand-new dFC methods and add them directly to ``pydfc``.  Just describe what
-you want at whatever level of specificity feels right:
-
-- *"Generate 5 new creative dFC methods."*
-- *"Generate 3 new state-based methods."*
-- *"Implement a dFC method based on Granger causality."*
-- *"Add a method that uses Riemannian geometry on covariance matrices."*
-- *"Here is a paper — implement the method it describes."*  (paste the PDF or text)
-
-The AI will read the existing codebase, follow the conventions in
-``docs/ADDING_DFC_METHODS.md``, write the new method file, and register it in
-``pydfc/dfc_methods/__init__.py`` so it works immediately alongside all other
-methods.

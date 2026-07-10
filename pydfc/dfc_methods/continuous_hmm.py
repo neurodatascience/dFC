@@ -33,7 +33,6 @@ todo:
 
 
 class HMM_CONT(BaseDFCMethod):
-    MEASURE_NAME = "ContinuousHMM"
 
     def __init__(self, **params):
         self.logs_ = ""
@@ -64,7 +63,7 @@ class HMM_CONT(BaseDFCMethod):
             else:
                 self.params[params_name] = None
 
-        self.params["measure_name"] = self.MEASURE_NAME
+        self.params["measure_name"] = "ContinuousHMM"
         self.params["is_state_based"] = True
 
     @property

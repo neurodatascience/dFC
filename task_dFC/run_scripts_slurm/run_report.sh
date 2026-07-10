@@ -10,8 +10,8 @@ DATASET_INFO="./dataset_info.json"
 SUBJ_LIST="./subj_list.txt"
 
 # ---- Cluster configuration (set these for your system) ----
-VENV_PATH="/home/achillev/projects/def-jbpoline/achillev/pydfc_env/bin/activate"
-PYDFC_CODE_DIR="/home/achillev/scratch/Git_repo"
+VENV_PATH="/path/to/your/venv/bin/activate"
+PYDFC_CODE_DIR="/path/to/pydfc"
 # -----------------------------------------------------------
 
 # Activate virtual environment

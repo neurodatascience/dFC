@@ -40,7 +40,6 @@ Parameters
 
 
 class SLIDING_WINDOW_CLUSTR(BaseDFCMethod):
-    MEASURE_NAME = "Clustering"
 
     def __init__(self, **params):
 
@@ -87,7 +86,7 @@ class SLIDING_WINDOW_CLUSTR(BaseDFCMethod):
             else:
                 self.params[params_name] = None
 
-        self.params["measure_name"] = self.MEASURE_NAME
+        self.params["measure_name"] = "Clustering"
         self.params["is_state_based"] = True
 
         if self.params["clstr_distance"] is None:
