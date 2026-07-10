@@ -9,11 +9,12 @@
 # #SBATCH --chdir=/path/to/multi_dataset_analysis/codes
 
 # ---- Cluster configuration (set these for your system) ----
-VENV_PATH="/path/to/your/venv/bin/activate"
-PYDFC_CODE_DIR="/path/to/pydfc"
+VENV_PATH="/home/achillev/projects/def-jbpoline/achillev/pydfc_env/bin/activate"
+PYDFC_CODE_DIR="/home/achillev/scratch/Git_repo"
 # -----------------------------------------------------------
 
 set -euo pipefail
+trap 'echo "ERROR: Script failed at line $LINENO with exit code $?" >&2' ERR
 
 mkdir -p logs
 source "$VENV_PATH"

@@ -22,6 +22,9 @@ todo:
 
 class BaseDFCMethod:
 
+    # Required in every concrete subclass for registry discovery.
+    MEASURE_NAME = None
+
     TF_methods_name_lst = ["CWT_mag", "CWT_phase_r", "CWT_phase_a", "WTC"]
 
     sw_methods_name_lst = [
@@ -255,6 +258,8 @@ import needed_toolbox
 
 class method_name(dFC):
 
+    MEASURE_NAME = 'method_name'
+
     def __init__(self, **params):
         self.FCS_ = []
         self.logs_ = ''
@@ -270,7 +275,7 @@ class method_name(dFC):
                 self.params[params_name] = None
 
         self.params['specific_param'] = value
-        self.params['measure_name'] = 'method_name'
+        self.params['measure_name'] = self.MEASURE_NAME
         self.params['is_state_based'] = True/False
 
     @property

@@ -36,6 +36,7 @@ todo:
 
 
 class WINDOWLESS(BaseDFCMethod):
+    MEASURE_NAME = "Windowless"
 
     def __init__(self, **params):
         self.logs_ = ""
@@ -65,7 +66,7 @@ class WINDOWLESS(BaseDFCMethod):
             else:
                 self.params[params_name] = None
 
-        self.params["measure_name"] = "Windowless"
+        self.params["measure_name"] = self.MEASURE_NAME
         self.params["is_state_based"] = True
 
     @property

@@ -8,6 +8,12 @@ __pycache__
 
 sample_data/
 
+HT_LLM/similarity/*_results/
+
+# HPC computing related
+*.sh
+slurm_out/
+
 # build related
 pydfc.egg-info
 build
