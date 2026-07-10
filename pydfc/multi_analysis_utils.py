@@ -5,81 +5,48 @@ Created on Dec 3 2024
 @author: Mohammad Torabi
 """
 
-import importlib
-import inspect
-import pkgutil
-import warnings
 from copy import deepcopy
 
 from joblib import Parallel, delayed
 
-from . import dfc_methods as _dfc_pkg
 from .dfc_methods import *
-
-# cache for discovered measures: map measure_name -> class
-_MEASURE_REGISTRY = None
-
-
-def _build_measure_registry():
-    global _MEASURE_REGISTRY
-    if _MEASURE_REGISTRY is not None:
-        return _MEASURE_REGISTRY
-
-    registry = {}
-    try:
-        for finder in pkgutil.iter_modules(_dfc_pkg.__path__):
-            mod_name = f"{_dfc_pkg.__name__}.{finder.name}"
-            try:
-                module = importlib.import_module(mod_name)
-            except Exception:
-                warnings.warn(f"Could not import module {mod_name}; skipping.")
-                continue
-            for _, obj in inspect.getmembers(module, inspect.isclass):
-                try:
-                    # ensure class originates from dfc_methods package
-                    if not obj.__module__.startswith(_dfc_pkg.__name__):
-                        continue
-                    from .dfc_methods.base_dfc_method import BaseDFCMethod
-
-                    if not issubclass(obj, BaseDFCMethod) or obj is BaseDFCMethod:
-                        continue
-                except Exception:
-                    continue
-
-                # class-level method name is required for stable discovery
-                name = getattr(obj, "MEASURE_NAME", None)
-                if name:
-                    registry[name] = obj
-                else:
-                    warnings.warn(
-                        f"{obj.__module__}.{obj.__name__} has no MEASURE_NAME; skipping."
-                    )
-    except Exception:
-        warnings.warn("Failed to iterate dfc_methods package for discovery.")
-
-    _MEASURE_REGISTRY = registry
-    return _MEASURE_REGISTRY
-
 
 ################################# DATA_LOADER functions ######################################
 
 
 def create_measure_obj(MEASURES_name_lst, **params):
-    """
-    Auto-discover dFC method classes under `pydfc.dfc_methods` and
-    instantiate them with `**params` based on their `measure_name`.
-    """
 
-    registry = _build_measure_registry()
-    MEASURES_lst = []
+    MEASURES_lst = list()
     for MEASURES_name in MEASURES_name_lst:
-        cls = registry.get(MEASURES_name)
-        if cls is None:
-            raise ValueError(f"Unknown dFC measure name: {MEASURES_name}")
-        try:
-            measure = cls(**params)
-        except Exception as e:
-            raise RuntimeError(f"Failed to instantiate measure {MEASURES_name}: {e}")
+
+        ###### CAP ######
+        if MEASURES_name == "CAP":
+            measure = CAP(**params)
+
+        ###### CONTINUOUS HMM ######
+        if MEASURES_name == "ContinuousHMM":
+            measure = HMM_CONT(**params)
+
+        ###### WINDOW_LESS ######
+        if MEASURES_name == "Windowless":
+            measure = WINDOWLESS(**params)
+
+        ###### SLIDING WINDOW ######
+        if MEASURES_name == "SlidingWindow":
+            measure = SLIDING_WINDOW(**params)
+
+        ###### TIME FREQUENCY ######
+        if MEASURES_name == "Time-Freq":
+            measure = TIME_FREQ(**params)
+
+        ###### SLIDING WINDOW + CLUSTERING ######
+        if MEASURES_name == "Clustering":
+            measure = SLIDING_WINDOW_CLUSTR(**params)
+
+        ###### DISCRETE HMM ######
+        if MEASURES_name == "DiscreteHMM":
+            measure = HMM_DISC(**params)
+
         MEASURES_lst.append(measure)
 
     return MEASURES_lst

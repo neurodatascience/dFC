@@ -1913,23 +1913,7 @@ def process_SB_features(X, measure_name):
         X_transformed = softmax(-X, tau=tau)
         # 2) ILR transform
         X_transformed = ilr_transform(X_transformed)
-    elif measure_name in [
-        "ContinuousHMM",
-        "DiscreteHMM",
-        "Windowless",
-        # New state-based methods (return probabilistic state assignments)
-        "PooledKMeansStates",
-        "MiniBatchKMeansStates",
-        "GaussianMixtureStates",
-        "BayesianGaussianMixtureStates",
-        "NMFStates",
-        "SpectralStates",
-        "BirchStates",
-        "AgglomerativeStates",
-        "LaggedKMeansStates",
-        "MarkovSmoothedKMeansStates",
-        "MarkovSmoothedGMMStates",
-    ]:
+    elif measure_name in ["ContinuousHMM", "DiscreteHMM", "Windowless"]:
         X_transformed = ilr_transform(X)
     return X_transformed
 
