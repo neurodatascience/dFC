@@ -4,7 +4,7 @@
 #SBATCH --output=logs/ML_out_%A_%a.txt   # %A = array job ID, %a = task ID
 #SBATCH --error=logs/ML_err_%A_%a.txt
 #SBATCH --time=24:00:00
-#SBATCH --mem=128G
+#SBATCH --mem=64G
 #SBATCH --requeue
 
 DATASET_INFO="./dataset_info.json"
