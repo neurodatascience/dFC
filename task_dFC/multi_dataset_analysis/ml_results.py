@@ -56,9 +56,47 @@ NON_AIGM_METHODS = frozenset(
         "DiscreteHMM",
     ]
 )
+
+HYBRID_METHODS = frozenset(
+    [
+        "AdaptiveDccRandom_hybrid_ensemble",
+        "AdaptiveEdgeKalman_hybrid",
+        "AdaptiveQuantumReservoir_hybrid",
+        "AdaptiveRandomSparse_hybrid",
+        "AdaptiveRobustDifferential_hybrid_ensemble",
+        "ChangepointMultiscaleExp_hybrid_ensemble",
+        "ChangepointRobustExp_hybrid",
+        "DccChangepointSparse_hybrid",
+        "DccEdgeExponential_hybrid",
+        "DccKalmanVolatility_hybrid_ensemble",
+        "DifferentialEdgeKalman_hybrid",
+        "EdgeKalmanExp_hybrid_ensemble",
+        "EdgeRandomReservoir_hybrid_ensemble",
+        "EdgeStftQuantum_hybrid",
+        "KalmanReservoirMultiscale_hybrid",
+        "MultiscaleDccKalman_hybrid",
+        "QuantumMultiscaleKalman_hybrid_ensemble",
+        "QuantumRandomExp_hybrid",
+        "RandomFourierKalman_hybrid",
+        "ReservoirChangepointRobust_hybrid_ensemble",
+        "ReservoirEdgeDcc_hybrid",
+        "RobustDifferentialStft_hybrid",
+        "RobustSparseEdge_hybrid",
+        "RobustVolatilitySliding_hybrid_ensemble",
+        "SlidingVolatilityDcc_hybrid",
+        "SparseDccExp_hybrid_ensemble",
+        "StftEdgeAdaptive_hybrid_ensemble",
+        "StftExpKalman_hybrid",
+        "StftQuantumSparse_hybrid_ensemble",
+        "VolatilityAdaptiveEdge_hybrid"
+    ]
+)
+
 _AIGM_COLOR = "#0077B6"
+_HYBRID_COLOR = "#1A759F"
 _NON_AIGM_COLOR = "#E63946"
 _NON_AIGM_LABEL_COLOR = "#D4721A"
+_HYBRID_LABEL_COLOR = "#1A759F"
 _METRIC_SHORT = {
     "Logistic regression balanced accuracy": "LogReg BA",
     "SVM balanced accuracy": "SVM BA",
@@ -487,6 +525,9 @@ def _highlight_nonaigm_labels(ax):
     for label in ax.get_yticklabels():
         if label.get_text() in NON_AIGM_METHODS:
             label.set_color(_NON_AIGM_LABEL_COLOR)
+    for label in ax.get_yticklabels():
+        if label.get_text() in HYBRID_METHODS:
+            label.set_color(_HYBRID_LABEL_COLOR)
 
 
 def _build_experiment_legend(
@@ -922,13 +963,14 @@ def plot_aigm_comparison(
 
     df_best = df_best.copy()
     df_best["group"] = df_best["dFC method"].apply(
-        lambda m: "Non-AIGM" if m in NON_AIGM_METHODS else "AIGM"
+        lambda m: "Non-AIGM" if m in NON_AIGM_METHODS else "Hybrid" if m in HYBRID_METHODS else "AIGM"
     )
 
-    group_order = ["AIGM", "Non-AIGM"]
+    group_order = ["AIGM", "Non-AIGM", "Hybrid"]
     n_aigm = df_best[df_best["group"] == "AIGM"]["dFC method"].nunique()
     n_non_aigm = df_best[df_best["group"] == "Non-AIGM"]["dFC method"].nunique()
-    group_labels = [f"AIGM\n(n={n_aigm} methods)", f"Non-AIGM\n(n={n_non_aigm} methods)"]
+    n_hybrid = df_best[df_best["group"] == "Hybrid"]["dFC method"].nunique()
+    group_labels = [f"AIGM\n(n={n_aigm} methods)", f"Non-AIGM\n(n={n_non_aigm} methods)", f"Hybrid\n(n={n_hybrid} methods)"]
     df_best["group_label"] = df_best["group"].map(dict(zip(group_order, group_labels)))
 
     fig, ax = plt.subplots(figsize=(9, 4))
@@ -953,7 +995,7 @@ def plot_aigm_comparison(
 
     # One point per (method × experiment), colored by group
     rng = np.random.default_rng(42)
-    group_colors = {"AIGM": _AIGM_COLOR, "Non-AIGM": _NON_AIGM_COLOR}
+    group_colors = {"AIGM": _AIGM_COLOR, "Non-AIGM": _NON_AIGM_COLOR, "Hybrid": _HYBRID_COLOR}
     for i, (group, label) in enumerate(zip(group_order, group_labels)):
         vals = df_best[df_best["group"] == group]["score"].dropna().values
         y_jit = i + rng.uniform(-0.18, 0.18, len(vals))
@@ -970,7 +1012,8 @@ def plot_aigm_comparison(
     # Mann-Whitney p-value
     aigm_vals = df_best[df_best["group"] == "AIGM"]["score"].dropna().values
     non_aigm_vals = df_best[df_best["group"] == "Non-AIGM"]["score"].dropna().values
-    if len(aigm_vals) >= 2 and len(non_aigm_vals) >= 2:
+    hybrid_vals = df_best[df_best["group"] == "Hybrid"]["score"].dropna().values
+    if len(aigm_vals) >= 2 and len(non_aigm_vals) >= 2: #Ajouter version pour p-value AIGM vs Hybrid
         _, pval = mannwhitneyu(aigm_vals, non_aigm_vals, alternative="two-sided")
         pstr = "p<0.001" if pval < 0.001 else f"p={pval:.3f}"
         ax.text(
