@@ -93,10 +93,10 @@ HYBRID_METHODS = frozenset(
 )
 
 _AIGM_COLOR = "#0077B6"
-_HYBRID_COLOR = "#1A759F"
+_HYBRID_COLOR = "#30AC30"
 _NON_AIGM_COLOR = "#E63946"
 _NON_AIGM_LABEL_COLOR = "#D4721A"
-_HYBRID_LABEL_COLOR = "#1A759F"
+_HYBRID_LABEL_COLOR = "#30AC30"
 _METRIC_SHORT = {
     "Logistic regression balanced accuracy": "LogReg BA",
     "SVM balanced accuracy": "SVM BA",
@@ -966,11 +966,11 @@ def plot_aigm_comparison(
         lambda m: "Non-AIGM" if m in NON_AIGM_METHODS else "Hybrid" if m in HYBRID_METHODS else "AIGM"
     )
 
-    group_order = ["AIGM", "Non-AIGM", "Hybrid"]
+    group_order = ["Hybrid","AIGM", "Non-AIGM"]
     n_aigm = df_best[df_best["group"] == "AIGM"]["dFC method"].nunique()
     n_non_aigm = df_best[df_best["group"] == "Non-AIGM"]["dFC method"].nunique()
     n_hybrid = df_best[df_best["group"] == "Hybrid"]["dFC method"].nunique()
-    group_labels = [f"AIGM\n(n={n_aigm} methods)", f"Non-AIGM\n(n={n_non_aigm} methods)", f"Hybrid\n(n={n_hybrid} methods)"]
+    group_labels = [f"Hybrid\n(n={n_hybrid} methods)",f"AIGM\n(n={n_aigm} methods)", f"Non-AIGM\n(n={n_non_aigm} methods)"]
     df_best["group_label"] = df_best["group"].map(dict(zip(group_order, group_labels)))
 
     fig, ax = plt.subplots(figsize=(9, 4))
@@ -1013,12 +1013,27 @@ def plot_aigm_comparison(
     aigm_vals = df_best[df_best["group"] == "AIGM"]["score"].dropna().values
     non_aigm_vals = df_best[df_best["group"] == "Non-AIGM"]["score"].dropna().values
     hybrid_vals = df_best[df_best["group"] == "Hybrid"]["score"].dropna().values
-    if len(aigm_vals) >= 2 and len(non_aigm_vals) >= 2: #Ajouter version pour p-value AIGM vs Hybrid
+    #Ajouter version pour p-value AIGM vs Hybrid
+    if len(aigm_vals) >= 2 and len(non_aigm_vals) >= 2: 
         _, pval = mannwhitneyu(aigm_vals, non_aigm_vals, alternative="two-sided")
         pstr = "p<0.001" if pval < 0.001 else f"p={pval:.3f}"
         ax.text(
             0.97,
             0.97,
+            pstr,
+            transform=ax.transAxes,
+            ha="right",
+            va="top",
+            fontsize=11,
+            fontweight="bold",
+            bbox=dict(boxstyle="round,pad=0.3", fc="white", ec="#BBBBBB", alpha=0.9),
+        )
+    if len(aigm_vals) >= 2 and len(hybrid_vals) >= 2: 
+        _, pval = mannwhitneyu(aigm_vals, hybrid_vals, alternative="two-sided")
+        pstr = "p<0.001" if pval < 0.001 else f"p={pval:.3f}"
+        ax.text(
+            0.97,
+            0.03,
             pstr,
             transform=ax.transAxes,
             ha="right",
