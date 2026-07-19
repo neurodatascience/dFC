@@ -1,6 +1,9 @@
 """The :mod:`pydfc.dfc_methods` contains dFC methods objects."""
 
 from .adaptive_exponential_window import ADAPTIVE_EXPONENTIAL_WINDOW
+from .adaptive_dcc_combo import ADAPTIVE_DCC_COMBO
+from .adaptive_multiscale_combo import ADAPTIVE_MULTISCALE_COMBO
+from .adaptive_random_fourier_combo import ADAPTIVE_RANDOM_FOURIER_COMBO
 from .agglomerative_states import AGGLOMERATIVE_STATES
 from .amplitude_envelope_correlation import AMPLITUDE_ENVELOPE_CORRELATION
 from .base_dfc_method import BaseDFCMethod
@@ -12,6 +15,8 @@ from .continuous_hmm import HMM_CONT
 from .copula_tail_dependence import COPULA_TAIL_DEPENDENCE
 from .curvature_correlation import CURVATURE_CORRELATION
 from .dcc_connectivity import DCC_CONNECTIVITY
+from .dcc_multiscale_combo import DCC_MULTISCALE_COMBO
+from .dcc_time_freq_combo import DCC_TIME_FREQ_COMBO
 from .derivative_weighted_window import DERIVATIVE_WEIGHTED_WINDOW
 from .differential_coactivation import DIFFERENTIAL_COACTIVATION
 from .discrete_hmm import HMM_DISC
@@ -44,6 +49,8 @@ from .positive_negative_asymmetry import POSITIVE_NEGATIVE_ASYMMETRY
 from .precision_shrinkage_window import PRECISION_SHRINKAGE_WINDOW
 from .quantum_mutual_information import QUANTUM_MUTUAL_INFORMATION
 from .random_fourier_dependence import RANDOM_FOURIER_DEPENDENCE
+from .random_fourier_dcc_combo import RANDOM_FOURIER_DCC_COMBO
+from .random_fourier_time_freq_combo import RANDOM_FOURIER_TIME_FREQ_COMBO
 from .recurrence_kernel_dependence import RECURRENCE_KERNEL_DEPENDENCE
 from .reservoir_echo_state import RESERVOIR_ECHO_STATE
 from .robust_sliding_window import ROBUST_SLIDING_WINDOW
@@ -104,6 +111,9 @@ __all__ = [
     "HMM_DISC",
     "EXPONENTIAL_WINDOW",
     "ADAPTIVE_EXPONENTIAL_WINDOW",
+    "ADAPTIVE_DCC_COMBO",
+    "ADAPTIVE_MULTISCALE_COMBO",
+    "ADAPTIVE_RANDOM_FOURIER_COMBO",
     "MULTISCALE_WINDOW",
     "EDGE_COACTIVATION",
     "PHASE_LOCKING_WINDOW",
@@ -120,6 +130,8 @@ __all__ = [
     "PRECISION_SHRINKAGE_WINDOW",
     "RECURRENCE_KERNEL_DEPENDENCE",
     "RANDOM_FOURIER_DEPENDENCE",
+    "RANDOM_FOURIER_DCC_COMBO",
+    "RANDOM_FOURIER_TIME_FREQ_COMBO",
     "SPECTRAL_STATES",
     "EVENT_SYNCHRONIZATION",
     "COPULA_TAIL_DEPENDENCE",
@@ -150,6 +162,8 @@ __all__ = [
     "POSITIVE_NEGATIVE_ASYMMETRY",
     "STATE_SPACE_NEIGHBORHOOD",
     "DCC_CONNECTIVITY",
+    "DCC_MULTISCALE_COMBO",
+    "DCC_TIME_FREQ_COMBO",
     "PERSISTENT_HOMOLOGY",
     "TIME_REVERSAL_ASYMMETRY",
     "QUANTUM_MUTUAL_INFORMATION",
