@@ -1,6 +1,9 @@
-AdaptiveExponentialWindow and DCCConnectivity
-AdaptiveExponentialWindow and MultiscaleWindow
-RandomFourierDependence and DCCConnectivity
-RandomFourierDependence and Time-Freq
-DCCConnectivity and MultiscaleWindow
-DCCConnectivity and Time-Freq
+AdaptiveExponentialWindow and SlidingWindow
+AdaptiveExponentialWindow and Time-Freq
+RandomFourierDependence and MultiscaleWindow 
+RandomFourierDependence and Sliding Window
+DCCConnectivity and SlidingWindow
+MultiscaleWindow and SlidingWindow
+MultiscaleWindow and Time-Freq
+SlidingWindow and Time-Freq
+

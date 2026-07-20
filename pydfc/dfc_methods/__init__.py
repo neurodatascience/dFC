@@ -4,6 +4,8 @@ from .adaptive_exponential_window import ADAPTIVE_EXPONENTIAL_WINDOW
 from .adaptive_dcc_combo import ADAPTIVE_DCC_COMBO
 from .adaptive_multiscale_combo import ADAPTIVE_MULTISCALE_COMBO
 from .adaptive_random_fourier_combo import ADAPTIVE_RANDOM_FOURIER_COMBO
+from .adaptive_sliding_window_combo import ADAPTIVE_SLIDING_WINDOW_COMBO
+from .adaptive_time_freq_combo import ADAPTIVE_TIME_FREQ_COMBO
 from .agglomerative_states import AGGLOMERATIVE_STATES
 from .amplitude_envelope_correlation import AMPLITUDE_ENVELOPE_CORRELATION
 from .base_dfc_method import BaseDFCMethod
@@ -16,6 +18,7 @@ from .copula_tail_dependence import COPULA_TAIL_DEPENDENCE
 from .curvature_correlation import CURVATURE_CORRELATION
 from .dcc_connectivity import DCC_CONNECTIVITY
 from .dcc_multiscale_combo import DCC_MULTISCALE_COMBO
+from .dcc_sliding_window_combo import DCC_SLIDING_WINDOW_COMBO
 from .dcc_time_freq_combo import DCC_TIME_FREQ_COMBO
 from .derivative_weighted_window import DERIVATIVE_WEIGHTED_WINDOW
 from .differential_coactivation import DIFFERENTIAL_COACTIVATION
@@ -36,6 +39,8 @@ from .markov_smoothed_gmm_states import MARKOV_SMOOTHED_GMM_STATES
 from .markov_smoothed_kmeans_states import MARKOV_SMOOTHED_KMEANS_STATES
 from .minibatch_kmeans_states import MINIBATCH_KMEANS_STATES
 from .multiscale_window import MULTISCALE_WINDOW
+from .multiscale_sliding_window_combo import MULTISCALE_SLIDING_WINDOW_COMBO
+from .multiscale_time_freq_combo import MULTISCALE_TIME_FREQ_COMBO
 from .mutual_compression import MUTUAL_COMPRESSION
 from .nmf_states import NMF_STATES
 from .oja_subspace_connectivity import OJA_SUBSPACE_CONNECTIVITY
@@ -50,11 +55,14 @@ from .precision_shrinkage_window import PRECISION_SHRINKAGE_WINDOW
 from .quantum_mutual_information import QUANTUM_MUTUAL_INFORMATION
 from .random_fourier_dependence import RANDOM_FOURIER_DEPENDENCE
 from .random_fourier_dcc_combo import RANDOM_FOURIER_DCC_COMBO
+from .random_fourier_multiscale_combo import RANDOM_FOURIER_MULTISCALE_COMBO
+from .random_fourier_sliding_window_combo import RANDOM_FOURIER_SLIDING_WINDOW_COMBO
 from .random_fourier_time_freq_combo import RANDOM_FOURIER_TIME_FREQ_COMBO
 from .recurrence_kernel_dependence import RECURRENCE_KERNEL_DEPENDENCE
 from .reservoir_echo_state import RESERVOIR_ECHO_STATE
 from .robust_sliding_window import ROBUST_SLIDING_WINDOW
 from .sliding_window import SLIDING_WINDOW
+from .sliding_time_freq_combo import SLIDING_TIME_FREQ_COMBO
 from .sliding_window_clustr import SLIDING_WINDOW_CLUSTR
 from .sparse_coactivation_code import SPARSE_COACTIVATION_CODE
 from .spectral_similarity import SPECTRAL_SIMILARITY
@@ -114,6 +122,8 @@ __all__ = [
     "ADAPTIVE_DCC_COMBO",
     "ADAPTIVE_MULTISCALE_COMBO",
     "ADAPTIVE_RANDOM_FOURIER_COMBO",
+    "ADAPTIVE_SLIDING_WINDOW_COMBO",
+    "ADAPTIVE_TIME_FREQ_COMBO",
     "MULTISCALE_WINDOW",
     "EDGE_COACTIVATION",
     "PHASE_LOCKING_WINDOW",
@@ -131,6 +141,8 @@ __all__ = [
     "RECURRENCE_KERNEL_DEPENDENCE",
     "RANDOM_FOURIER_DEPENDENCE",
     "RANDOM_FOURIER_DCC_COMBO",
+    "RANDOM_FOURIER_MULTISCALE_COMBO",
+    "RANDOM_FOURIER_SLIDING_WINDOW_COMBO",
     "RANDOM_FOURIER_TIME_FREQ_COMBO",
     "SPECTRAL_STATES",
     "EVENT_SYNCHRONIZATION",
@@ -138,6 +150,7 @@ __all__ = [
     "OJA_SUBSPACE_CONNECTIVITY",
     "GRAPH_DIFFUSION_COACTIVATION",
     "SLIDING_WINDOW",
+    "SLIDING_TIME_FREQ_COMBO",
     "TEMPORAL_DERIVATIVE_MULTIPLICATION",
     "TIME_FREQ",
     "WINDOWLESS",
@@ -163,7 +176,10 @@ __all__ = [
     "STATE_SPACE_NEIGHBORHOOD",
     "DCC_CONNECTIVITY",
     "DCC_MULTISCALE_COMBO",
+    "DCC_SLIDING_WINDOW_COMBO",
     "DCC_TIME_FREQ_COMBO",
+    "MULTISCALE_SLIDING_WINDOW_COMBO",
+    "MULTISCALE_TIME_FREQ_COMBO",
     "PERSISTENT_HOMOLOGY",
     "TIME_REVERSAL_ASYMMETRY",
     "QUANTUM_MUTUAL_INFORMATION",
