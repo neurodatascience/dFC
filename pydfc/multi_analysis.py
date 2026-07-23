@@ -162,6 +162,14 @@ class MultiAnalysis:
             if MEASURES_name == "AdaptiveExponentialWindow":
                 measure = ADAPTIVE_EXPONENTIAL_WINDOW(**params)
 
+            ###### ADAPTIVE DCC COMBO ######
+            if MEASURES_name == "AdaptiveDcccombo":
+                measure = ADAPTIVE_DCC_COMBO(**params)
+
+            ###### ADAPTIVE MULTISCALE COMBO ######
+            if MEASURES_name == "AdaptiveMultiscalecombo":
+                measure = ADAPTIVE_MULTISCALE_COMBO(**params)
+
             ###### MULTISCALE WINDOW ######
             if MEASURES_name == "MultiscaleWindow":
                 measure = MULTISCALE_WINDOW(**params)
@@ -201,6 +209,26 @@ class MultiAnalysis:
             ###### RANDOM FOURIER DEPENDENCE ######
             if MEASURES_name == "RandomFourierDependence":
                 measure = RANDOM_FOURIER_DEPENDENCE(**params)
+
+            ###### RANDOM FOURIER DCC COMBO ######
+            if MEASURES_name == "RandomFourierDcccombo":
+                measure = RANDOM_FOURIER_DCC_COMBO(**params)
+
+            ###### RANDOM FOURIER TIME FREQ COMBO ######
+            if MEASURES_name == "RandomFourierTimeFreqcombo":
+                measure = RANDOM_FOURIER_TIME_FREQ_COMBO(**params)
+
+            ###### ADAPTIVE RANDOM FOURIER COMBO ######
+            if MEASURES_name == "AdaptiveRandomFouriercombo":
+                measure = ADAPTIVE_RANDOM_FOURIER_COMBO(**params)
+
+            ###### DCC MULTISCALE COMBO ######
+            if MEASURES_name == "DccMultiscalecombo":
+                measure = DCC_MULTISCALE_COMBO(**params)
+
+            ###### DCC TIME FREQ COMBO ######
+            if MEASURES_name == "DccTimeFreqcombo":
+                measure = DCC_TIME_FREQ_COMBO(**params)
 
             ###### EVENT SYNCHRONIZATION ######
             if MEASURES_name == "EventSynchronization":
